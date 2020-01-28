@@ -37,21 +37,12 @@ public class AcquireSettings extends DialogFragment {
     private TextView acquireSettingsSetMultiModeDelayEditText;
     private TextView acquireSettingsAECCompensationEditText;
 
-    // Different Imaging Modes
-    String BFMode;
-    String FPMMode;
-    String DFMode;
-    String DPCMode;
-    String MMMode;
-
 
 
     // Override the Fragment.onAttach() method to instantiate the NoticeDialogListener
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
-
-
         // Verify that the host activity implements the callback interface
         try {
             // Instantiate the NoticeDialogListener so we can send events to the host
@@ -75,8 +66,6 @@ public class AcquireSettings extends DialogFragment {
         LayoutInflater inflater = getActivity().getLayoutInflater();
         View view = inflater.inflate(R.layout.activity_acquire_settings, null);
 
-
-
         // Inflate and set the layout for the dialog
         // Pass null as the parent view because its going in the dialog layout
         builder.setView(view);
@@ -84,16 +73,7 @@ public class AcquireSettings extends DialogFragment {
         builder.setPositiveButton("Set", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int id) {
-                int mmCountValue = Integer.parseInt(acquireSettingsMultiModeCountTextView.getText().toString());
-                String mmDelayValue = acquireSettingsSetMultiModeDelayEditText.getText().toString();
-                String aecCompensationVal = acquireSettingsAECCompensationEditText.getText().toString();
-                String datasetName = acquireSettingsSetDatasetName.getText().toString();
-
-                Log.d(TAG,String.format("nMaxSearchApertures: %s", mmCountValue));
-                Log.d(TAG,String.format("mmDelay: %s", mmDelayValue));
                 AcquireActivity callingActivity = (AcquireActivity) getActivity();
-
-                //callingActivity.setMmCount(mmCountValue);
 
             }
         })
@@ -105,7 +85,7 @@ public class AcquireSettings extends DialogFragment {
 
         AcquireActivity callingActivity = (AcquireActivity) getActivity();
 
-
+/*
 
 
         acquireSettingsMultiModeCountTextView = (TextView) view.findViewById(R.id.acquireSettingsMultiModeCountTextView);
@@ -161,7 +141,7 @@ public class AcquireSettings extends DialogFragment {
         });
 
 
-
+*/
         return builder.create();
     }
 

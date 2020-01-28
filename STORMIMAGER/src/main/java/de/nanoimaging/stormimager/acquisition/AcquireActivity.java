@@ -38,7 +38,6 @@ import android.media.CamcorderProfile;
 import android.media.Image;
 import android.media.ImageReader;
 import android.media.MediaRecorder;
-import android.media.MediaRouter;
 import android.media.MediaScannerConnection;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -60,7 +59,6 @@ import android.util.Log;
 import android.util.Rational;
 import android.util.Size;
 import android.util.SparseIntArray;
-import android.view.Display;
 import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.Surface;
@@ -116,14 +114,17 @@ import static de.nanoimaging.stormimager.acquisition.CaptureRequestEx.HUAWEI_DUA
  * Created by Bene on 26.09.2015.
  */
 
-public class AcquireActivity extends Activity implements FragmentCompat.OnRequestPermissionsResultCallback {
+public class AcquireActivity extends Activity implements FragmentCompat.OnRequestPermissionsResultCallback, AcquireSettings.NoticeDialogListener {
 
     String TAG = "STORMimager_AcquireActivity";
 
     String global_isoval = "0";
     String global_expval = "0";
 
-
+    int t_period_measurement = 6*10; // in seconds
+    int t_duration_measurement = 10; // in seconds
+    int t_period_realign = 10*10; // in seconds
+    boolean is_measurement = false; // switch for ongoing measurement
     /**
      * Whether the app is recording video now
      */
@@ -134,10 +135,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     private MediaRecorder mMediaRecorder;
     private static final String VIDEO_DIRECTORY_NAME = "STORMIMAGER";
     private File mCurrentFile;
+    File myVideoFileName = new File("");
     //private CaptureRequest.Builder mPreviewRequestBuilder;
     
 
     public boolean cameraReady = true;
+    boolean isRaw = false;
+    int mImageFormat = ImageFormat.JPEG;
 
     // (default) global file paths
     String mypath_measurements  = Environment.getExternalStorageDirectory()+"/STORMimager/";
@@ -155,23 +159,22 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     private SeekBar seekbar_iso;
     private SeekBar seekbar_shutter;
-    private SeekBar seekBarLSposZ;
-    private SeekBar seekBarLSwidth;
+    private SeekBar seekBarLensX;
+    private SeekBar seekBarLensZ;
+    private SeekBar seekBarLaser;
 
     private TextView textView_iso;
     private TextView textView_shutter;
     private TextView textViewLensX;
-    private TextView textViewLSwidth;
+    private TextView textViewLensZ;
+    private TextView textViewLaser;
 
     ProgressDialog progressDialog;
 
     // GUI-Settings
-    Button btnStartLSMeasurement;
-    Button btnStartLSMeasurementBG;
-    Button btnShowResult;
+    Button btnStartMeasurement;
+    Button btnStopMeasurement;
 
-    private TextView acquireTextView;
-    private TextView acquireTextView2;
     private TextView timeLeftTextView;
 
     private ProgressBar acquireProgressBar;
@@ -181,15 +184,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     //**********************************************************************************************
     MqttAndroidClient mqttAndroidClient;
 
-    // Server uri follows the format tcp://ipaddress:port
-    String serverUri = "192.168.43.86";//"192.168.43.86";
+    // Server uri follows the format tcp://ipaddress
+    String serverUri = "192.168.43.86";
 
     final String mqttUser = "username";
     final String mqttPass = "pi";
 
     final String clientId = "STORMimager";
-
-    int tap_counter_ipadress_button = 0;
 
     // Save settings for later
     private final String PREFERENCE_FILE_KEY = "myAppPreference";
@@ -199,13 +200,17 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     public static final String topic_stepper_y_bwd = "stepper/y/bwd";
     public static final String topic_stepper_x_fwd = "stepper/x/fwd";
     public static final String topic_stepper_x_bwd = "stepper/x/bwd";
+    public static final String topic_lens_z = "lens/left/x";
+    public static final String topic_lens_x = "lens/left/y";
+    public static final String topic_laser = "laser/red";
+
 
     // Global MQTT Values
     int val_lens_x_global = 0;
     int val_lens_z_global = 0;
     int val_laser_red_global = 0;
     int coarse_increment = 20; // steps for ++/--
-
+    int max_pwm = 2^15-1;
     // Buttons
     Button button_x_fwd;
     Button button_x_bwd;
@@ -264,11 +269,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 }
             }
         };
-        
-        seekbar_iso = findViewById(R.id.seekBar_iso);
-        seekbar_iso.setVisibility(View.GONE);
-        seekbar_shutter = findViewById(R.id.seekBar_shutter);
-        seekbar_shutter.setVisibility(View.GONE);
+
 
         // Create the ISO-List
         List<String> isolist = new ArrayList<>();
@@ -296,6 +297,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         button_y_fwd = findViewById(R.id.button_y_fwd);
         button_y_bwd = findViewById(R.id.button_y_bwd);
 
+
+        seekbar_iso = findViewById(R.id.seekBar_iso);
+        seekbar_iso.setVisibility(View.GONE);
+        seekbar_shutter = findViewById(R.id.seekBar_shutter);
+        seekbar_shutter.setVisibility(View.GONE);
+        
         seekbar_iso.setMax(isovalues.length-1);
         seekbar_iso.setProgress(3); // 50x16=800
         seekbar_iso.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -362,64 +369,106 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         
         // SETUP GUI components for the Z-position of the Lightsheet 
-        seekBarLSposZ = (SeekBar) findViewById(R.id.seekBarLSposZ);
-        seekBarLSposZ.setMax(1920);
-        seekBarLSposZ.setProgress(0);
-        
-        textViewLensX = (TextView) findViewById(R.id.textViewLSposz);
-        textViewLensX.setText("Light-Sheet (z): " + seekBarLSposZ.getProgress());
 
-        seekBarLSposZ.setOnSeekBarChangeListener(
+        // Lens in X-direction
+        seekBarLensX = (SeekBar) findViewById(R.id.seekBarLensX);
+        seekBarLensX.setMax(max_pwm);
+        seekBarLensX.setProgress(0);
+        
+        textViewLensX = (TextView) findViewById(R.id.textViewLensX);
+        String text_lens_x_pre = "Lens (X): ";
+        textViewLensX.setText(text_lens_x_pre + seekBarLensX.getProgress());
+
+        seekBarLensX.setOnSeekBarChangeListener(
                 new SeekBar.OnSeekBarChangeListener() {
 
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                         val_lens_x_global = progress;
-                        textViewLensX.setText("Light-Sheet (z): " + String.format("%.2f", val_lens_x_global*1.));
+                        textViewLensX.setText(text_lens_x_pre+ String.format("%.2f", val_lens_x_global*1.));
+                        publishMessage(topic_lens_x, String.valueOf(val_lens_x_global));
                     }
 
                     @Override
                     public void onStartTrackingTouch(SeekBar seekBar) {
-                        textViewLensX.setText("Light-Sheet (z): " + String.format("%.2f", val_lens_x_global*1.));
+                        textViewLensX.setText(text_lens_x_pre+ String.format("%.2f", val_lens_x_global*1.));
                     }
 
                     @Override
                     public void onStopTrackingTouch(SeekBar seekBar) {
-                        textViewLensX.setText("Light-Sheet (z): " + String.format("%.2f", val_lens_x_global*1.));
+                        textViewLensX.setText(text_lens_x_pre+ String.format("%.2f", val_lens_x_global*1.));
                     }
                 }
         );
+
         
+        
+        // Lens in Z-direction
+        seekBarLensZ = (SeekBar) findViewById(R.id.seekBarLensZ);
+        seekBarLensZ.setMax(max_pwm);
+        seekBarLensZ.setProgress(val_lens_z_global);
 
-        seekBarLSwidth = (SeekBar) findViewById(R.id.seekBarLSwidth);
-        //seekBarLSwidth.setMin(0);
-        seekBarLSwidth.setMax(100);
-        seekBarLSwidth.setProgress(val_lens_z_global);
+        textViewLensZ = (TextView) findViewById(R.id.textViewLensZ);
+        String text_lens_z_pre = "Lens (Z): ";
+        textViewLensZ.setText(text_lens_z_pre+ seekBarLensZ.getProgress());
 
-        textViewLSwidth = (TextView) findViewById(R.id.textViewLSwidth);
-        textViewLSwidth.setText("Light-Sheet (width): " + seekBarLSwidth.getProgress());
-
-        seekBarLSwidth.setOnSeekBarChangeListener(
+        seekBarLensZ.setOnSeekBarChangeListener(
                 new SeekBar.OnSeekBarChangeListener() {
 
                     int YPos_global; //progress value of seekbar
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                         val_lens_z_global = progress;
-                        textViewLSwidth.setText("Light-Sheet (width): " + val_lens_z_global*1.);
+                        textViewLensZ.setText(text_lens_z_pre + val_lens_z_global*1.);
+                        publishMessage(topic_lens_z, String.valueOf(val_lens_z_global));
                     }
 
                     @Override
                     public void onStartTrackingTouch(SeekBar seekBar) {
-                        textViewLSwidth.setText("Light-Sheet (width): " + val_lens_z_global*1.);
+                        textViewLensZ.setText(text_lens_z_pre + val_lens_z_global*1.);
                     }
 
                     @Override
                     public void onStopTrackingTouch(SeekBar seekBar) {
-                        textViewLSwidth.setText("Light-Sheet (width): " + val_lens_z_global*1.);
+                        textViewLensZ.setText(text_lens_z_pre + val_lens_z_global*1.);
+                    }
+                }
+
+        );
+        
+        
+        // Laser control
+        // Lens in X-direction
+        seekBarLaser = (SeekBar) findViewById(R.id.seekBarLaser);
+        seekBarLaser.setMax(max_pwm);
+        seekBarLaser.setProgress(0);
+
+        textViewLaser = (TextView) findViewById(R.id.textViewLaser);
+        String text_laser_pre = "Laser (I): ";
+        textViewLaser.setText(text_laser_pre + seekBarLaser.getProgress());
+
+        seekBarLaser.setOnSeekBarChangeListener(
+                new SeekBar.OnSeekBarChangeListener() {
+
+                    @Override
+                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                        val_laser_red_global = progress;
+                        textViewLensX.setText(text_laser_pre+ String.format("%.2f", val_laser_red_global*1.));
+                        publishMessage(topic_laser, String.valueOf(val_laser_red_global));
+                    }
+
+                    @Override
+                    public void onStartTrackingTouch(SeekBar seekBar) {
+                        textViewLensX.setText(text_laser_pre+ String.format("%.2f", val_laser_red_global*1.));
+                    }
+
+                    @Override
+                    public void onStopTrackingTouch(SeekBar seekBar) {
+                        textViewLensX.setText(text_laser_pre+ String.format("%.2f", val_laser_red_global*1.));
                     }
                 }
         );
+
 
 
         //Create second surface with another holder (holderTransparent) for drawing the rectangle
@@ -433,20 +482,16 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         //Set Text and Button in UI
         btnCapture = (Button) findViewById(R.id.btnCapture);
         btnSetup = (Button) findViewById(R.id.btnSetup);
-        btnStartLSMeasurement = (Button) findViewById(R.id.btnStartLSMeasurement);
-        btnShowResult = (Button) findViewById(R.id.btnResult);
-        btnShowResult.setEnabled(false);
+        btnStartMeasurement = (Button) findViewById(R.id.btnStart);
+        btnStopMeasurement = (Button) findViewById(R.id.btnStop);
 
-        acquireTextView = (TextView) findViewById(R.id.acquireStatusTextView);
-        acquireTextView2 = (TextView) findViewById(R.id.acquireStatusTextView2);
+
         timeLeftTextView = (TextView) findViewById(R.id.timeLeftTextView);
         acquireProgressBar = (ProgressBar) findViewById(R.id.acquireProgressBar);
 
         acquireProgressBar.setVisibility(View.INVISIBLE); // Make invisible at first, then have it pop up
 
         //Setup Colours
-        acquireTextView.setTextColor(Color.YELLOW);
-        acquireTextView2.setTextColor(Color.YELLOW);
         timeLeftTextView.setTextColor(Color.YELLOW);
 
         settingsDialogFragment = new AcquireSettings();
@@ -458,39 +503,28 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         });
 
         btnCapture.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {                //new runLSsnap().execute();}
-        if(mIsRecordingVideo)
-
-            {
-                try {
-                    stopRecordingVideo();
-                    //prepareViews();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        else
-
-            {
-                startRecordingVideo();
-                //mRecordVideo.setImageResource(R.drawable.ic_stop);
-                //Receive out put file here
-                //mOutputFilePath = getCurrentFile().getAbsolutePath();
-            }
-
-        }
-
-    });
-
-
-
-        btnStartLSMeasurement.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                new runLSmeasurement().execute();
+                new runLSsnap().execute();
             }
+
         });
 
 
+
+        btnStartMeasurement.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                is_measurement = true;
+                new run_measurement().execute();
+            }
+        });
+
+        btnStopMeasurement.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                is_measurement = false;
+            }
+        });
+
+        /*
         btnShowResult.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 Intent intent_showresult = new Intent();
@@ -499,7 +533,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 startActivity(intent_showresult);
             }
         });
-
+*/
 
         //******************* STEPPER in Y-Direction ********************************************//
         // this goes wherever you setup your button listener:
@@ -623,31 +657,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         super.onStop();
     }
 
-    // Differentiate between different Illumination Pattern Sources
-    // This can be either a BMP, from File or from Asset
 
-    public void openSettingsDialog() {
-        settingsDialogFragment.show(getFragmentManager(), "acquireSettings2");
-    }
 
-    /*
-    public void setISO(String iso) {
-        isoSetting = Integer.parseInt(iso);
-        Log.i("ISO return", Integer.toString(isoSetting));
-
-        //set camera iso value
-        mPreviewRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, isoSetting);
-
-        try {
-            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mCaptureCallback, null);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        } catch (NullPointerException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-     */
 
     //------------------------CAMERA 2 API STUFF----------------------------------------------------
     //Conversion from screen rotation to JPEG orientation.
@@ -686,12 +697,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         ORIENTATIONS.append(Surface.ROTATION_270, 270);
     }
 
-
-
     private Image mRawLastReceivedImage = null;
-    // private ImageReader mRawImageReader;
-    private Size mRawSize;
-    private Integer mRawFormat;
+
 
     /**
      * Request code for camera permissions.
@@ -858,7 +865,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      * This is used to allow us to clean up the {@link ImageReader} when all background tasks using
      * its {@link Image}s have completed.
      */
-    private RefCountedAutoCloseable<ImageReader> mRawImageReader;
+    private RefCountedAutoCloseable<ImageReader> mImageReader;
+
+    private RefCountedAutoCloseable<ImageReader> mJPEGImageReader;
 
     /**
      * Whether or not the currently configured camera device is fixed-focus.
@@ -951,7 +960,37 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         @Override
         public void onImageAvailable(ImageReader reader) {
-            dequeueAndSaveImage(mRawResultQueue, mRawImageReader);
+            dequeueAndSaveImage(mRawResultQueue, mImageReader);
+        }
+
+    };
+
+
+    /**
+     * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
+     * still image is ready to be saved.
+     */
+    private final ImageReader.OnImageAvailableListener mOnImageAvailableListener
+            = new ImageReader.OnImageAvailableListener() {
+
+        @Override
+        public void onImageAvailable(ImageReader reader) {
+            Image image = reader.acquireLatestImage();
+            if (image == null) return;
+
+            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+            byte[] bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+            int nRowStride = image.getPlanes()[0].getRowStride();
+            int nPixelStride = image.getPlanes()[0].getPixelStride();
+            image.close();
+            try {
+                //TextResult[] results = mBarcodeReader.decodeBuffer(bytes, mImageReader.getWidth(), mImageReader.getHeight(), nRowStride * nPixelStride, EnumImagePixelFormat.IPF_NV21, "");
+                String output = "";
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
     };
@@ -1044,18 +1083,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request,
                                      long timestamp, long frameNumber) {
             String currentDateTime = generateTimestamp();
-            File rawFile =null;
-            if(false) {
-                rawFile = new File(Environment.
-                        getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM),
-                        "RAW_" + currentDateTime + "_ExpTime_" + global_expval.split("/") + "_ISOVal_" + global_isoval + ".dng");
-            }
-            else{
-                rawFile = new File(myfullpath_measurements,fullfilename_measurements);
-            }
+            File imageFile =null;
 
-
-
+            // setting the filepath
+            if(isRaw) imageFile = new File(myfullpath_measurements,fullfilename_measurements+".DNG");
+            else imageFile = new File(myfullpath_measurements,fullfilename_measurements+".JPG");
+            
             // Look up the ImageSaverBuilder for this request and update it with the file name
             // based on the capture start time.
             ImageSaver.ImageSaverBuilder rawBuilder;
@@ -1064,7 +1097,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 rawBuilder = mRawResultQueue.get(requestId);
             }
 
-            if (rawBuilder != null) rawBuilder.setFile(rawFile);
+            if (rawBuilder != null) rawBuilder.setFile(imageFile);
         }
 
         @Override
@@ -1167,22 +1200,51 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                         CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
                 // For still image captures, we use the largest available size.
-                Size largestRaw = Collections.max(
-                        Arrays.asList(map.getOutputSizes(ImageFormat.RAW_SENSOR)),
+
+                Size largestSize = new Size(MAX_PREVIEW_WIDTH, MAX_PREVIEW_HEIGHT);
+                if(isRaw){
+                    largestSize = Collections.max(
+                        Arrays.asList(map.getOutputSizes(ImageFormat.RAW_SENSOR)),//RAW_SENSOR)),
                         new CompareSizesByArea());
+
+                largestSize = new Size(MAX_PREVIEW_WIDTH, MAX_PREVIEW_HEIGHT);
+                }
+                else{
+                    largestSize = new Size(MAX_PREVIEW_WIDTH, MAX_PREVIEW_HEIGHT);
+                    Size[] sizeList =  map.getOutputSizes(ImageFormat.YUV_420_888);
+                    for (Size size : sizeList) {
+                        if(size.getWidth() * size.getHeight() > 1000000)
+                            continue;
+                        else{
+                            largestSize = size;
+                            break;
+                        }
+                    }
+                }
+
 
                 synchronized (mCameraStateLock) {
                     // Set up ImageReaders for JPEG and RAW outputs.  Place these in a reference
                     // counted wrapper to ensure they are only closed when all background tasks
                     // using them are finished.
 
-                    if (mRawImageReader == null || mRawImageReader.getAndRetain() == null) {
-                        mRawImageReader = new RefCountedAutoCloseable<>(
-                                ImageReader.newInstance(largestRaw.getWidth(),
-                                        largestRaw.getHeight(), ImageFormat.RAW_SENSOR, /*maxImages*/ 5));
+
+                    // RAW or JPEG
+                    if(isRaw)
+                        mImageFormat = ImageFormat.RAW_SENSOR;
+                    else
+                        mImageFormat = ImageFormat.JPEG;
+
+                    if (mImageReader == null || mImageReader.getAndRetain() == null) {
+                        mImageReader = new RefCountedAutoCloseable<>(
+                                ImageReader.newInstance(largestSize.getWidth(),
+                                        largestSize.getHeight(), mImageFormat, /*maxImages*/ 5));
                     }
-                    mRawImageReader.get().setOnImageAvailableListener(
+
+                    mImageReader.get().setOnImageAvailableListener(
                             mOnRawImageAvailableListener, mBackgroundHandler);
+
+
 
                     mCharacteristics = characteristics;
                     mCameraId = cameraId;
@@ -1306,9 +1368,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     mCameraDevice.close();
                     mCameraDevice = null;
                 }
-                if (null != mRawImageReader) {
-                    mRawImageReader.close();
-                    mRawImageReader = null;
+                if (null != mImageReader) {
+                    mImageReader.close();
+                    mImageReader = null;
                 }
             }
         } catch (InterruptedException e) {
@@ -1366,7 +1428,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
             // Here, we create a CameraCaptureSession for camera preview.
             mCameraDevice.createCaptureSession(Arrays.asList(surface,
-                    mRawImageReader.get().getSurface()), new CameraCaptureSession.StateCallback() {
+                    mImageReader.get().getSurface()), new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(CameraCaptureSession cameraCaptureSession) {
                             synchronized (mCameraStateLock) {
@@ -1488,8 +1550,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         setExposureTime(global_expval);
         setIso(global_isoval);
-
-
     }
 
     /**
@@ -1648,10 +1708,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                             CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
                 }
 
-
-
-
-
                 // Update state machine to wait for auto-focus, auto-exposure, and
                 // auto-white-balance (aka. "3A") to converge.
                 mState = STATE_WAITING_FOR_3A_CONVERGENCE;
@@ -1684,7 +1740,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             final CaptureRequest.Builder captureBuilder =
                     mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
 
-            captureBuilder.addTarget(mRawImageReader.get().getSurface());
+            captureBuilder.addTarget(mImageReader.get().getSurface());
 
             // Use the same AE and AF modes as the preview.
             setup3AControlsLocked(captureBuilder);
@@ -1782,6 +1838,20 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
     }
 
+    public void openSettingsDialog() {
+        settingsDialogFragment.show(getFragmentManager(), "acquireSettings");
+    }
+
+    @Override
+    public void onDialogPositiveClick(DialogFragment dialog) {
+
+    }
+
+    @Override
+    public void onDialogNegativeClick(DialogFragment dialog) {
+
+    }
+
     /**
      * Runnable that saves an {@link Image} into the specified {@link File}, and updates
      * {@link android.provider.MediaStore} to include the resulting file.
@@ -1842,7 +1912,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     buffer.get(bytes);
                     FileOutputStream output = null;
                     try {
-                        output = new FileOutputStream(mFile);
+                        output = new FileOutputStream(mFile+".jpg");
                         output.write(bytes);
                         success = true;
                     } catch (IOException e) {
@@ -1857,7 +1927,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     DngCreator dngCreator = new DngCreator(mCharacteristics, mCaptureResult);
                     FileOutputStream output = null;
                     try {
-                        output = new FileOutputStream(mFile);
+                        output = new FileOutputStream(mFile+".jpg");
                         dngCreator.writeImage(output, mImage);
                         success = true;
                     } catch (IOException e) {
@@ -2313,29 +2383,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     }
 
-    /**
-     * Create directory and return file
-     * returning video file
-     */
-    private File getOutputMediaFile() {
-        // External sdcard file location
-        File mediaStorageDir = new File(Environment.getExternalStorageDirectory(),
-                VIDEO_DIRECTORY_NAME);
-        // Create storage directory if it does not exist
-        if (!mediaStorageDir.exists()) {
-            if (!mediaStorageDir.mkdirs()) {
-                Log.d(TAG, "Oops! Failed create "
-                        + VIDEO_DIRECTORY_NAME + " directory");
-                return null;
-            }
-        }
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss",
-                Locale.getDefault()).format(new Date());
-        File mediaFile;
-        mediaFile = new File(mediaStorageDir.getPath() + File.separator
-                + "VID_" + timeStamp + ".mp4");
-        return mediaFile;
-    }
 
 
     private void setUpMediaRecorder() throws IOException {
@@ -2349,13 +2396,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         /**
          * create video output file
          */
-        mCurrentFile = getOutputMediaFile();
+        mCurrentFile = myVideoFileName;
         /**
          * set output file in media recorder
          */
         mMediaRecorder.setOutputFile(mCurrentFile.getAbsolutePath());
-        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_480P);
-        mMediaRecorder.setVideoFrameRate(profile.videoFrameRate);
+        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P);
+        mMediaRecorder.setVideoFrameRate(20);
         mMediaRecorder.setVideoSize(profile.videoFrameWidth, profile.videoFrameHeight);
         mMediaRecorder.setVideoEncodingBitRate(profile.videoBitRate);
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
@@ -2741,7 +2788,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     }
 
 
-    private class runLSmeasurement extends AsyncTask<Void, Void, Void> {
+    private class run_measurement extends AsyncTask<Void, Void, Void> {
 
         long t = 0;
         int i_meas = 0;
@@ -2761,7 +2808,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             }
 
             timeLeftTextView.setText("Time left:");
-            acquireTextView.setText("Light-Sheet Measurement in Progress");
+            
             acquireProgressBar.setVisibility(View.VISIBLE); // Make invisible at first, then have it pop up
             acquireProgressBar.setMax(n_measurement);
 
@@ -2777,7 +2824,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         }
 
-
         void mSleep(int sleepVal) {
             try {
                 Thread.sleep(sleepVal);
@@ -2789,29 +2835,54 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         @Override
         protected Void doInBackground(Void... params) {
 
-            Log.i("CAM2", "do in Background started");
             publishProgress();
 
             // Wait for the data to propigate down the chain
             t = SystemClock.elapsedRealtime();
 
-            for (i_meas = 0; i_meas < n_measurement; i_meas++) // one count i per cycle
-            {
-                publishProgress();
+            
+            // Start with a video measurement for XXX-seconds 
+            i_meas = 0;
+            while(is_measurement){
+                i_meas++;
+
+                // determine the path for the video
+                myVideoFileName= new File( mypath + File.separator + "VID_" + String.valueOf(i_meas) + ".mp4");
+                Log.i(TAG, "Saving file here:" + String.valueOf(myVideoFileName));
+
+                // turn on the laser
+                publishMessage(topic_laser, String.valueOf(val_laser_red_global));
                 mSleep(500); //Let AEC stabalize if it's on
 
-                // initialize file names for this LED
-                myfullpath_measurements = mypath;
-                fullfilename_measurements = String.valueOf(i_meas)+".DNG";
-                cameraReady = false;
+                // TODO turn on fluctuation
+                // publishMessage(topic_laser, String.valueOf(val_laser_red_global));
+                mSleep(500); //Let AEC stabalize if it's on
 
-                // move the stage by one step and pause
-                publishMessage(topic_stepper_x_fwd, "2");
-                mSleep(1000);
+                // start video-capture
+                if(!mIsRecordingVideo) {
+                    startRecordingVideo();
+                }
+                mSleep(t_duration_measurement*1000); //Let AEC stabalize if it's on
 
-                // capture image and pause
-                captureImage();
-                mSleep(1000);
+                // stop video-capture
+                if(mIsRecordingVideo)
+                {
+                    try {
+                        stopRecordingVideo();
+                        //prepareViews();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                // turn off the laser
+                publishMessage(topic_laser, String.valueOf(0));
+                mSleep(500); //Let AEC stabalize if it's on
+
+                // TODO turn off fluctuation
+                // publishMessage(topic_laser, String.valueOf(val_laser_red_global));
+                mSleep(500); //Let AEC stabalize if it's on
+
 
             }
             return null;
@@ -2860,7 +2931,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             }
 
             btnCapture.setEnabled(false);
-            acquireTextView.setText("Light-Sheet Measurement in Progress (SNAP!)");
+            
             acquireProgressBar.setVisibility(View.VISIBLE); // Make invisible at first, then have it pop up
             acquireProgressBar.setMax(1);
 
@@ -2887,7 +2958,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             Log.i("CAM2", "do in Background started");
             // initialize file names for this LED
                 myfullpath_measurements = mypath;
-                fullfilename_measurements = "SNAP_1.DNG";
+
+                fullfilename_measurements = "SNAP_1";
                 cameraReady = false;
 
                 // capture image and pause

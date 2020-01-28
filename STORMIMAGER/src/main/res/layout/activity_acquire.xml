@@ -101,7 +101,7 @@
 
 
                 <FrameLayout
-                    android:id="@+id/controlLSZ"
+                    android:id="@+id/controlLensX"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:layout_alignParentBottom="true"
@@ -113,13 +113,13 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="?android:attr/textAppearanceLarge"
-                        android:text="Light-Sheet (z): "
+                        android:text="Lens (X): "
                         android:textColor="@color/white"
-                        android:id="@+id/textViewLSposz"
+                        android:id="@+id/textViewLensX"
                         android:layout_gravity="center_horizontal|bottom" />
 
                     <SeekBar
-                        android:id="@+id/seekBarLSposZ"
+                        android:id="@+id/seekBarLensX"
                         android:layout_width="252dp"
                         android:layout_height="wrap_content"
                         android:layout_gravity="left|center_vertical"
@@ -129,7 +129,7 @@
                 </FrameLayout>
 
                 <FrameLayout
-                    android:id="@+id/controlLSWidth"
+                    android:id="@+id/controlLensZ"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:layout_alignParentBottom="true"
@@ -141,13 +141,13 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="?android:attr/textAppearanceLarge"
-                        android:text="Light-Sheet (width): "
+                        android:text="Lens (Z): "
                         android:textColor="@color/white"
-                        android:id="@+id/textViewLSwidth"
+                        android:id="@+id/textViewLensZ"
                         android:layout_gravity="center_horizontal|bottom" />
 
                     <SeekBar
-                        android:id="@+id/seekBarLSwidth"
+                        android:id="@+id/seekBarLensZ"
                         android:layout_width="252dp"
                         android:layout_height="wrap_content"
                         android:layout_gravity="left|center_vertical"
@@ -155,6 +155,36 @@
 
 
                 </FrameLayout>
+
+
+                <FrameLayout
+                    android:id="@+id/controlLaser"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_alignParentBottom="true"
+                    android:layout_alignParentStart="true"
+                    android:layout_gravity="right|bottom">
+
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?android:attr/textAppearanceLarge"
+                        android:text="Laser (Intensity): "
+                        android:textColor="@color/white"
+                        android:id="@+id/textViewLaser"
+                        android:layout_gravity="center_horizontal|bottom" />
+
+                    <SeekBar
+                        android:id="@+id/seekBarLaser"
+                        android:layout_width="252dp"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="left|center_vertical"
+                        android:layout_marginLeft="15dp"/>
+
+
+                </FrameLayout>
+
 
 
             </LinearLayout>
@@ -231,27 +261,7 @@
                 <LinearLayout
                     android:orientation="vertical"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content">
-
-                    <TextView
-                        android:id="@+id/acquireStatusTextView"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:gravity="left"
-                        android:paddingLeft="10dp"
-                        android:text="Small Text"
-                        android:textAppearance="?android:attr/textAppearanceSmall" />
-
-                    <TextView
-                        android:id="@+id/acquireStatusTextView2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="0.52"
-                        android:gravity="right|end"
-                        android:paddingLeft="10dp"
-                        android:text="Small Text"
-                        android:textAppearance="?android:attr/textAppearanceSmall" />
-                </LinearLayout>
+                    android:layout_height="wrap_content"/>
             </LinearLayout>
 
         </LinearLayout>
@@ -276,7 +286,8 @@
                     android:layout_alignParentBottom="true"
                     android:layout_alignParentRight="true"
                     android:enabled="true"
-                    android:text="+X+" />
+                    android:text="+X+"
+                    android:visibility="gone"/>
 
                 <Button
                     android:id="@+id/button_x_bwd"
@@ -285,7 +296,8 @@
                     android:layout_alignParentBottom="true"
                     android:layout_alignParentRight="true"
                     android:enabled="true"
-                    android:text="-X-" />
+                    android:text="-X-"
+                    android:visibility="gone"/>
 
                 <Button
                     android:id="@+id/button_y_fwd"
@@ -294,7 +306,8 @@
                     android:layout_alignParentBottom="true"
                     android:layout_alignParentRight="true"
                     android:enabled="true"
-                    android:text="+Y+" />
+                    android:text="+Y+"
+                    android:visibility="gone"/>
 
                 <Button
                     android:id="@+id/button_y_bwd"
@@ -303,7 +316,8 @@
                     android:layout_alignParentBottom="true"
                     android:layout_alignParentRight="true"
                     android:enabled="true"
-                    android:text="-Y-" />
+                    android:text="-Y-"
+                    android:visibility="gone"/>
 
 
             </LinearLayout>
@@ -314,23 +328,23 @@
                 android:layout_height="match_parent">
 
                 <Button
-                    android:id="@+id/btnResult"
+                    android:id="@+id/btnStart"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_alignParentBottom="true"
                     android:layout_alignParentRight="true"
+                    android:layout_alignParentBottom="true"
                     android:layout_weight="1"
-                    android:text="Result" />
+                    android:text="Start" />
 
                 <Button
-                    android:id="@+id/btnStartLSMeasurement"
+                    android:id="@+id/btnStop"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_alignParentBottom="true"
                     android:layout_alignParentLeft="true"
+                    android:layout_alignParentBottom="true"
                     android:layout_toLeftOf="@+id/btnSetup"
-                    android:text="LS-Vol."
-                    android:layout_weight="1" />
+                    android:layout_weight="1"
+                    android:text="Stop" />
 
                 <Button
                     android:id="@+id/btnSetup"
