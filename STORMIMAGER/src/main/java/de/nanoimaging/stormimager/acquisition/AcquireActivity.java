@@ -130,7 +130,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     String global_expval = "0";
 
     int t_period_measurement = 6 * 10; // in seconds
-    int t_duration_measurement = 10; // in seconds
+    int t_duration_meas = 5; // in seconds
     int t_period_realign = 10 * 10; // in seconds
     boolean is_measurement = false; // switch for ongoing measurement
     boolean is_findcoupling = false;
@@ -150,7 +150,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     //private CaptureRequest.Builder mPreviewRequestBuilder;
 
 
-    public boolean cameraReady = true;
+    public boolean isCameraBusy = false;
     boolean isRaw = false;
     int mImageFormat = ImageFormat.JPEG;
     ByteBuffer buffer = null; // for the processing
@@ -192,6 +192,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     private TextView textViewLensX;
     private TextView textViewLensZ;
     private TextView textViewLaser;
+    private TextView textViewGuiText;
 
     ProgressDialog progressDialog;
 
@@ -357,6 +358,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         button_x_bwd = findViewById(R.id.button_x_bwd);
         button_y_fwd = findViewById(R.id.button_y_fwd);
         button_y_bwd = findViewById(R.id.button_y_bwd);
+        textViewGuiText = findViewById(R.id.textViewGuiText);
 
 
         seekbar_iso = findViewById(R.id.seekBar_iso);
@@ -562,9 +564,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         btnCapture.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-
                 //
-                Log.i(TAG, "I st the is_find_coupling to true!");
+                Log.i(TAG, "Set is_find_coupling to true!");
                 if (!is_findcoupling) is_findcoupling = true;
             }
 
@@ -574,7 +575,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         btnStartMeasurement.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 is_measurement = true;
-                new run_measurement().execute();
+                new run_meas().execute();
             }
         });
 
@@ -847,11 +848,21 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         @Override
         public void onSurfaceTextureUpdated(SurfaceTexture texture) {
 
-            if (is_findcoupling) {
+            if (is_findcoupling & !isCameraBusy) {
+                //Log.i(TAG, "Lens Calibration in progress");
                 global_bitmap = mTextureView.getBitmap();
                 global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), mTextureView.getTransform(null), true);
 
-                new run_calibration().execute();
+                /*
+                if (i_search_maxintensity >= i_search_maxintensity_max) {
+                    is_findcoupling=false;
+                    i_search_maxintensity = 0;
+                }
+                i_search_maxintensity++;
+*/
+
+                Log.i(TAG, "Lens Calibration in progress: "+String.valueOf(i_search_maxintensity));
+                run_calibration_trhead.start();//new run_calibration().execute();
 
             }
         }
@@ -2831,11 +2842,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     }
 
 
-    private class run_measurement extends AsyncTask<Void, Void, Void> {
+    private class run_meas extends AsyncTask<Void, Void, Void> {
 
+        String my_gui_text = "";
         long t = 0;
         int i_meas = 0;
-        int n_measurement = 20;
+        int n_meas = 20;
         String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS", Locale.US).format(new Date());
         String mypath = mypath_measurements + timestamp + "/";
         File myDir = new File(mypath);
@@ -2843,18 +2855,21 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-
+            // Create Folder
             if (!myDir.exists()) {
                 if (!myDir.mkdirs()) {
                     return; //Cannot make directory
                 }
             }
 
-            timeLeftTextView.setText("Time left:");
+            is_findcoupling = true;
 
+            // Set some GUI components
             acquireProgressBar.setVisibility(View.VISIBLE); // Make invisible at first, then have it pop up
-            acquireProgressBar.setMax(n_measurement);
+            acquireProgressBar.setMax(n_meas);
+            Toast.makeText(AcquireActivity.this, "Start Measurements", Toast.LENGTH_SHORT).show();
 
+            // Wait a moment
             mSleep(20);
         }
 
@@ -2862,6 +2877,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         protected void onProgressUpdate(Void... params) {
             acquireProgressBar.setProgress(i_meas);
             long elapsed = SystemClock.elapsedRealtime() - t;
+            textViewGuiText.setText(my_gui_text);
+            //timeLeftTextView.setText();
         }
 
         void mSleep(int sleepVal) {
@@ -2875,17 +2892,21 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         @Override
         protected Void doInBackground(Void... params) {
 
-            publishProgress();
-
             // Wait for the data to propigate down the chain
             t = SystemClock.elapsedRealtime();
-
 
             // Start with a video measurement for XXX-seconds 
             i_meas = 0;
             while (is_measurement) {
 
+
+
+                // if no coupling has to be done -> measure!
                 if (!is_findcoupling) {
+                    // Once in a while update the GUI
+                    my_gui_text = "Measurement: " + String.valueOf(i_meas+1) + '/' + String.valueOf(n_meas);
+                    publishProgress();
+
                     // only perform the measurements if the camera is not looking for best coupling
                     i_meas++;
 
@@ -2897,7 +2918,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     publishMessage(topic_laser, String.valueOf(val_laser_red_global));
                     mSleep(500); //Let AEC stabalize if it's on
 
-
                     // start video-capture
                     if (!mIsRecordingVideo) {
                         startRecordingVideo();
@@ -2905,10 +2925,11 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                     // turn on fluctuation
                     publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_ampltiude_z));
-                    mSleep(t_duration_measurement * 1000); //Let AEC stabalize if it's on
+                    mSleep(t_duration_meas * 1000); //Let AEC stabalize if it's on
 
                     // turn off fluctuation
                     publishMessage(topic_lens_sofi_z, String.valueOf(0));
+                    mSleep(500); //Let AEC stabalize if it's on
 
                     // stop video-capture
                     if (mIsRecordingVideo) {
@@ -2919,6 +2940,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                             e.printStackTrace();
                         }
                     }
+                    mSleep(5000); //Let AEC stabalize if it's on
 
                     // turn off the laser
                     publishMessage(topic_laser, String.valueOf(0));
@@ -2926,8 +2948,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 }
 
                 // Do recalibration every  10 measurements
-                if ((i_meas % 2) == 0) {
+                int n_calibration = 2; // do lens calibration every n-th step
+                if ((i_meas % n_calibration) == 0) {
+                    Log.i(TAG, "Lens Calibration in progress");
+                    my_gui_text = "Lens Calibration in progress";
                     is_findcoupling = true;
+                    i_meas++;
                 }
             }
             return null;
@@ -2938,9 +2964,78 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             super.onPostExecute(result);
             // free memory
             is_findcoupling = false;
+            Toast.makeText(AcquireActivity.this, "Stop Measurements", Toast.LENGTH_SHORT).show();
             System.gc();
         }
     }
+
+
+    Thread run_calibration_trhead = new Thread() {
+        public void run() {
+            try {
+                isCameraBusy = true;
+
+                Log.i(TAG, "byte to bitmap");
+                i_search_maxintensity++;
+
+                long startTime = System.currentTimeMillis();
+                Mat src = new Mat();
+                Mat dst = new Mat();
+                Utils.bitmapToMat(global_bitmap, src);
+                Imgproc.cvtColor(src, dst, Imgproc.COLOR_BGRA2BGR);
+
+                // reset the lens's position in the first iteration by some value
+                if (i_search_maxintensity == 0) {
+                    val_lens_x_global_old = val_lens_x_global; // Save the value for later
+                    val_lens_x_global = val_lens_x_global - 50;
+                }
+
+                double i_mean = Core.mean(dst).val[0];
+                Log.i(TAG, "My Mean is:" + String.valueOf(i_mean));
+                if (i_mean > val_mean_max) {
+                    val_mean_max = i_mean;
+                    val_lens_x_maxintensity = val_lens_x_global;
+
+                    // increase the lens position
+                    val_lens_x_global++;
+                    publishMessage(topic_lens_x, String.valueOf(val_lens_x_global));
+                } else {
+                    // I'm done - max intensity found
+                    // Should be better ... noise can cancel this thing here!
+                    // is_findcoupling = false;
+
+                    if (val_lens_x_maxintensity == 0) val_lens_x_maxintensity = val_lens_x_global;
+                }
+
+                if (i_search_maxintensity >= i_search_maxintensity_max) {
+                    // if maximum number of search iteration is reached, break
+                    if (val_lens_x_maxintensity == 0) {
+                        val_lens_x_maxintensity = val_lens_x_global_old;
+                    }
+                    val_lens_x_global = val_lens_x_maxintensity;
+                    publishMessage(topic_lens_x, String.valueOf(val_lens_x_maxintensity));
+                    is_findcoupling = false;
+                    i_search_maxintensity = 0;
+                }
+
+
+                System.gc();
+
+                // free memory
+                src.release();
+                dst.release();
+                global_bitmap.recycle();
+
+
+                isCameraBusy = false;
+
+            }
+            catch(Exception v) {
+                System.out.println(v);
+            }
+        }
+    };
+
 
 
     private class run_calibration extends AsyncTask<Void, Void, Void> {
@@ -2949,6 +3044,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
+            Log.i(TAG, "Starting the calibration");
+            isCameraBusy = true;
         }
 
         @Override
@@ -2966,9 +3063,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         @Override
         protected Void doInBackground(Void... voids) {
-            Log.i("CAM2", "do in Background started");
             //takePicture();
-            Log.d(TAG, "byte to bitmap");
+            i_search_maxintensity++;
 
             long startTime = System.currentTimeMillis();
             Mat src = new Mat();
@@ -2977,9 +3073,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             Imgproc.cvtColor(src, dst, Imgproc.COLOR_BGRA2BGR);
 
             // reset the lens's position in the first iteration by some value 
-            if(i_search_maxintensity==0) {
+            if (i_search_maxintensity == 0) {
                 val_lens_x_global_old = val_lens_x_global; // Save the value for later
-                val_lens_x_global = val_lens_x_global-50;
+                val_lens_x_global = val_lens_x_global - 50;
             }
 
             double i_mean = Core.mean(dst).val[0];
@@ -2994,21 +3090,23 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             } else {
                 // I'm done - max intensity found
                 // Should be better ... noise can cancel this thing here!
-                is_findcoupling = false;
+                // is_findcoupling = false;
 
-                if (val_lens_x_maxintensity==0) val_lens_x_maxintensity=val_lens_x_global;
+                if (val_lens_x_maxintensity == 0) val_lens_x_maxintensity = val_lens_x_global;
             }
 
-            if (i_search_maxintensity >= i_search_maxintensity_max){
+            if (i_search_maxintensity >= i_search_maxintensity_max) {
                 // if maximum number of search iteration is reached, break 
-                if (val_lens_x_maxintensity==0) {
-                    val_lens_x_maxintensity=val_lens_x_global_old;
+                if (val_lens_x_maxintensity == 0) {
+                    val_lens_x_maxintensity = val_lens_x_global_old;
                 }
                 val_lens_x_global = val_lens_x_maxintensity;
                 publishMessage(topic_lens_x, String.valueOf(val_lens_x_maxintensity));
+                is_findcoupling = false;
+                i_search_maxintensity = 0;
             }
 
-            i_search_maxintensity ++;
+
 
             System.gc();
 
@@ -3022,6 +3120,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         @Override
         protected void onPostExecute(Void result) {
             System.gc();
+            isCameraBusy = false;
         }
 
     }

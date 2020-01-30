@@ -193,21 +193,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" >
 
-                <TextView
-                    android:id="@+id/textView17"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="left"
-                    android:paddingLeft="10dp"
-                    android:text="Z Distance"
-                    android:textAppearance="?android:attr/textAppearanceSmall" />
 
                 <TextView
-                    android:id="@+id/activityacquire_ZDist"
+                    android:id="@+id/textViewGuiText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="left"
-                    android:paddingLeft="10dp"
+                    android:textColor="@color/white"
+                    android:paddingLeft="15dp"
                     android:text="0.19 m"
                     android:textAppearance="?android:attr/textAppearanceSmall" />
             </LinearLayout>

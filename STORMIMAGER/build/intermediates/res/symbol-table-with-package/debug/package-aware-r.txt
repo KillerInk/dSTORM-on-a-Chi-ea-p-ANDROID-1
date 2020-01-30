@@ -1057,7 +1057,6 @@ id action_text
 id actions
 id activity_chooser_view_content
 id activityacquire_ExpVal
-id activityacquire_ZDist
 id add
 id alertTitle
 id all
@@ -1260,10 +1259,10 @@ id textSpacerNoButtons
 id textSpacerNoTitle
 id textView1
 id textView13
-id textView17
 id textView2
 id textView3
 id textViewExp
+id textViewGuiText
 id textViewLSposz
 id textViewLaser
 id textViewLensX
