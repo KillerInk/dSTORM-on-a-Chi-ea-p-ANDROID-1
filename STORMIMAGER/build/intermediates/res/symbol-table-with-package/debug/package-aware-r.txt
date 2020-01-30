@@ -1056,7 +1056,6 @@ id action_mode_close_button
 id action_text
 id actions
 id activity_chooser_view_content
-id activityacquire_ExpVal
 id add
 id alertTitle
 id all
@@ -1258,7 +1257,6 @@ id text2
 id textSpacerNoButtons
 id textSpacerNoTitle
 id textView1
-id textView13
 id textView2
 id textView3
 id textViewExp

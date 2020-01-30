@@ -210,7 +210,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     MqttAndroidClient mqttAndroidClient;
 
     // Server uri follows the format tcp://ipaddress
-    String serverUri = "192.168.43.86";
+    String serverUri = "0.0.0.0";
 
     final String mqttUser = "username";
     final String mqttPass = "pi";
@@ -226,7 +226,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     public static final String topic_stepper_x_fwd = "stepper/x/fwd";
     public static final String topic_stepper_x_bwd = "stepper/x/bwd";
     public static final String topic_lens_z = "lens/right/x";
-    public static final String topic_lens_x = "lens/right/y";
+    public static final String topic_lens_x = "lens/right/z";
     public static final String topic_laser = "laser/red";
     public static final String topic_lens_sofi_z = "lens/right/sofi/z";
     public static final String topic_lens_sofi_x = "lens/right/sofi/x";
@@ -853,16 +853,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 global_bitmap = mTextureView.getBitmap();
                 global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), mTextureView.getTransform(null), true);
 
-                /*
-                if (i_search_maxintensity >= i_search_maxintensity_max) {
-                    is_findcoupling=false;
-                    i_search_maxintensity = 0;
-                }
-                i_search_maxintensity++;
-*/
-
-                Log.i(TAG, "Lens Calibration in progress: "+String.valueOf(i_search_maxintensity));
-                run_calibration_trhead.start();//new run_calibration().execute();
+                // START THREAD AND ALIGN THE LENS
+                run_calibration_thread thread_1 = new run_calibration_thread("First  thread");
 
             }
         }
@@ -2970,15 +2962,35 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     }
 
 
-    Thread run_calibration_trhead = new Thread() {
-        public void run() {
+    // Java program to illustrate
+    // stopping a thread using boolean flag
+    class run_calibration_thread implements Runnable {
+
+        // to stop the thread
+        private boolean exit;
+
+        private String name;
+        Thread mythread;
+
+        run_calibration_thread (String threadname)
+        {
+            name = threadname;
+            mythread = new Thread(this, name);
+            exit = false;
+            mythread.start(); // Starting the thread
+        }
+
+        // execution of thread starts from run() method
+        public void run()
+        {
+
             try {
+
                 isCameraBusy = true;
 
-                Log.i(TAG, "byte to bitmap");
                 i_search_maxintensity++;
 
-                long startTime = System.currentTimeMillis();
+                // convert the Bitmap coming from the camera frame to MAT
                 Mat src = new Mat();
                 Mat dst = new Mat();
                 Utils.bitmapToMat(global_bitmap, src);
@@ -2993,19 +3005,14 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 double i_mean = Core.mean(dst).val[0];
                 Log.i(TAG, "My Mean is:" + String.valueOf(i_mean));
                 if (i_mean > val_mean_max) {
+                    // Save the position with maximum intensity
                     val_mean_max = i_mean;
                     val_lens_x_maxintensity = val_lens_x_global;
-
-                    // increase the lens position
-                    val_lens_x_global++;
-                    publishMessage(topic_lens_x, String.valueOf(val_lens_x_global));
-                } else {
-                    // I'm done - max intensity found
-                    // Should be better ... noise can cancel this thing here!
-                    // is_findcoupling = false;
-
-                    if (val_lens_x_maxintensity == 0) val_lens_x_maxintensity = val_lens_x_global;
                 }
+
+                // increase the lens position
+                val_lens_x_global++;
+                publishMessage(topic_lens_x, String.valueOf(val_lens_x_global));
 
                 if (i_search_maxintensity >= i_search_maxintensity_max) {
                     // if maximum number of search iteration is reached, break
@@ -3016,12 +3023,11 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     publishMessage(topic_lens_x, String.valueOf(val_lens_x_maxintensity));
                     is_findcoupling = false;
                     i_search_maxintensity = 0;
+                    exit = true;
                 }
 
-
-                System.gc();
-
                 // free memory
+                System.gc();
                 src.release();
                 dst.release();
                 global_bitmap.recycle();
@@ -3029,100 +3035,23 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                 isCameraBusy = false;
 
+
             }
             catch(Exception v) {
                 System.out.println(v);
             }
-        }
-    };
 
+            System.out.println(name + " Stopped.");
 
-
-    private class run_calibration extends AsyncTask<Void, Void, Void> {
-
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            Log.i(TAG, "Starting the calibration");
-            isCameraBusy = true;
         }
 
-        @Override
-        protected void onProgressUpdate(Void... params) {
+        // for stopping the thread
+        public void stop()
+        {
+            exit = true;
         }
-
-
-        void mSleep(int sleepVal) {
-            try {
-                Thread.sleep(sleepVal);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        protected Void doInBackground(Void... voids) {
-            //takePicture();
-            i_search_maxintensity++;
-
-            long startTime = System.currentTimeMillis();
-            Mat src = new Mat();
-            Mat dst = new Mat();
-            Utils.bitmapToMat(global_bitmap, src);
-            Imgproc.cvtColor(src, dst, Imgproc.COLOR_BGRA2BGR);
-
-            // reset the lens's position in the first iteration by some value 
-            if (i_search_maxintensity == 0) {
-                val_lens_x_global_old = val_lens_x_global; // Save the value for later
-                val_lens_x_global = val_lens_x_global - 50;
-            }
-
-            double i_mean = Core.mean(dst).val[0];
-            Log.i(TAG, "My Mean is:" + String.valueOf(i_mean));
-            if (i_mean > val_mean_max) {
-                val_mean_max = i_mean;
-                val_lens_x_maxintensity = val_lens_x_global;
-
-                // increase the lens position
-                val_lens_x_global++;
-                publishMessage(topic_lens_x, String.valueOf(val_lens_x_global));
-            } else {
-                // I'm done - max intensity found
-                // Should be better ... noise can cancel this thing here!
-                // is_findcoupling = false;
-
-                if (val_lens_x_maxintensity == 0) val_lens_x_maxintensity = val_lens_x_global;
-            }
-
-            if (i_search_maxintensity >= i_search_maxintensity_max) {
-                // if maximum number of search iteration is reached, break 
-                if (val_lens_x_maxintensity == 0) {
-                    val_lens_x_maxintensity = val_lens_x_global_old;
-                }
-                val_lens_x_global = val_lens_x_maxintensity;
-                publishMessage(topic_lens_x, String.valueOf(val_lens_x_maxintensity));
-                is_findcoupling = false;
-                i_search_maxintensity = 0;
-            }
-
-
-
-            System.gc();
-
-            // free memory
-            src.release();
-            dst.release();
-            global_bitmap.recycle();
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void result) {
-            System.gc();
-            isCameraBusy = false;
-        }
-
     }
+
+
 
 }
