@@ -12,7 +12,7 @@ import de.nanoimaging.stormimager.R;
 import de.nanoimaging.stormimager.acquisition.AcquireActivity;
 
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity  {
     private static final String TAG = "MainActivity";
 
 
