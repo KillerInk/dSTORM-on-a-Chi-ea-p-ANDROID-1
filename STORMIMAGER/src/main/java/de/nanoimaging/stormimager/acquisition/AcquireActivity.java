@@ -87,7 +87,6 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
@@ -129,9 +128,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     String global_isoval = "0";
     String global_expval = "0";
 
-    int t_period_measurement = 6 * 10; // in seconds
-    int t_duration_meas = 5; // in seconds
-    int t_period_realign = 10 * 10; // in seconds
+    int val_period_measurement = 6 * 10; // in seconds
+    int val_duration_measurement = 5; // in seconds
+    int val_period_calibration = 10 * 10; // in seconds
     boolean is_measurement = false; // switch for ongoing measurement
     boolean is_findcoupling = false;
     double val_mean_max = 0; // for coupling intensity
@@ -209,8 +208,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     //**********************************************************************************************
     MqttAndroidClient mqttAndroidClient;
 
+    SharedPreferences.Editor editor = null;
+
     // Server uri follows the format tcp://ipaddress
-    String serverUri = "0.0.0.0";
+    String myIPAddress = "0.0.0.0";
 
     final String mqttUser = "username";
     final String mqttPass = "pi";
@@ -225,8 +226,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     public static final String topic_stepper_y_bwd = "stepper/y/bwd";
     public static final String topic_stepper_x_fwd = "stepper/x/fwd";
     public static final String topic_stepper_x_bwd = "stepper/x/bwd";
-    public static final String topic_lens_z = "lens/right/x";
-    public static final String topic_lens_x = "lens/right/z";
+    public static final String topic_lens_z = "lens/right/z";
+    public static final String topic_lens_x = "lens/right/x";
     public static final String topic_laser = "laser/red";
     public static final String topic_lens_sofi_z = "lens/right/sofi/z";
     public static final String topic_lens_sofi_x = "lens/right/sofi/x";
@@ -239,7 +240,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     int val_increment_fine = 1; // steps for ++/--
     int PWM_RES = (int) (Math.pow(2, 15)) - 1;   // bitrate of the PWM signal
     int val_sofi_timeperiode = 10; // time to pause between toggling
-    int val_sofi_ampltiude_z = 20; // amplitude of the lens in each periode
+    int val_sofi_amplitude_z = 20; // amplitude of the lens in each periode
     int val_sofi_amplitude_x = 20; // amplitude of the lens in each periode
     boolean is_SOFI_x = false;
     boolean is_SOFI_z = false;
@@ -297,20 +298,26 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         // Initialize OpenCV using external library for now //TODO use internal!
         OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
 
+        // Take care of previously saved settings
+        SharedPreferences sharedPref = this.getSharedPreferences(
+                PREFERENCE_FILE_KEY, Context.MODE_PRIVATE);
+        editor = sharedPref.edit();
+
+        // Read old IP ADress if available and set it to the GUI
+        myIPAddress = sharedPref.getString("myIPAddress", myIPAddress);
+        val_period_calibration = Integer.parseInt(sharedPref.getString("val_period_calibration", String.valueOf(val_period_calibration)));
+        val_period_measurement = Integer.parseInt(sharedPref.getString("val_period_measurement", String.valueOf(val_period_measurement)));
+        val_duration_measurement = Integer.parseInt(sharedPref.getString("val_period_calibration", String.valueOf(val_duration_measurement)));
+        val_sofi_amplitude_x = Integer.parseInt(sharedPref.getString("val_sofi_amplitude_x", String.valueOf(val_sofi_amplitude_x)));
+        val_sofi_amplitude_z = Integer.parseInt(sharedPref.getString("val_sofi_amplitude_z", String.valueOf(val_sofi_amplitude_z)));
+
+
         // SET GUI components first
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         mTextureView = (AutoFitTextureView) this.findViewById(R.id.texture);
 
-        // LOAD shared prefs
-        // Take care of previously saved settings
-        SharedPreferences sharedPref = this.getSharedPreferences(
-                PREFERENCE_FILE_KEY, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPref.edit();
-
-        // Read old IP ADress if available and set it to the GUI
-        serverUri = sharedPref.getString("IP_ADDRESS", serverUri);
-
+        initialConfig();
         if (isNetworkAvailable()) {
             Toast.makeText(this, "Connecting MQTT", Toast.LENGTH_SHORT).show();
             initialConfig();
@@ -443,9 +450,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         seekBarLensX.setOnSeekBarChangeListener(
                 new SeekBar.OnSeekBarChangeListener() {
 
+
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        val_lens_x_global = progress;
+                        double normalizedseebar = (double)progress/(double)PWM_RES;
+                        double quadraticseekbar = Math.pow(normalizedseebar,2);
+                        val_lens_x_global = (int)(quadraticseekbar*(double)PWM_RES);
                         textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
                         publishMessage(topic_lens_x, String.valueOf(val_lens_x_global));
                     }
@@ -479,7 +489,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        val_lens_z_global = progress;
+                        double normalizedseebar = (double)progress/(double)PWM_RES;
+                        double quadraticseekbar = Math.pow(normalizedseebar,2);
+                        val_lens_z_global = (int)(quadraticseekbar*(double)PWM_RES);
                         textViewLensZ.setText(text_lens_z_pre + val_lens_z_global * 1.);
                         publishMessage(topic_lens_z, String.valueOf(val_lens_z_global));
                     }
@@ -513,7 +525,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        val_laser_red_global = progress;
+                        double normalizedseebar = (double)progress/(double)PWM_RES;
+                        double quadraticseekbar = Math.pow(normalizedseebar,2);
+                        val_laser_red_global = (int)(quadraticseekbar*(double)PWM_RES);
+
                         textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
                         publishMessage(topic_laser, String.valueOf(val_laser_red_global));
                     }
@@ -936,7 +951,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     /**
      * Whether or not the currently configured camera device is fixed-focus.
      */
-    private boolean mNoAFRun = false;
+    private boolean mNoAFRun = true;
 
     /**
      * Number of pending user requests to capture a photo.
@@ -1082,9 +1097,14 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                             }
 
                             // If auto-focus has reached locked state, we are ready to capture
-                            readyToCapture =
-                                    (afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED ||
-                                            afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED);
+                            if(true){
+                                readyToCapture = true;
+                            }
+                            else{
+                                readyToCapture =
+                                        (afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED ||
+                                                afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED);
+                            }
                         }
 
                         // If we are running on an non-legacy device, we should also wait until
@@ -1908,6 +1928,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     }
 
+
     /**
      * Runnable that saves an {@link Image} into the specified {@link File}, and updates
      * {@link android.provider.MediaStore} to include the resulting file.
@@ -2703,17 +2724,17 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
 
     private void initialConfig() {
-        mqttAndroidClient = new MqttAndroidClient(getApplicationContext(), "tcp://" + serverUri, clientId);
+        mqttAndroidClient = new MqttAndroidClient(getApplicationContext(), "tcp://" + myIPAddress, clientId);
         mqttAndroidClient.setCallback(new MqttCallbackExtended() {
             @Override
-            public void connectComplete(boolean reconnect, String serverURI) {
+            public void connectComplete(boolean reconnect, String myIPAddress) {
 
                 if (reconnect) {
-                    //addToHistory("Reconnected to : " + serverURI);
+                    //addToHistory("Reconnected to : " + myIPAddress);
                     // Because Clean Session is true, we need to re-subscribe
                     // subscribeToTopic();
                 } else {
-                    //addToHistory("Connected to: " + serverURI);
+                    //addToHistory("Connected to: " + myIPAddress);
                 }
             }
 
@@ -2742,7 +2763,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         mqttConnectOptions.setCleanSession(false);
 
         try {
-            //addToHistory("Connecting to " + serverUri);
+            //addToHistory("Connecting to " + myIPAddress);
             mqttAndroidClient.connect(mqttConnectOptions, null, new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
@@ -2761,7 +2782,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                 @Override
                 public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                    //addToHistory("Failed to connect to: " + serverUri);
+                    //addToHistory("Failed to connect to: " + myIPAddress);
                     Toast.makeText(AcquireActivity.this, "Connection attemp failed", Toast.LENGTH_SHORT).show();
                 }
             });
@@ -2808,6 +2829,77 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             Toast.makeText(AcquireActivity.this, "Something went wrong - propbably no connection established?", Toast.LENGTH_SHORT).show();
             Log.e(TAG, String.valueOf(e));
         }
+    }
+
+
+    public void setIPAddress(String mIPaddress) {
+        myIPAddress=mIPaddress;
+    }
+
+    public void setSOFIX(boolean misSOFI_X, int mvalSOFIX) {
+        val_sofi_amplitude_x = mvalSOFIX;
+        is_SOFI_x = misSOFI_X;
+        publishMessage(topic_lens_sofi_x, String.valueOf(val_sofi_amplitude_x));
+    }
+
+    public void setSOFIZ(boolean misSOFI_Z, int mvalSOFIZ) {
+        val_sofi_amplitude_z = mvalSOFIZ;
+        is_SOFI_z = misSOFI_Z;
+        publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
+    }
+
+    public void setValSOFIX(int mval_sofi_amplitude_x) {
+        val_sofi_amplitude_x=mval_sofi_amplitude_x;
+
+        // Save the IP address for next start
+        editor.putString("mval_sofi_amplitude_x", String.valueOf(mval_sofi_amplitude_x));
+        editor.commit();
+    }
+
+    public void setValSOFIZ(int mval_sofi_amplitude_z) {
+        val_sofi_amplitude_z =mval_sofi_amplitude_z;
+
+        // Save the IP address for next start
+        editor.putString("mval_sofi_amplitude_z", String.valueOf(mval_sofi_amplitude_z));
+        editor.commit();
+    }
+
+
+    public void setValDurationMeas(int mval_duration_measurement) {
+        val_duration_measurement=mval_duration_measurement;
+
+        // Save the IP address for next start
+        editor.putString("val_duration_measurement", String.valueOf(mval_duration_measurement));
+        editor.commit();
+    }
+
+    public void setValPeriodMeas(int mval_period_measurement) {
+        val_period_measurement=mval_period_measurement;
+
+        // Save the IP address for next start
+        editor.putString("val_period_measurement", String.valueOf(mval_period_measurement));
+        editor.commit();
+    }
+
+    public void setValPeriodCalibration(int mval_period_calibration) {
+        val_period_calibration=mval_period_calibration;
+
+        // Save the IP address for next start
+        editor.putString("val_period_calibration", String.valueOf(mval_period_calibration));
+        editor.commit();
+    }
+
+    void  mqtt_reconenect(String mIP) {
+
+        myIPAddress = mIP;
+        Toast.makeText(AcquireActivity.this, "IP-Address set to: " + myIPAddress, Toast.LENGTH_SHORT).show();
+        stopConnection();
+        initialConfig();
+
+        // Save the IP address for next start
+        editor.putString("myIPAddress", myIPAddress);
+        editor.commit();
+
     }
 
 
@@ -2868,8 +2960,11 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         @Override
         protected void onProgressUpdate(Void... params) {
             acquireProgressBar.setProgress(i_meas);
-            long elapsed = SystemClock.elapsedRealtime() - t;
             textViewGuiText.setText(my_gui_text);
+            // Update GUI
+            String text_lens_x_pre = "Lens (X): ";
+            textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+            seekBarLensX.setProgress(0);
             //timeLeftTextView.setText();
         }
 
@@ -2916,8 +3011,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     }
 
                     // turn on fluctuation
-                    publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_ampltiude_z));
-                    mSleep(t_duration_meas * 1000); //Let AEC stabalize if it's on
+                    publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
+                    mSleep(val_duration_measurement * 1000); //Let AEC stabalize if it's on
 
                     // turn off fluctuation
                     publishMessage(topic_lens_sofi_z, String.valueOf(0));
@@ -2942,6 +3037,11 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 // Do recalibration every  10 measurements
                 int n_calibration = 2; // do lens calibration every n-th step
                 if ((i_meas % n_calibration) == 0) {
+                    // turn on the laser
+                    publishMessage(topic_laser, String.valueOf(val_laser_red_global));
+                    mSleep(500); //Let AEC stabalize if it's on
+
+
                     Log.i(TAG, "Lens Calibration in progress");
                     my_gui_text = "Lens Calibration in progress";
                     is_findcoupling = true;
@@ -2954,6 +3054,11 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         @Override
         protected void onPostExecute(Void result) {
             super.onPostExecute(result);
+
+            // Set some GUI components
+            acquireProgressBar.setVisibility(View.GONE); // Make invisible at first, then have it pop up
+            textViewGuiText.setText("Done Measurements.");
+
             // free memory
             is_findcoupling = false;
             Toast.makeText(AcquireActivity.this, "Stop Measurements", Toast.LENGTH_SHORT).show();
@@ -2988,7 +3093,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                 isCameraBusy = true;
 
-                i_search_maxintensity++;
+
 
                 // convert the Bitmap coming from the camera frame to MAT
                 Mat src = new Mat();
@@ -2999,8 +3104,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 // reset the lens's position in the first iteration by some value
                 if (i_search_maxintensity == 0) {
                     val_lens_x_global_old = val_lens_x_global; // Save the value for later
-                    val_lens_x_global = val_lens_x_global - 50;
+                    val_lens_x_global = val_lens_x_global - 5000;
                 }
+                i_search_maxintensity++;
+
 
                 double i_mean = Core.mean(dst).val[0];
                 Log.i(TAG, "My Mean is:" + String.valueOf(i_mean));
@@ -3011,7 +3118,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 }
 
                 // increase the lens position
-                val_lens_x_global++;
+                val_lens_x_global = val_lens_x_global+100;
                 publishMessage(topic_lens_x, String.valueOf(val_lens_x_global));
 
                 if (i_search_maxintensity >= i_search_maxintensity_max) {

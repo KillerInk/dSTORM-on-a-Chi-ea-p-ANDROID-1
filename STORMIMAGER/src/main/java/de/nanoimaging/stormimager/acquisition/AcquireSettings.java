@@ -10,15 +10,13 @@ import android.text.InputType;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CheckBox;
-import android.widget.Spinner;
+import android.widget.CompoundButton;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 
 import de.nanoimaging.stormimager.R;
-
-import static android.R.layout.simple_spinner_item;
 
 public class AcquireSettings extends DialogFragment {
 
@@ -32,12 +30,19 @@ public class AcquireSettings extends DialogFragment {
     // Use this instance of the interface to deliver action events
     AcquireSettings.NoticeDialogListener mListener;
 
-    private TextView acquireSettingsSetDatasetName;
-    private TextView acquireSettingsMultiModeCountTextView;
-    private TextView acquireSettingsSetMultiModeDelayEditText;
-    private TextView acquireSettingsAECCompensationEditText;
+    private TextView acquireSettingsValPeriodMeas;
+    private TextView acquireSettingsIPaddress;
+    private TextView acquireSettingsValSOFIX;
+    private TextView acquireSettingsValSOFIZ;
+    private TextView acquireSettingsValDurationMeas;
+    private TextView acquireSettingsValPerioCalibration;
 
+    private Button acquireSettingsButtonIPGO;
 
+    private ToggleButton acquireSettingsSOFIXToggle;
+    private ToggleButton acquireSettingsSOFIZToggle;
+
+    
 
     // Override the Fragment.onAttach() method to instantiate the NoticeDialogListener
     @Override
@@ -64,16 +69,46 @@ public class AcquireSettings extends DialogFragment {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         // Get the layout inflater
         LayoutInflater inflater = getActivity().getLayoutInflater();
-        View view = inflater.inflate(R.layout.activity_acquire_settings, null);
+        View content = inflater.inflate(R.layout.activity_acquire_settings, null);
 
         // Inflate and set the layout for the dialog
         // Pass null as the parent view because its going in the dialog layout
-        builder.setView(view);
+        builder.setView(content);
         // Add action buttons
         builder.setPositiveButton("Set", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int id) {
+
                 AcquireActivity callingActivity = (AcquireActivity) getActivity();
+
+                String mIPaddress = acquireSettingsIPaddress.getText().toString();
+                Log.d(TAG,String.format("mIPaddress: %s", mIPaddress));
+                callingActivity.setIPAddress(mIPaddress);
+
+                int mValDurationMeas = Integer.parseInt(acquireSettingsValDurationMeas.getText().toString());
+                Log.d(TAG,String.format("mValDurationMeas: %s", mValDurationMeas));
+                callingActivity.setValDurationMeas(mValDurationMeas);
+
+                int mValPeriodMeas = Integer.parseInt(acquireSettingsValPeriodMeas.getText().toString());
+                Log.d(TAG,String.format("mValPeriodMeas: %s", mValPeriodMeas));
+                callingActivity.setValPeriodMeas(mValPeriodMeas);
+
+                int mValPeriodCalibration = Integer.parseInt(acquireSettingsValPerioCalibration.getText().toString());
+                Log.d(TAG,String.format("mValPeriodCalibration: %s", mValPeriodCalibration));
+                callingActivity.setValPeriodCalibration(mValPeriodCalibration);
+
+                int mValSOFIX = Integer.parseInt(acquireSettingsValSOFIX.getText().toString());
+                Log.d(TAG,String.format("mValSOFIX: %s", mValSOFIX));
+                callingActivity.setValSOFIX(mValSOFIX);
+
+                int mValSOFIZ = Integer.parseInt(acquireSettingsValSOFIZ.getText().toString());
+                Log.d(TAG,String.format("mValSOFIX: %s", mValSOFIZ));
+                callingActivity.setValSOFIZ(mValSOFIZ);
+
+                callingActivity.setSOFIX(acquireSettingsSOFIXToggle.isChecked(), mValSOFIX);
+                callingActivity.setSOFIZ(acquireSettingsSOFIZToggle.isChecked(), mValSOFIZ);
+
+                callingActivity.mqtt_reconenect(acquireSettingsIPaddress.getText().toString());
 
             }
         })
@@ -85,63 +120,85 @@ public class AcquireSettings extends DialogFragment {
 
         AcquireActivity callingActivity = (AcquireActivity) getActivity();
 
-/*
+        // ASsign the GUI components 
+        acquireSettingsIPaddress = (TextView) content.findViewById(R.id.editText_ip_address);
+        acquireSettingsIPaddress.setText(callingActivity.myIPAddress);
+
+        acquireSettingsValSOFIX = (TextView) content.findViewById(R.id.editText_SOFI_x);
+        acquireSettingsValSOFIX.setInputType(InputType.TYPE_CLASS_NUMBER);
+        acquireSettingsValSOFIX.setText(String.valueOf(callingActivity.val_sofi_amplitude_x));
+
+        acquireSettingsValSOFIZ = (TextView) content.findViewById(R.id.editText_SOFI_z);
+        acquireSettingsValSOFIZ.setInputType(InputType.TYPE_CLASS_NUMBER);
+        acquireSettingsValSOFIZ.setText(String.valueOf(callingActivity.val_sofi_amplitude_z));
+
+        acquireSettingsValPeriodMeas = (TextView) content.findViewById(R.id.editText_period_measure);
+        acquireSettingsValPeriodMeas.setInputType(InputType.TYPE_CLASS_NUMBER);
+        acquireSettingsValPeriodMeas.setText(String.valueOf(callingActivity.val_period_measurement));
+
+        acquireSettingsValDurationMeas = (TextView) content.findViewById(R.id.editText_duraction_measure);
+        acquireSettingsValDurationMeas.setInputType(InputType.TYPE_CLASS_NUMBER);
+        acquireSettingsValDurationMeas.setText(String.valueOf(callingActivity.val_duration_measurement));
+
+        acquireSettingsValPerioCalibration = (TextView) content.findViewById(R.id.editText_period_align);
+        acquireSettingsValPerioCalibration.setInputType(InputType.TYPE_CLASS_NUMBER);
+        acquireSettingsValPerioCalibration.setText(String.valueOf(callingActivity.val_period_calibration));
 
 
-        acquireSettingsMultiModeCountTextView = (TextView) view.findViewById(R.id.acquireSettingsMultiModeCountTextView);
-        acquireSettingsMultiModeCountTextView.setInputType(InputType.TYPE_CLASS_NUMBER);
-        //acquireSettingsMultiModeCountTextView.setText(String.format("%d", callingActivity.mmCount));
-
-        acquireSettingsAECCompensationEditText = (TextView) view.findViewById(R.id.acquireSettingsAECCompensationEditText);
-        acquireSettingsAECCompensationEditText.setInputType(InputType.TYPE_NUMBER_FLAG_SIGNED);
-        //acquireSettingsAECCompensationEditText.setText(String.format("%d", callingActivity.aecCompensation));
-
-        acquireSettingsSetMultiModeDelayEditText = (TextView) view.findViewById(R.id.acquireSettingsSetMultiModeDelayEditText);
-        acquireSettingsSetMultiModeDelayEditText.setInputType(InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        //acquireSettingsSetMultiModeDelayEditText.setText(String.format("%.2f", callingActivity.mmDelay));
-
-        acquireSettingsSetDatasetName = (TextView) view.findViewById(R.id.acquireSettingsSetDatasetName);
-        acquireSettingsSetDatasetName.setInputType(InputType.TYPE_CLASS_TEXT);
-        //acquireSettingsSetDatasetName.setText(callingActivity.datasetName);
-
-        //acquireSettingsHDRCheckbox.setChecked(callingActivity.usingHDR);
-
-
-        // Select imaging method as a spinner
-        Spinner dropdownAcqMethods = (Spinner) view.findViewById(R.id.acqSettingsModeSpinner);
-        String[] items = new String[]{BFMode, MMMode, FPMMode, DFMode, DPCMode};
-        ArrayAdapter<String>acquireSettingsSpinnerMethods = new ArrayAdapter<String>(this.getActivity(), simple_spinner_item, items);
-        dropdownAcqMethods.setAdapter(acquireSettingsSpinnerMethods);
-
-        dropdownAcqMethods.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-                String spinnerVal= parent.getSelectedItem().toString();
+        acquireSettingsButtonIPGO = (Button) content.findViewById(R.id.button_ip_address_go);
+        acquireSettingsButtonIPGO.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View view) {
                 AcquireActivity callingActivity = (AcquireActivity) getActivity();
+                callingActivity.mqtt_reconenect(acquireSettingsIPaddress.getText().toString());
+                Log.i(TAG, "IP-Address: "+acquireSettingsIPaddress.getText().toString());
             }
-            public void onNothingSelected(AdapterView<?> parent) {
+        });
+
+        // toggle buttons
+        acquireSettingsSOFIXToggle = content.findViewById(R.id.button_SOFI_x);
+        acquireSettingsSOFIXToggle.setText("SOFI (x): 0");
+        acquireSettingsSOFIXToggle.setTextOn("SOFI (x): 1");
+        acquireSettingsSOFIXToggle.setTextOff("SOFI (x): 0");
+
+        //******************* SOFI-Mode  ********************************************//
+        // This is to let the lens vibrate by a certain amount
+        acquireSettingsSOFIXToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    Log.i(TAG, "Checked");
+                    int myamplitude_x = Integer.parseInt(acquireSettingsValSOFIX.getText().toString());
+                    Log.i(TAG, "Set the amplitude to: " + String.valueOf(myamplitude_x));
+                    callingActivity.setSOFIX(true, myamplitude_x);
+                } else {
+                    callingActivity.setSOFIX(false, 0);
+                    }
             }
+
+        });
+
+        // toggle buttons
+        acquireSettingsSOFIZToggle = content.findViewById(R.id.button_SOFI_z);
+        acquireSettingsSOFIZToggle.setText("SOFI (z): 0");
+        acquireSettingsSOFIZToggle.setTextOn("SOFI (z): 1");
+        acquireSettingsSOFIZToggle.setTextOff("SOFI (z): 0");
+
+        //******************* SOFI-Mode  ********************************************//
+        // This is to let the lens vibrate by a certain amount
+        acquireSettingsSOFIZToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    int myamplitude_z = Integer.parseInt(acquireSettingsValSOFIZ.getText().toString());
+                    Log.i(TAG, "Set the amplitude to: " + String.valueOf(myamplitude_z));
+                    callingActivity.setSOFIZ(true, myamplitude_z);
+                } else {
+                    callingActivity.setSOFIZ(false, 0);
+                }
+            }
+
         });
 
 
 
-        // Select ISO value using a spinner
-        Spinner dropdownISOVal = (Spinner) view.findViewById(R.id.acqSettingsISOSpinner);
-        String[] ISOitems = new String[]{"100", "200", "300", "500", "1000"};
-        ArrayAdapter<String>acquireSettingsSpinnerISO = new ArrayAdapter<String>(this.getActivity(), simple_spinner_item, ISOitems);
-        dropdownISOVal.setAdapter(acquireSettingsSpinnerISO);
-
-        dropdownISOVal.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-                String spinnerVal= parent.getSelectedItem().toString();
-                AcquireActivity callingActivity = (AcquireActivity) getActivity();
-
-            }
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
-
-
-*/
         return builder.create();
     }
 

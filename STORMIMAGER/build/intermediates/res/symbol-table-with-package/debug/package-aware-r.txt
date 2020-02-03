@@ -1085,8 +1085,6 @@ id buttonPanel
 id button_SOFI_x
 id button_SOFI_z
 id button_ip_address_go
-id button_load_defaultip
-id button_load_localip
 id button_x_bwd
 id button_x_fwd
 id button_y_bwd

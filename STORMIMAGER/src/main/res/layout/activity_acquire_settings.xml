@@ -28,22 +28,6 @@
                 android:textSize="15sp" />
 
             <Button
-                android:id="@+id/button_load_defaultip"
-                android:layout_width="wrap_content"
-                android:layout_height="24pt"
-                android:layout_weight="1"
-                android:text="IPd"
-                android:textSize="15sp" />
-
-            <Button
-                android:id="@+id/button_load_localip"
-                android:layout_width="wrap_content"
-                android:layout_height="24pt"
-                android:layout_weight="1"
-                android:text="IP!"
-                android:textSize="15sp" />
-
-            <Button
                 android:id="@+id/button_ip_address_go"
                 android:layout_width="wrap_content"
                 android:layout_height="24pt"
@@ -62,7 +46,7 @@
 
             <TextView
                 android:id="@+id/textview_sofi_x"
-                android:layout_width="wrap_content"
+                android:layout_width="100pt"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="SOFI (X)"
@@ -76,7 +60,7 @@
                 android:text="SOFI-X" />
 
             <EditText
-                android:id="@+id/editText_SOFI_z"
+                android:id="@+id/editText_SOFI_x"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -94,7 +78,7 @@
 
             <TextView
                 android:id="@+id/textview_sofi_z"
-                android:layout_width="wrap_content"
+                android:layout_width="100pt"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="SOFI (Z)"
@@ -108,7 +92,7 @@
                 android:text="SOFI-Z" />
 
             <EditText
-                android:id="@+id/editText_SOFI_x"
+                android:id="@+id/editText_SOFI_z"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -127,7 +111,7 @@
 
             <TextView
                 android:id="@+id/textview_period_measure"
-                android:layout_width="wrap_content"
+                android:layout_width="100pt"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Periodicity (Measure)"
@@ -153,7 +137,7 @@
 
             <TextView
                 android:id="@+id/textview_duration_measure"
-                android:layout_width="wrap_content"
+                android:layout_width="100pt"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Duration (Measure)"
@@ -167,7 +151,8 @@
                 android:digits="0123456789"
                 android:ems="10"
                 android:inputType="number"
-                android:text="10" />
+                android:text="10"
+                android:textSize="15sp" />
 
         </LinearLayout>
 
@@ -179,10 +164,10 @@
 
             <TextView
                 android:id="@+id/textview_period_align"
-                android:layout_width="wrap_content"
+                android:layout_width="100pt"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Period (Laser)"
+                android:text="Period (Align)"
                 android:textSize="15sp" />
 
             <EditText
