@@ -11,8 +11,9 @@ import org.opencv.core.Mat;
 
 import de.nanoimaging.stormimager.R;
 
-import static org.opencv.imgcodecs.Imgcodecs.CV_LOAD_IMAGE_ANYDEPTH;
+//import static org.opencv.imgcodecs.Imgcodecs.CV_LOAD_IMAGE_ANYDEPTH;
 import static org.opencv.imgcodecs.Imgcodecs.imread;
+import org.opencv.imgcodecs.Imgcodecs;
 
 /**
  * Created by Bene on 20.10.17.
@@ -40,7 +41,7 @@ public class AcquireResultActivity extends Activity {
 
 
         if(imagepath!=""){
-            Mat qDPCresultMat = imread(imagepath, CV_LOAD_IMAGE_ANYDEPTH);
+            Mat qDPCresultMat = imread(imagepath, Imgcodecs.IMREAD_ANYDEPTH);
             Bitmap qDPCresultBMP = null;
             qDPCresultBMP = Bitmap.createBitmap(qDPCresultMat.cols(), qDPCresultMat.rows(), Bitmap.Config.ARGB_8888);
             Utils.matToBitmap(qDPCresultMat, qDPCresultBMP);

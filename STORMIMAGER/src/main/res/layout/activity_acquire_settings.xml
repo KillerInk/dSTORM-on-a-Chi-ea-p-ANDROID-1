@@ -167,11 +167,11 @@
                 android:layout_width="100pt"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Period (Align)"
+                android:text="Realign (Nth-meas.)"
                 android:textSize="15sp" />
 
             <EditText
-                android:id="@+id/editText_period_align"
+                android:id="@+id/editText_nperiod_realign"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"

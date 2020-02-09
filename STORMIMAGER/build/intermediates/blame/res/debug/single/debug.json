@@ -4,16 +4,8 @@
         "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/menu/line.xml"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxhdpi-v4_design_ic_visibility_off.png.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-xxhdpi-v4/design_ic_visibility_off.png"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-mdpi-v4_abc_ic_menu_cut_mtrl_alpha.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-mdpi-v4/abc_ic_menu_cut_mtrl_alpha.png"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/anim_design_snackbar_out.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/anim/design_snackbar_out.xml"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-hdpi-v4_abc_btn_radio_to_on_mtrl_000.png.flat",
@@ -52,10 +44,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xhdpi-v4/abc_ic_star_black_36dp.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-mdpi-v4_design_ic_visibility.png.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-mdpi-v4/design_ic_visibility.png"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-mdpi-v4_abc_list_selector_disabled_holo_dark.9.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-mdpi-v4/abc_list_selector_disabled_holo_dark.9.png"
     },
@@ -70,10 +58,6 @@
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_abc_screen_content_include.xml.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/layout/abc_screen_content_include.xml"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-anydpi-v21_design_ic_visibility.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-anydpi-v21/design_ic_visibility.xml"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-hdpi-v4_abc_ic_commit_search_api_mtrl_alpha.png.flat",
@@ -142,10 +126,6 @@
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxhdpi-v4_abc_ic_star_half_black_16dp.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxhdpi-v4/abc_ic_star_half_black_16dp.png"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_design_layout_tab_icon.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout/design_layout_tab_icon.xml"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-mdpi-v4_abc_menu_hardkey_panel_mtrl_mult.9.png.flat",
@@ -228,10 +208,6 @@
         "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/drawable-nodpi/transparent.xml"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_design_navigation_menu_item.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout/design_navigation_menu_item.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-nodpi_img9.jpg.flat",
         "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/drawable-nodpi/img9.jpg"
     },
@@ -292,10 +268,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-hdpi-v4/abc_scrubber_primary_mtrl_alpha.9.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxxhdpi-v4_design_ic_visibility_off.png.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-xxxhdpi-v4/design_ic_visibility_off.png"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/color-v11_abc_background_cache_hint_selector_material_light.xml.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/color-v11/abc_background_cache_hint_selector_material_light.xml"
     },
@@ -350,10 +322,6 @@
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-nodpi_img5.jpg.flat",
         "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/drawable-nodpi/img5.jpg"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-hdpi-v4_design_ic_visibility.png.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-hdpi-v4/design_ic_visibility.png"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xhdpi-v4_abc_list_selector_disabled_holo_light.9.png.flat",
@@ -416,10 +384,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-mdpi-v4/abc_text_select_handle_left_mtrl_dark.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_design_navigation_menu.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout/design_navigation_menu.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxhdpi-v4_abc_btn_radio_to_on_mtrl_015.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxhdpi-v4/abc_btn_radio_to_on_mtrl_015.png"
     },
@@ -440,10 +404,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxhdpi-v4/abc_btn_check_to_on_mtrl_015.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxhdpi-v4_design_ic_visibility.png.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-xxhdpi-v4/design_ic_visibility.png"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-mdpi-v4_abc_textfield_default_mtrl_alpha.9.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-mdpi-v4/abc_textfield_default_mtrl_alpha.9.png"
     },
@@ -454,14 +414,6 @@
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxhdpi-v4_abc_list_pressed_holo_light.9.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxhdpi-v4/abc_list_pressed_holo_light.9.png"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_design_navigation_item_separator.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout/design_navigation_item_separator.xml"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_design_layout_snackbar.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout/design_layout_snackbar.xml"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-mdpi-v4_abc_scrubber_control_to_pressed_mtrl_005.png.flat",
@@ -556,10 +508,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/layout/support_simple_spinner_dropdown_item.xml"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/color_design_tint_password_toggle.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/color/design_tint_password_toggle.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxxhdpi-v4_abc_ic_star_black_16dp.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxxhdpi-v4/abc_ic_star_black_16dp.png"
     },
@@ -588,16 +536,8 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-ldrtl-xxxhdpi-v17/abc_ic_menu_copy_mtrl_am_alpha.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-v21_design_bottom_navigation_item_background.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-v21/design_bottom_navigation_item_background.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-mdpi-v4_abc_text_select_handle_right_mtrl_light.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-mdpi-v4/abc_text_select_handle_right_mtrl_light.png"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable_design_fab_background.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable/design_fab_background.xml"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-hdpi-v4_abc_list_focused_holo.9.png.flat",
@@ -664,10 +604,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-ldrtl-mdpi-v17/abc_ic_menu_copy_mtrl_am_alpha.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-mdpi-v4_design_ic_visibility_off.png.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-mdpi-v4/design_ic_visibility_off.png"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-hdpi-v4_abc_btn_radio_to_on_mtrl_015.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-hdpi-v4/abc_btn_radio_to_on_mtrl_015.png"
     },
@@ -692,10 +628,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xhdpi-v4/abc_ic_star_half_black_36dp.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-anydpi-v21_design_ic_visibility_off.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-anydpi-v21/design_ic_visibility_off.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-mdpi-v4_abc_ic_commit_search_api_mtrl_alpha.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-mdpi-v4/abc_ic_commit_search_api_mtrl_alpha.png"
     },
@@ -718,6 +650,10 @@
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable_abc_text_cursor_material.xml.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable/abc_text_cursor_material.xml"
+    },
+    {
+        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable_abc_edit_text_material.xml.flat",
+        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable/abc_edit_text_material.xml"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxxhdpi-v4_abc_ic_menu_copy_mtrl_am_alpha.png.flat",
@@ -812,10 +748,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-mdpi-v4/abc_switch_track_mtrl_alpha.9.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-v21_avd_show_password.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-v21/avd_show_password.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/color_abc_primary_text_disable_only_material_light.xml.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/color/abc_primary_text_disable_only_material_light.xml"
     },
@@ -838,10 +770,6 @@
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xhdpi-v4_abc_scrubber_control_to_pressed_mtrl_005.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xhdpi-v4/abc_scrubber_control_to_pressed_mtrl_005.png"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xhdpi-v4_design_ic_visibility_off.png.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-xhdpi-v4/design_ic_visibility_off.png"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-hdpi-v4_abc_scrubber_control_to_pressed_mtrl_000.png.flat",
@@ -876,14 +804,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxxhdpi-v4/abc_scrubber_control_to_pressed_mtrl_005.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_design_navigation_item_subheader.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout/design_navigation_item_subheader.xml"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_design_layout_tab_text.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout/design_layout_tab_text.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable_abc_ratingbar_small_material.xml.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable/abc_ratingbar_small_material.xml"
     },
@@ -896,10 +816,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable/abc_cab_background_internal_bg.xml"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_design_bottom_navigation_item.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout/design_bottom_navigation_item.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xhdpi-v4_abc_cab_background_top_mtrl_alpha.9.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xhdpi-v4/abc_cab_background_top_mtrl_alpha.9.png"
     },
@@ -908,16 +824,8 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-ldrtl-xhdpi-v17/abc_ic_menu_copy_mtrl_am_alpha.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/anim-v21_design_bottom_sheet_slide_out.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/anim-v21/design_bottom_sheet_slide_out.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxhdpi-v4_abc_list_focused_holo.9.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxhdpi-v4/abc_list_focused_holo.9.png"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_design_navigation_item_header.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout/design_navigation_item_header.xml"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-hdpi-v4_abc_textfield_activated_mtrl_alpha.9.png.flat",
@@ -996,10 +904,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/layout/abc_activity_chooser_view_list_item.xml"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout-sw600dp-v13_design_layout_snackbar.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout-sw600dp-v13/design_layout_snackbar.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xhdpi_play.png.flat",
         "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/drawable-xhdpi/play.png"
     },
@@ -1046,10 +950,6 @@
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-mdpi-v4_abc_spinner_mtrl_am_alpha.9.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-mdpi-v4/abc_spinner_mtrl_am_alpha.9.png"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-v21_design_password_eye.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-v21/design_password_eye.xml"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable_abc_btn_default_mtrl_shape.xml.flat",
@@ -1204,10 +1104,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-ldrtl-xxxhdpi-v17/abc_ic_menu_cut_mtrl_alpha.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/color-v23_design_tint_password_toggle.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/color-v23/design_tint_password_toggle.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxhdpi-v4_abc_btn_radio_to_on_mtrl_000.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxhdpi-v4/abc_btn_radio_to_on_mtrl_000.png"
     },
@@ -1288,10 +1184,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable/abc_seekbar_thumb_material.xml"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-v21_avd_hide_password.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-v21/avd_hide_password.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxhdpi-v4_abc_list_longpressed_holo.9.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxhdpi-v4/abc_list_longpressed_holo.9.png"
     },
@@ -1336,12 +1228,12 @@
         "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/menu/menu.xml"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable_microscope_icon.png.flat",
-        "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/drawable/microscope_icon.png"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-mdpi-v4_abc_scrubber_primary_mtrl_alpha.9.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-mdpi-v4/abc_scrubber_primary_mtrl_alpha.9.png"
+    },
+    {
+        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable_microscope_icon.png.flat",
+        "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/drawable/microscope_icon.png"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-mdpi-v4_abc_ic_menu_selectall_mtrl_alpha.png.flat",
@@ -1382,10 +1274,6 @@
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxhdpi-v4_abc_text_select_handle_right_mtrl_light.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxhdpi-v4/abc_text_select_handle_right_mtrl_light.png"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_design_layout_snackbar_include.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout/design_layout_snackbar_include.xml"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_abc_expanded_menu_layout.xml.flat",
@@ -1436,6 +1324,10 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-mdpi-v4/abc_tab_indicator_mtrl_alpha.9.png"
     },
     {
+        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable_abc_btn_colored_material.xml.flat",
+        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable/abc_btn_colored_material.xml"
+    },
+    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxxhdpi-v4_abc_btn_check_to_on_mtrl_015.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxxhdpi-v4/abc_btn_check_to_on_mtrl_015.png"
     },
@@ -1482,6 +1374,10 @@
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_notification_template_media.xml.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/971a5b69b89846008f16f9726686958d/support-media-compat-26.1.0/res/layout/notification_template_media.xml"
+    },
+    {
+        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_notification_template_icon_group.xml.flat",
+        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/acedb5a439482afea3702661a6a2cc74/support-compat-26.1.0/res/layout/notification_template_icon_group.xml"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-nodpi_marker2.png.flat",
@@ -1532,18 +1428,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxhdpi-v4/abc_btn_switch_to_on_mtrl_00001.9.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_design_text_input_password_icon.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout/design_text_input_password_icon.xml"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxxhdpi-v4_design_ic_visibility.png.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-xxxhdpi-v4/design_ic_visibility.png"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable_design_snackbar_background.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable/design_snackbar_background.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-nodpi_img1.jpg.flat",
         "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/drawable-nodpi/img1.jpg"
     },
@@ -1584,10 +1468,6 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxhdpi-v4/abc_text_select_handle_middle_mtrl_dark.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_design_bottom_sheet_dialog.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout/design_bottom_sheet_dialog.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-nodpi_img0.jpg.flat",
         "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/drawable-nodpi/img0.jpg"
     },
@@ -1604,28 +1484,12 @@
         "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/layout/presentation_layout.xml"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/color_design_error.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/color/design_error.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xhdpi-v4_abc_ab_share_pack_mtrl_alpha.9.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xhdpi-v4/abc_ab_share_pack_mtrl_alpha.9.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_design_menu_item_action_area.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout/design_menu_item_action_area.xml"
-    },
-    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_notification_media_cancel_action.xml.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/971a5b69b89846008f16f9726686958d/support-media-compat-26.1.0/res/layout/notification_media_cancel_action.xml"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xhdpi-v4_design_ic_visibility.png.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-xhdpi-v4/design_ic_visibility.png"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable_navigation_empty_icon.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable/navigation_empty_icon.xml"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxhdpi-v4_abc_btn_switch_to_on_mtrl_00012.9.png.flat",
@@ -1656,16 +1520,16 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xhdpi-v4/abc_switch_track_mtrl_alpha.9.png"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-nodpi_pushpin_blue.png.flat",
-        "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/drawable-nodpi/pushpin_blue.png"
+        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxxhdpi-v4_abc_ic_star_half_black_36dp.png.flat",
+        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxxhdpi-v4/abc_ic_star_half_black_36dp.png"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-nodpi_img3.jpg.flat",
         "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/drawable-nodpi/img3.jpg"
     },
     {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxxhdpi-v4_abc_ic_star_half_black_36dp.png.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxxhdpi-v4/abc_ic_star_half_black_36dp.png"
+        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-nodpi_pushpin_blue.png.flat",
+        "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/drawable-nodpi/pushpin_blue.png"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_tooltip.xml.flat",
@@ -1678,10 +1542,6 @@
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable_notification_icon_background.xml.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/acedb5a439482afea3702661a6a2cc74/support-compat-26.1.0/res/drawable/notification_icon_background.xml"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/anim-v21_design_bottom_sheet_slide_in.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/anim-v21/design_bottom_sheet_slide_in.xml"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/anim_abc_slide_out_bottom.xml.flat",
@@ -1724,6 +1584,10 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-hdpi-v4/abc_cab_background_top_mtrl_alpha.9.png"
     },
     {
+        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout-v16_notification_template_custom_big.xml.flat",
+        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/acedb5a439482afea3702661a6a2cc74/support-compat-26.1.0/res/layout-v16/notification_template_custom_big.xml"
+    },
+    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_abc_search_dropdown_item_icons_2line.xml.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/layout/abc_search_dropdown_item_icons_2line.xml"
     },
@@ -1750,10 +1614,6 @@
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-hdpi-v4_notification_bg_normal_pressed.9.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/acedb5a439482afea3702661a6a2cc74/support-compat-26.1.0/res/drawable-hdpi-v4/notification_bg_normal_pressed.9.png"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-hdpi-v4_design_ic_visibility_off.png.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/drawable-hdpi-v4/design_ic_visibility_off.png"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/color_abc_btn_colored_text_material.xml.flat",
@@ -1788,6 +1648,10 @@
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xhdpi-v4/abc_btn_check_to_on_mtrl_015.png"
     },
     {
+        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_notification_action_tombstone.xml.flat",
+        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/acedb5a439482afea3702661a6a2cc74/support-compat-26.1.0/res/layout/notification_action_tombstone.xml"
+    },
+    {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxhdpi-v4_abc_text_select_handle_left_mtrl_dark.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xxhdpi-v4/abc_text_select_handle_left_mtrl_dark.png"
     },
@@ -1806,14 +1670,6 @@
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xhdpi-v4_abc_btn_radio_to_on_mtrl_015.png.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/drawable-xhdpi-v4/abc_btn_radio_to_on_mtrl_015.png"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/animator-v21_design_appbar_state_list_animator.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/animator-v21/design_appbar_state_list_animator.xml"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_design_navigation_item.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/layout/design_navigation_item.xml"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-xxhdpi-v4_abc_scrubber_control_to_pressed_mtrl_000.png.flat",
@@ -1862,6 +1718,10 @@
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-nodpi_img15.jpg.flat",
         "source": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/res/drawable-nodpi/img15.jpg"
+    },
+    {
+        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/layout_notification_action.xml.flat",
+        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/acedb5a439482afea3702661a6a2cc74/support-compat-26.1.0/res/layout/notification_action.xml"
     },
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/drawable-hdpi-v4_abc_ic_menu_copy_mtrl_am_alpha.png.flat",
@@ -1922,9 +1782,5 @@
     {
         "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/color_switch_thumb_material_dark.xml.flat",
         "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/b28c3dfacec283a46c3ce58afd169202/appcompat-v7-26.1.0/res/color/switch_thumb_material_dark.xml"
-    },
-    {
-        "merged": "/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/res/merged/debug/anim_design_snackbar_in.xml.flat",
-        "source": "/Users/bene/.gradle/caches/transforms-2/files-2.1/fa761254aaa8e1689e6752d7e2f87c59/design-26.1.0/res/anim/design_snackbar_in.xml"
     }
 ]

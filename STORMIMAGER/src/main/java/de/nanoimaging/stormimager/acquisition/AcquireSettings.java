@@ -11,7 +11,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.ToggleButton;
@@ -35,7 +34,7 @@ public class AcquireSettings extends DialogFragment {
     private TextView acquireSettingsValSOFIX;
     private TextView acquireSettingsValSOFIZ;
     private TextView acquireSettingsValDurationMeas;
-    private TextView acquireSettingsValPerioCalibration;
+    private TextView acquireSettingsValNPeriodsCalibration;
 
     private Button acquireSettingsButtonIPGO;
 
@@ -93,9 +92,9 @@ public class AcquireSettings extends DialogFragment {
                 Log.d(TAG,String.format("mValPeriodMeas: %s", mValPeriodMeas));
                 callingActivity.setValPeriodMeas(mValPeriodMeas);
 
-                int mValPeriodCalibration = Integer.parseInt(acquireSettingsValPerioCalibration.getText().toString());
-                Log.d(TAG,String.format("mValPeriodCalibration: %s", mValPeriodCalibration));
-                callingActivity.setValPeriodCalibration(mValPeriodCalibration);
+                int mNValPeriodCalibration = Integer.parseInt(acquireSettingsValNPeriodsCalibration.getText().toString());
+                Log.d(TAG,String.format("mNValPeriodCalibration: %s", mNValPeriodCalibration));
+                callingActivity.setNValPeriodCalibration(mNValPeriodCalibration);
 
                 int mValSOFIX = Integer.parseInt(acquireSettingsValSOFIX.getText().toString());
                 Log.d(TAG,String.format("mValSOFIX: %s", mValSOFIX));
@@ -140,9 +139,9 @@ public class AcquireSettings extends DialogFragment {
         acquireSettingsValDurationMeas.setInputType(InputType.TYPE_CLASS_NUMBER);
         acquireSettingsValDurationMeas.setText(String.valueOf(callingActivity.val_duration_measurement));
 
-        acquireSettingsValPerioCalibration = (TextView) content.findViewById(R.id.editText_period_align);
-        acquireSettingsValPerioCalibration.setInputType(InputType.TYPE_CLASS_NUMBER);
-        acquireSettingsValPerioCalibration.setText(String.valueOf(callingActivity.val_period_calibration));
+        acquireSettingsValNPeriodsCalibration = (TextView) content.findViewById(R.id.editText_nperiod_realign);
+        acquireSettingsValNPeriodsCalibration.setInputType(InputType.TYPE_CLASS_NUMBER);
+        acquireSettingsValNPeriodsCalibration.setText(String.valueOf(callingActivity.val_nperiods_calibration));
 
 
         acquireSettingsButtonIPGO = (Button) content.findViewById(R.id.button_ip_address_go);

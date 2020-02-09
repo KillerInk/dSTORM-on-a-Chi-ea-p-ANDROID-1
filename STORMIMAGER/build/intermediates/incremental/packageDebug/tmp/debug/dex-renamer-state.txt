@@ -1,10 +1,4 @@
-#Mon Feb 03 19:58:36 CET 2020
-path.2=classes_0.dex
-path.1=classes.dex
+#Fri Feb 07 21:30:20 CET 2020
+base.0=/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/dex/debug/mergeDexDebug/out/classes.dex
 path.0=classes.dex
-renamed.2=classes3.dex
-renamed.1=classes2.dex
 renamed.0=classes.dex
-base.2=/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/dex/debug/mergeLibDexDebug/out/classes_0.dex
-base.1=/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/dex/debug/mergeProjectDexDebug/out/classes.dex
-base.0=/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/dex/debug/mergeExtDexDebug/out/classes.dex
