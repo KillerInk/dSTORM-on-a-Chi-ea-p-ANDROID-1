@@ -925,6 +925,8 @@ id button_SOFI_z
 id button_ip_address_go
 id button_x_bwd
 id button_x_fwd
+id button_x_lens_minus
+id button_x_lens_plus
 id button_y_bwd
 id button_y_fwd
 id camera
@@ -942,6 +944,7 @@ id control
 id controlExp
 id controlLaser
 id controlLensX
+id controlLensXinner
 id controlLensZ
 id controlNA
 id custom

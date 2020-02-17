@@ -122,6 +122,7 @@ import de.nanoimaging.stormimager.R;
 import static de.nanoimaging.stormimager.acquisition.CaptureRequestEx.HUAWEI_DUAL_SENSOR_MODE;
 import static org.opencv.core.Core.norm;
 import static org.opencv.core.CvType.CV_32F;
+import static org.opencv.imgcodecs.Imgcodecs.imwrite;
 
 /**
  * Created by Bene on 26.09.2015.
@@ -179,10 +180,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     private Button btnSetup;
     private Button btnCapture;
 
-    Button button_x_fwd;
-    Button button_x_bwd;
-    Button button_y_fwd;
-    Button button_y_bwd;
+    Button button_x_lens_plus;
+    Button button_x_lens_minus;
 
     private String[] isovalues;
     private String[] texpvalues;
@@ -382,10 +381,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
 
         // GUI-STUFF
-        button_x_fwd = findViewById(R.id.button_x_fwd);
-        button_x_bwd = findViewById(R.id.button_x_bwd);
-        button_y_fwd = findViewById(R.id.button_y_fwd);
-        button_y_bwd = findViewById(R.id.button_y_bwd);
+        button_x_lens_plus = findViewById(R.id.button_x_lens_plus);
+        button_x_lens_minus = findViewById(R.id.button_x_lens_minus);
+
         textViewGuiText = findViewById(R.id.textViewGuiText);
         textView_shutter = findViewById(R.id.textView_shutter);
         textView_iso = findViewById(R.id.textView_iso);
@@ -464,10 +462,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         });
 
 
-
-
-        // SETUP GUI components for the Z-position of the Lightsheet 
-
         // Lens in X-direction
         seekBarLensX = (SeekBar) findViewById(R.id.seekBarLensX);
         seekBarLensX.setMax(PWM_RES);
@@ -479,7 +473,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         seekBarLensX.setOnSeekBarChangeListener(
                 new SeekBar.OnSeekBarChangeListener() {
-
 
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -512,8 +505,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         seekBarLensZ.setOnSeekBarChangeListener(
                 new SeekBar.OnSeekBarChangeListener() {
-
-                    int YPos_global; //progress value of seekbar
 
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -595,6 +586,34 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 openSettingsDialog();
             }
         });
+
+
+
+        button_x_lens_plus.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                val_lens_x_global = val_lens_x_global+10;
+                setLensX(val_lens_x_global);
+                textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                seekBarLensX.setProgress(val_lens_x_global);
+            }
+
+        });
+
+        button_x_lens_minus.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                val_lens_x_global = val_lens_x_global-10;
+                setLensX(val_lens_x_global);
+                textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                seekBarLensX.setProgress(val_lens_x_global);
+            }
+
+        });
+
+
+
+
+
+
 
         btnCapture.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -2934,11 +2953,14 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
             // Wait a moment until the door ist closed!
             int waitsecs = 5;
+            /*
             for (int isecs = waitsecs; isecs > 0; isecs--) {
+
                 my_gui_text = "Wait for the user to close the door:" + String.valueOf(isecs) + "/" + String.valueOf(waitsecs) + "secs";
                 textViewGuiText.setText(my_gui_text);
                 mSleep(1000);
             }
+            */
         }
 
         @Override
@@ -3012,7 +3034,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                             e.printStackTrace();
                         }
                     }
-                    mSleep(5000); //Let AEC stabalize if it's on
+                    //mSleep(5000); //Let AEC stabalize if it's on
 
                     // turn off the laser
                     setLaser(0);
@@ -3089,6 +3111,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 Rect roi = new Rect((int)dst.width()/2-mysize_subroi/2, (int)dst.height()/2-mysize_subroi/2, mysize_subroi, mysize_subroi);
                 Mat dst_cropped = new Mat(dst, roi);
 
+
                 // reset the lens's position in the first iteration by some value
                 if (i_search_maxintensity == 0) {
                     val_lens_x_global_old = val_lens_x_global; // Save the value for later
@@ -3100,13 +3123,16 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 else {
                     double i_mean = Core.mean(dst_cropped).val[0];
                     Core.meanStdDev(dst_cropped, tmp_mean, tmp_std);
+
+                    // Estimate Entropy in Image
                     Mat dst_tmp = new Mat();
-                    Log.i(TAG, String.valueOf(dst_cropped));
                     dst_cropped.convertTo(dst_cropped, CV_32F);
-                    Log.i(TAG, String.valueOf(dst_cropped));
+
                     Core.pow(dst_cropped, 2., dst_tmp);
-                    Core.sqrt(dst_tmp, dst_tmp);
+
                     double myL2norm = Core.norm(dst_cropped,Core.NORM_L2);
+                    double myL1norm = Core.norm(dst_cropped,Core.NORM_L1);
+                    double myMinMaxnorm = Core.norm(dst_cropped,Core.NORM_MINMAX);
 
 
                 /*
@@ -3119,6 +3145,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                  */
                     Log.i(TAG, "My Mean/STDV (coarse) is:" + String.valueOf(i_mean) + "/" + String.valueOf(Core.mean(dst).val[0]) + " / " +  " / " + String.valueOf(myL2norm) +" @ " + String.valueOf(val_lens_x_global));
+                    imwrite(Environment.getExternalStorageDirectory() + "/STORMimager/mytest"+String.valueOf(i_search_maxintensity)+"_mean_" + String.valueOf(i_mean) + "_stdv_" + String.valueOf(Core.mean(tmp_std).val[0]) + "_L2_" + String.valueOf(myL2norm) +"_L1_" + String.valueOf(myL1norm) +"_MinMax_" + String.valueOf(myMinMaxnorm) +"_L2_" + String.valueOf(myL2norm) +"@" + String.valueOf(val_lens_x_global)+".png", dst_cropped);
+
                     if (i_mean > val_mean_max) {
                         // Save the position with maximum intensity
                         val_mean_max = i_mean;
@@ -3143,7 +3171,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                 } else {
                     // increase the lens position
-                    val_lens_x_global = val_lens_x_global + 1000;
+                    val_lens_x_global = val_lens_x_global + 400;
                     setLensX(val_lens_x_global);
                     // free memory
                     System.gc();
@@ -3282,10 +3310,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         if ((laserintensity < PWM_RES ) && (laserintensity > 0)) {
             publishMessage(topic_laser, String.valueOf(lin2qudratic(laserintensity, PWM_RES)));
             // Wait until the command was actually sent
-            try {
-                Thread.sleep(MQTT_SLEEP);
-            } catch (Exception e) {
-                Log.e(TAG, String.valueOf(e));
+            if(is_findcoupling){
+                try {
+                    Thread.sleep(MQTT_SLEEP);
+                } catch (Exception e) {
+                    Log.e(TAG, String.valueOf(e));
+                }
             }
         }
     }
@@ -3294,10 +3324,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         if ((lensposition < PWM_RES) && (lensposition > 0)) {
             publishMessage(topic_lens_x, String.valueOf(lin2qudratic(lensposition, PWM_RES)));
             // Wait until the command was actually sent
+            if(is_findcoupling){
             try {
                 Thread.sleep(MQTT_SLEEP);
             } catch (Exception e) {
                 Log.e(TAG, String.valueOf(e));
+            }
             }
         }
     }
@@ -3306,10 +3338,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         if (lensposition < PWM_RES && lensposition > 0) {
             publishMessage(topic_lens_z, String.valueOf(lin2qudratic(lensposition, PWM_RES)));
             // Wait until the command was actually sent
-            try {
-                Thread.sleep(MQTT_SLEEP);
-            } catch (Exception e) {
-                Log.e(TAG, String.valueOf(e));
+            if(is_findcoupling){
+                try {
+                    Thread.sleep(MQTT_SLEEP);
+                } catch (Exception e) {
+                    Log.e(TAG, String.valueOf(e));
+                }
             }
         }
     }
