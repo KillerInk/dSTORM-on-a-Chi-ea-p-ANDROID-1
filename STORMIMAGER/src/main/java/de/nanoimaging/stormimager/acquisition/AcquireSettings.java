@@ -107,7 +107,7 @@ public class AcquireSettings extends DialogFragment {
                 callingActivity.setSOFIX(acquireSettingsSOFIXToggle.isChecked(), mValSOFIX);
                 callingActivity.setSOFIZ(acquireSettingsSOFIZToggle.isChecked(), mValSOFIZ);
 
-                callingActivity.mqtt_reconenect(acquireSettingsIPaddress.getText().toString());
+                callingActivity.MQTT_Reconnect(acquireSettingsIPaddress.getText().toString());
 
             }
         })
@@ -148,7 +148,7 @@ public class AcquireSettings extends DialogFragment {
         acquireSettingsButtonIPGO.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
                 AcquireActivity callingActivity = (AcquireActivity) getActivity();
-                callingActivity.mqtt_reconenect(acquireSettingsIPaddress.getText().toString());
+                callingActivity.MQTT_Reconnect(acquireSettingsIPaddress.getText().toString());
                 Log.i(TAG, "IP-Address: "+acquireSettingsIPaddress.getText().toString());
             }
         });

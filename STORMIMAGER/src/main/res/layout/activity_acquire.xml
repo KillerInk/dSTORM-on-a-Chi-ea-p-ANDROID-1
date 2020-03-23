@@ -4,7 +4,8 @@
 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -340,6 +341,15 @@
                     android:layout_toLeftOf="@+id/btnSetup"
                     android:layout_weight="1"
                     android:text="Stop" />
+
+                <ToggleButton
+                    android:id="@+id/btnSofi"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentRight="true"
+                    android:layout_alignParentBottom="true"
+                    android:layout_weight="1"
+                    android:text="SOFI" />
 
                 <Button
                     android:id="@+id/btnSetup"

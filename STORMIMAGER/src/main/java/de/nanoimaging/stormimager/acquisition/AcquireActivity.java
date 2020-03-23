@@ -7,7 +7,6 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.Fragment;
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
@@ -43,8 +42,8 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
-import android.nfc.Tag;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -52,15 +51,14 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.os.SystemClock;
-import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.support.v13.app.FragmentCompat;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.util.Rational;
 import android.util.Size;
 import android.util.SparseIntArray;
-import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.SurfaceHolder;
@@ -69,10 +67,12 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
@@ -83,15 +83,12 @@ import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
 import org.opencv.core.Rect;
-import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
@@ -121,7 +118,6 @@ import de.nanoimaging.stormimager.R;
 
 import static de.nanoimaging.stormimager.acquisition.CaptureRequestEx.HUAWEI_DUAL_SENSOR_MODE;
 import static org.opencv.core.Core.norm;
-import static org.opencv.core.CvType.CV_32F;
 import static org.opencv.imgcodecs.Imgcodecs.imwrite;
 
 /**
@@ -130,68 +126,115 @@ import static org.opencv.imgcodecs.Imgcodecs.imwrite;
 
 public class AcquireActivity extends Activity implements FragmentCompat.OnRequestPermissionsResultCallback, AcquireSettings.NoticeDialogListener {
 
+    /**
+     * MQTT related stuff
+     */
+    MqttAndroidClient mqttAndroidClient;
 
-    String TAG = "STORMimager_AcquireActivity";
+    String myIPAddress = "0.0.0.0";             // IP for the MQTT Broker, format tcp://ipaddress
+    public static final String topic_lens_z = "lens/right/z";
+    public static final String topic_lens_x = "lens/right/x";
+    public static final String topic_laser = "laser/red";
+    public static final String topic_lens_sofi_z = "lens/right/sofi/z";
+    public static final String topic_lens_sofi_x = "lens/right/sofi/x";
+    public static final String topic_state = "state";
+    String STATE_CALIBRATION = "state_calib";       // STate signal sent to ESP for light signal
+    String STATE_WAIT = "state_wait";               // STate signal sent to ESP for light signal
+    String STATE_RECORD = "state_record";           // STate signal sent to ESP for light signal
 
-    String global_isoval = "0";
-    String global_expval = "0";
+    final String MQTT_USER = "username";
+    final String MQTT_PASS = "pi";
+    final String MQTT_CLIENTID = "STORMimager";
 
-    int val_period_measurement = 6 * 10; // in seconds
-    int val_duration_measurement = 5; // in seconds
-    int val_nperiods_calibration = 10 * 10; // in seconds
-    boolean is_measurement = false; // switch for ongoing measurement
-    boolean is_findcoupling = false;
-    double val_mean_max = 0; // for coupling intensity
-    boolean is_savefile = true;
+    SharedPreferences.Editor editor = null;
+
+    // Global MQTT Values
+    int MQTT_SLEEP = 250;                       // wait until next thing should be excuted
+
+    /**
+     * GUI related stuff
+     */
+    public DialogFragment settingsDialogFragment;       // For the pop-up window for external settings
+    String TAG = "STORMimager_AcquireActivity";         // TAG for the APP
+
+    // Save settings for later
+    private final String PREFERENCE_FILE_KEY = "myAppPreference";
 
     /**
      * Whether the app is recording video now
      */
-    public boolean mIsRecordingVideo;
-    /**
-     * MediaRecorder
-     */
-    private MediaRecorder mMediaRecorder;
-    private File mCurrentFile;
+    public boolean mIsRecordingVideo;                   // State if camera is recording
+    public boolean isCameraBusy = false;                // State if camera is busy
+    boolean is_measurement = false;                     // State if measurement is performed
+    boolean is_findcoupling = false;                    // State if coupling is performed
+
+    // Camera parameters
+    String global_isoval = "0";                         // global iso-value
+    String global_expval = "0";                         // global exposure time in ms
+    private String[] isovalues;                         // array to store available iso values
+    private String[] texpvalues;                        // array to store available exposure times
+    int val_iso_index = 3;                              // Slider value for
+    int val_texp_index = 10;
+
+    // Acquisition parameters
+    int val_period_measurement = 6 * 10;                // time between measurements in seconds
+    int val_duration_measurement = 5;                   // duration for one measurement in seconds
+    int val_nperiods_calibration = 10 * 10;             // number of measurements for next recalibraiont
+
+    // settings for coupling
+    double val_mean_max = 0;                            // for coupling intensity
+    int i_search_maxintensity = 0;                      // global counter for number of search steps
+    int val_lens_x_maxintensity = 0;                    // lens-position for maximum intensity
+    int val_lens_x_global_old = 0;                      // last lens position before optimization
+    int ROI_SIZE = 512;                                 // region which gets cropped to measure the coupling efficiencey
+    boolean is_findcoupling_coarse = true;              // State if coupling is in fine mode
+    boolean is_findcoupling_fine = false;               // State if coupling is in coarse mode
+
+    // File IO parameters
     File myVideoFileName = new File("");
-    //private CaptureRequest.Builder mPreviewRequestBuilder;
-
-
-    public boolean isCameraBusy = false;
     boolean isRaw = false;
     int mImageFormat = ImageFormat.JPEG;
     ByteBuffer buffer = null; // for the processing
     Bitmap global_bitmap = null;
-
-
     // (default) global file paths
     String mypath_measurements = Environment.getExternalStorageDirectory() + "/STORMimager/";
     String myfullpath_measurements = mypath_measurements;
-    String fullfilename_measurements = "myfile.DNG";
+    private MediaRecorder mMediaRecorder;               // MediaRecorder
+    private File mCurrentFile;
+    int global_framerate = 20;
+    int global_cameraquality = CamcorderProfile.QUALITY_1080P; //CamcorderProfile.QUALITY_2160P;
 
+    /**
+     * HARDWARE Settings for MQTT related values
+     */
+    int PWM_RES = (int) (Math.pow(2, 15)) - 1;          // bitrate of the PWM signal 15 bit
 
-    public DialogFragment settingsDialogFragment;
+    int val_lens_x_global = 0;                          // global position for the x-lens
+    int val_lens_z_global = 0;                          // global position for the z-lens
+    int val_laser_red_global = 0;                       // global value for the laser
 
-    //--------------------------------------------------------------------------------
-    // --------------------------------GUI Settings
-    //--------------------------------------------------------------------------------
+    int val_sofi_amplitude_z = 20; // amplitude of the lens in each periode
+    int val_sofi_amplitude_x = 20; // amplitude of the lens in each periode
 
-    // Buttons
+    boolean is_SOFI_x = false;
+    boolean is_SOFI_z = false;
+
+    /*
+     GUI-Settings
+     */
+    ToggleButton acquireSettingsSOFIToggle;
+    private Button btn_x_lens_plus;
+    private Button btn_x_lens_minus;
+    private Button btnStartMeasurement;
+    private Button btnStopMeasurement;
     private Button btnSetup;
     private Button btnCapture;
-
-    Button button_x_lens_plus;
-    Button button_x_lens_minus;
-
-    private String[] isovalues;
-    private String[] texpvalues;
 
     private SeekBar seekbar_iso;
     private SeekBar seekbar_shutter;
     private SeekBar seekBarLensX;
     private SeekBar seekBarLensZ;
     private SeekBar seekBarLaser;
-
     private TextView textView_iso;
     private TextView textView_shutter;
     private TextView textViewLensX;
@@ -199,587 +242,21 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     private TextView textViewLaser;
     private TextView textViewGuiText;
 
-    ProgressDialog progressDialog;
-
-    // GUI-Settings
-    Button btnStartMeasurement;
-    Button btnStopMeasurement;
-
-    private TextView timeLeftTextView;
-
     private ProgressBar acquireProgressBar;
 
-    // *********************************************************************************************
-    //  MQTT - STUFF
-    //**********************************************************************************************
-    MqttAndroidClient mqttAndroidClient;
 
-    SharedPreferences.Editor editor = null;
-
-    // Server uri follows the format tcp://ipaddress
-    String myIPAddress = "0.0.0.0";
-
-    final String mqttUser = "username";
-    final String mqttPass = "pi";
-
-    final String clientId = "STORMimager";
-
-    // Save settings for later
-    private final String PREFERENCE_FILE_KEY = "myAppPreference";
-
-    // MQTT Topics
-    public static final String topic_stepper_y_fwd = "stepper/y/fwd";
-    public static final String topic_stepper_y_bwd = "stepper/y/bwd";
-    public static final String topic_stepper_x_fwd = "stepper/x/fwd";
-    public static final String topic_stepper_x_bwd = "stepper/x/bwd";
-    public static final String topic_lens_z = "lens/right/z";
-    public static final String topic_lens_x = "lens/right/x";
-    public static final String topic_laser = "laser/red";
-    public static final String topic_lens_sofi_z = "lens/right/sofi/z";
-    public static final String topic_lens_sofi_x = "lens/right/sofi/x";
-
-    // Global MQTT Values
-    int MQTT_SLEEP = 200; // wait until next thing should be excuted
-    int val_lens_x_global = 0;
-    int val_lens_z_global = 0;
-    int val_laser_red_global = 0;
-    int PWM_RES = (int) (Math.pow(2, 15)) - 1;   // bitrate of the PWM signal
-    int val_sofi_amplitude_z = 20; // amplitude of the lens in each periode
-    int val_sofi_amplitude_x = 20; // amplitude of the lens in each periode
-    int val_iso_index = 3;
-    int val_texp_index = 10;
-    boolean is_SOFI_x = false;
-    boolean is_SOFI_z = false;
-
-    boolean is_findcoupling_coarse = true;
-    boolean is_findcoupling_fine = false;
-
-    int i_search_maxintensity = 0;  // current iter for coupling search
-    int val_lens_x_maxintensity = 0;    // lens-position for maximum intensity
-    int val_lens_x_global_old = 0;      // last lens position before optimization
-
-
-    // *****************************************************************************************
-    //  Make sure openCV gets loaded
-    //**********************************************************************************************
-
-    /*
-    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
-        @Override
-        public void onManagerConnected(int status) {
-            switch (status) {
-                case LoaderCallbackInterface.SUCCESS: {
-                    Log.i(TAG, "OpenCV loaded successfully");
-
-                    // Load native libraries after(!) OpenCV initialization
-                    postOpenCVLoad();
-                }
-                break;
-                default: {
-                    super.onManagerConnected(status);
-                }
-                break;
-            }
-        }
-    };
-
-    // override this to use opencv dependent libraries
-    public void postOpenCVLoad() {
-        Toast.makeText(this, "OpenCV initialized successfully", Toast.LENGTH_SHORT).show();
-        return;
-    }
-
-     */
-
-    static {
-        if (!OpenCVLoader.initDebug()) {
-            // Handle initialization error
-        }
-    }
-
-    // *****************************************************************************************
-    //  Method OnCreate
-    //**********************************************************************************************
-
-
-    public AcquireActivity() {
-        Log.i(TAG, "Instantiated new " + this.getClass());
-    }
-
-
-    @SuppressLint("ClickableViewAccessibility")
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_acquire);
-        OpenCVLoader.initDebug();
-
-        // Initialize OpenCV using external library for now //TODO use internal!
-        //OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
-
-        // Take care of previously saved settings
-        SharedPreferences sharedPref = this.getSharedPreferences(
-                PREFERENCE_FILE_KEY, Context.MODE_PRIVATE);
-        editor = sharedPref.edit();
-
-        // Read old IP ADress if available and set it to the GUI
-        myIPAddress = sharedPref.getString("myIPAddress", myIPAddress);
-        val_nperiods_calibration = Integer.parseInt(sharedPref.getString("val_nperiods_calibration", String.valueOf(val_nperiods_calibration)));
-        val_period_measurement = Integer.parseInt(sharedPref.getString("val_period_measurement", String.valueOf(val_period_measurement)));
-        val_duration_measurement = Integer.parseInt(sharedPref.getString("val_duration_measurement", String.valueOf(val_duration_measurement)));
-        val_sofi_amplitude_x = Integer.parseInt(sharedPref.getString("val_sofi_amplitude_x", String.valueOf(val_sofi_amplitude_x)));
-        val_sofi_amplitude_z = Integer.parseInt(sharedPref.getString("val_sofi_amplitude_z", String.valueOf(val_sofi_amplitude_z)));
-        val_iso_index = Integer.parseInt(sharedPref.getString("val_iso_index", String.valueOf(val_iso_index)));
-        val_texp_index = Integer.parseInt(sharedPref.getString("val_texp_index", String.valueOf(val_texp_index)));
-
-        // SET GUI components first
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        mTextureView = (AutoFitTextureView) this.findViewById(R.id.texture);
-
-        initialConfig();
-        if (isNetworkAvailable()) {
-            Toast.makeText(this, "Connecting MQTT", Toast.LENGTH_SHORT).show();
-            initialConfig();
-        } else
-            Toast.makeText(this, "We don't have network", Toast.LENGTH_SHORT).show();
-
-
-        // *****************************************************************************************
-        //  Camera STUFF
-        //******************************************************************************************
-        // Setup a new OrientationEventListener.  This is used to handle rotation events like a
-        // 180 degree rotation that do not normally trigger a call to onCreate to do view re-layout
-        // or otherwise cause the preview TextureView's size to change.
-        mOrientationListener = new OrientationEventListener(this,
-                SensorManager.SENSOR_DELAY_NORMAL) {
-            @Override
-            public void onOrientationChanged(int orientation) {
-                if (mTextureView != null && mTextureView.isAvailable()) {
-                    configureTransform(mTextureView.getWidth(), mTextureView.getHeight());
-                }
-            }
-        };
-
-        // Create the ISO-List
-        List<String> isolist = new ArrayList<>();
-
-        isolist.add(String.valueOf(100));
-        isolist.add(String.valueOf(200));
-        isolist.add(String.valueOf(300));
-        isolist.add(String.valueOf(1000));
-        isolist.add(String.valueOf(1500));
-        isolist.add(String.valueOf(2000));
-        isolist.add(String.valueOf(3200));
-        isolist.add(String.valueOf(6400));
-        isolist.add(String.valueOf(12800));
-        isovalues = new String[isolist.size()];
-        isolist.toArray(isovalues);
-
-        // Create the Shutter-List
-        texpvalues = "1/100000,1/6000,1/4000,1/2000,1/1000,1/500,1/250,1/125,1/60,1/30,1/15,1/8,1/4,1/2,2,4,8,15,30,32".split(",");
-
-
-        // GUI-STUFF
-        button_x_lens_plus = findViewById(R.id.button_x_lens_plus);
-        button_x_lens_minus = findViewById(R.id.button_x_lens_minus);
-
-        textViewGuiText = findViewById(R.id.textViewGuiText);
-        textView_shutter = findViewById(R.id.textView_shutter);
-        textView_iso = findViewById(R.id.textView_iso);
-
-
-        seekbar_iso = findViewById(R.id.seekBar_iso);
-        seekbar_iso.setVisibility(View.GONE);
-        seekbar_shutter = findViewById(R.id.seekBar_shutter);
-        seekbar_shutter.setVisibility(View.GONE);
-
-        seekbar_iso.setMax(isovalues.length - 1);
-        seekbar_iso.setProgress(val_iso_index); // 50x16=800
-        textView_iso.setText("Iso:" + isovalues[val_iso_index]);
-
-        seekbar_iso.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (mPreviewRequestBuilder != null && fromUser) {
-                    editor.putString("val_iso_index", String.valueOf(progress));
-                    editor.commit();
-
-                    textView_iso.setText("Iso:" + isovalues[progress]);
-                    global_isoval = isovalues[progress];
-                    setIso(global_isoval);
-                    try {
-                        mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mPreCaptureCallback, mBackgroundHandler);
-                    } catch (CameraAccessException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
-        });
-
-
-        seekbar_shutter.setMax(texpvalues.length - 1);
-        seekbar_shutter.setProgress(val_texp_index); // == 1/30
-        textView_shutter.setText("Shutter:" + texpvalues[val_texp_index]);
-
-        seekbar_shutter.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (mPreviewRequestBuilder != null && fromUser) {
-                    editor.putString("val_texp_index", String.valueOf(progress));
-                    editor.commit();
-
-                    global_expval = texpvalues[progress];
-                    textView_shutter.setText("Shutter:" + texpvalues[progress]);
-                    setExposureTime(texpvalues[progress]);
-                    try {
-                        mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mPreCaptureCallback, mBackgroundHandler);
-                    } catch (CameraAccessException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
-        });
-
-
-        // Lens in X-direction
-        seekBarLensX = (SeekBar) findViewById(R.id.seekBarLensX);
-        seekBarLensX.setMax(PWM_RES);
-        seekBarLensX.setProgress(0);
-
-        textViewLensX = (TextView) findViewById(R.id.textViewLensX);
-        String text_lens_x_pre = "Lens (X): ";
-        textViewLensX.setText(text_lens_x_pre + seekBarLensX.getProgress());
-
-        seekBarLensX.setOnSeekBarChangeListener(
-                new SeekBar.OnSeekBarChangeListener() {
-
-                    @Override
-                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        val_lens_x_global = progress;
-                        setLensX(val_lens_x_global);
-                        textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
-                    }
-
-                    @Override
-                    public void onStartTrackingTouch(SeekBar seekBar) {
-                        textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
-                    }
-
-                    @Override
-                    public void onStopTrackingTouch(SeekBar seekBar) {
-                        textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
-                    }
-                }
-        );
-
-
-        // Lens in Z-direction
-        seekBarLensZ = (SeekBar) findViewById(R.id.seekBarLensZ);
-        seekBarLensZ.setMax(PWM_RES);
-        seekBarLensZ.setProgress(val_lens_z_global);
-
-        textViewLensZ = (TextView) findViewById(R.id.textViewLensZ);
-        String text_lens_z_pre = "Lens (Z): ";
-        textViewLensZ.setText(text_lens_z_pre + seekBarLensZ.getProgress());
-
-        seekBarLensZ.setOnSeekBarChangeListener(
-                new SeekBar.OnSeekBarChangeListener() {
-
-                    @Override
-                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        val_lens_z_global = progress;
-                        setLensZ(val_lens_z_global);
-                        textViewLensZ.setText(text_lens_z_pre + val_lens_z_global * 1.);
-                    }
-
-                    @Override
-                    public void onStartTrackingTouch(SeekBar seekBar) {
-                        textViewLensZ.setText(text_lens_z_pre + val_lens_z_global * 1.);
-                    }
-
-                    @Override
-                    public void onStopTrackingTouch(SeekBar seekBar) {
-                        textViewLensZ.setText(text_lens_z_pre + val_lens_z_global * 1.);
-                    }
-                }
-
-        );
-
-
-        // Laser control
-        // Lens in X-direction
-        seekBarLaser = (SeekBar) findViewById(R.id.seekBarLaser);
-        seekBarLaser.setMax(PWM_RES);
-        seekBarLaser.setProgress(0);
-
-        textViewLaser = (TextView) findViewById(R.id.textViewLaser);
-        String text_laser_pre = "Laser (I): ";
-        textViewLaser.setText(text_laser_pre + seekBarLaser.getProgress());
-
-        seekBarLaser.setOnSeekBarChangeListener(
-                new SeekBar.OnSeekBarChangeListener() {
-
-                    @Override
-                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        val_laser_red_global = progress;
-                        setLaser(val_laser_red_global);
-                        textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
-                    }
-
-                    @Override
-                    public void onStartTrackingTouch(SeekBar seekBar) {
-                        textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
-                    }
-
-                    @Override
-                    public void onStopTrackingTouch(SeekBar seekBar) {
-                        textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
-                    }
-                }
-        );
-
-
-        //Create second surface with another holder (holderTransparent) for drawing the rectangle
-        SurfaceView transparentView = (SurfaceView) findViewById(R.id.TransparentView);
-        transparentView.setBackgroundColor(Color.TRANSPARENT);
-        transparentView.setZOrderOnTop(true);    // necessary
-        SurfaceHolder holderTransparent = transparentView.getHolder();
-        holderTransparent.setFormat(PixelFormat.TRANSPARENT);
-        //TODO holderTransparent.addCallback(callBack);
-
-        //Set Text and Button in UI
-        btnCapture = (Button) findViewById(R.id.btnCapture);
-        btnSetup = (Button) findViewById(R.id.btnSetup);
-        btnStartMeasurement = (Button) findViewById(R.id.btnStart);
-        btnStopMeasurement = (Button) findViewById(R.id.btnStop);
-
-        timeLeftTextView = (TextView) findViewById(R.id.timeLeftTextView);
-        acquireProgressBar = (ProgressBar) findViewById(R.id.acquireProgressBar);
-
-        acquireProgressBar.setVisibility(View.INVISIBLE); // Make invisible at first, then have it pop up
-
-        settingsDialogFragment = new AcquireSettings();
-
-        btnSetup.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                openSettingsDialog();
-            }
-        });
-
-
-
-        button_x_lens_plus.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                val_lens_x_global = val_lens_x_global+10;
-                setLensX(val_lens_x_global);
-                textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
-                seekBarLensX.setProgress(val_lens_x_global);
-            }
-
-        });
-
-        button_x_lens_minus.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                val_lens_x_global = val_lens_x_global-10;
-                setLensX(val_lens_x_global);
-                textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
-                seekBarLensX.setProgress(val_lens_x_global);
-            }
-
-        });
-
-
-
-
-
-
-
-        btnCapture.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                //
-                Log.i(TAG, "Set is_find_coupling to true!");
-                if (!is_findcoupling) is_findcoupling = true;
-            }
-
-        });
-
-        btnStartMeasurement.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if(!is_measurement&!is_findcoupling){
-                    is_measurement = true;
-                    new run_meas().execute();
-                }
-            }
-        });
-
-        btnStopMeasurement.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                is_measurement = false;
-                is_findcoupling = false;
-            }
-        });
-
-
-
-
-    }
-
-    double loadValue(String key) {
-        // method to read an array-list from the preferences
-        double value = 0;
-        SharedPreferences mSharedPreference1 = PreferenceManager.getDefaultSharedPreferences(this);
-
-        try {
-            value = Double.parseDouble(mSharedPreference1.getString(key, null));
-        } catch (Exception e) {
-            value = 0.0;
-        }
-
-        return value;
-    }
-
-
-    //**********************************************************************************************
-    //  Method OnPause
-    //**********************************************************************************************
-    @Override
-    protected void onPause() {
-        super.onPause();
-        Log.e(TAG, "onPause");
-
-        if (mOrientationListener != null) {
-            mOrientationListener.disable();
-        }
-        closeCamera();
-        super.onPause();
-        stopBackgroundThread();
-    }
-
-    //**********************************************************************************************
-    //  Method OnREsume
-    //**********************************************************************************************
-
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        startBackgroundThread();
-        openCamera();
-
-        // When the screen is turned off and turned back on, the SurfaceTexture is already
-        // available, and "onSurfaceTextureAvailable" will not be called. In that case, we should
-        // configure the preview bounds here (otherwise, we wait until the surface is ready in
-        // the SurfaceTextureListener).
-        if (mTextureView.isAvailable()) {
-            configureTransform(mTextureView.getWidth(), mTextureView.getHeight());
-        } else {
-            mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
-        }
-        if (mOrientationListener != null && mOrientationListener.canDetectOrientation()) {
-            mOrientationListener.enable();
-        }
-
-
-        // SET CAMERA PARAMETERS FROM GUI
-        try {
-            global_isoval = isovalues[val_iso_index];
-            setIso(global_isoval);
-            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mPreCaptureCallback, mBackgroundHandler);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        try {
-            global_expval = texpvalues[val_texp_index];
-            setExposureTime(global_expval);
-            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mPreCaptureCallback, mBackgroundHandler);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-
-    }
-
-    public void onDestroy() {
-        super.onDestroy();
-    }
-
-    @Override
-    public void onStart() {
-        super.onStart();
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-    }
-
-
-    //------------------------CAMERA 2 API STUFF----------------------------------------------------
-    //Conversion from screen rotation to JPEG orientation.
 
     /**
-     * Implementing a {@link android.media.MediaRouter.Callback} to update the displayed
-     * {@link android.app.Presentation} when a route is selected, unselected or the
-     * presentation display has changed. The provided stub implementation
-     * {@link android.media.MediaRouter.SimpleCallback} is extended and only
-     * {@link android.media.MediaRouter.SimpleCallback#onRouteSelected(android.media.MediaRouter, int, android.media.MediaRouter.RouteInfo)}
-     * ,
-     * {@link android.media.MediaRouter.SimpleCallback#onRouteUnselected(android.media.MediaRouter, int, android.media.MediaRouter.RouteInfo)}
-     * and
-     * {@link android.media.MediaRouter.SimpleCallback#onRoutePresentationDisplayChanged(android.media.MediaRouter, android.media.MediaRouter.RouteInfo)}
-     * are overridden to update the displayed {@link android.app.Presentation} in
-     * {@link #updatePresentation()}. These callbacks enable or disable the
-     * second screen presentation based on the routing provided by the
-     * {@link android.media.MediaRouter} for {@link android.media.MediaRouter#ROUTE_TYPE_LIVE_VIDEO}
-     * streams. @
+     * CAMERA-Related stuff
      */
-
-
-    //-----------------------
-    //-----CAMERA STUFF------
-    //-----------------------
     /**
      * Conversion from screen rotation to JPEG orientation.
      */
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
-
-    static {
-        ORIENTATIONS.append(Surface.ROTATION_0, 0);
-        ORIENTATIONS.append(Surface.ROTATION_90, 90);
-        ORIENTATIONS.append(Surface.ROTATION_180, 180);
-        ORIENTATIONS.append(Surface.ROTATION_270, 270);
-    }
-
-    private Image mRawLastReceivedImage = null;
-
-
     /**
      * Request code for camera permissions.
      */
     private static final int REQUEST_CAMERA_PERMISSIONS = 1;
-
     /**
      * Permissions required to take a picture.
      */
@@ -789,271 +266,70 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.RECORD_AUDIO,
     };
-
     /**
      * Timeout for the pre-capture sequence.
      */
     private static final long PRECAPTURE_TIMEOUT_MS = 1000;
-
     /**
      * Tolerance when comparing aspect ratios.
      */
     private static final double ASPECT_RATIO_TOLERANCE = 0.005;
-
+    //private CaptureRequest.Builder mPreviewRequestBuilder;
     /**
      * Max preview width that is guaranteed by Camera2 API
      */
     private static final int MAX_PREVIEW_WIDTH = 1920;
-
     /**
      * Max preview height that is guaranteed by Camera2 API
      */
     private static final int MAX_PREVIEW_HEIGHT = 1080;
-
-
     /**
      * Camera state: Device is closed.
      */
     private static final int STATE_CLOSED = 0;
-
     /**
      * Camera state: Device is opened, but is not capturing.
      */
     private static final int STATE_OPENED = 1;
-
     /**
      * Camera state: Showing camera preview.
      */
     private static final int STATE_PREVIEW = 2;
-
     /**
      * Camera state: Waiting for 3A convergence before capturing a photo.
      */
     private static final int STATE_WAITING_FOR_3A_CONVERGENCE = 3;
 
-    /**
-     * An {@link OrientationEventListener} used to determine when device rotation has occurred.
-     * This is mainly necessary for when the device is rotated by 180 degrees, in which case
-     * onCreate or onConfigurationChanged is not called as the view dimensions remain the same,
-     * but the orientation of the has changed, and thus the preview rotation must be updated.
-     */
-    private OrientationEventListener mOrientationListener;
-
-    /**
-     * {@link TextureView.SurfaceTextureListener} handles several lifecycle events of a
-     * {@link TextureView}.
-     */
-    private final TextureView.SurfaceTextureListener mSurfaceTextureListener
-            = new TextureView.SurfaceTextureListener() {
-
-        @Override
-        public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
-            configureTransform(width, height);
+    static {
+        if (!OpenCVLoader.initDebug()) {
+            // Handle initialization error
         }
+    }
 
-        @Override
-        public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
-            configureTransform(width, height);
-        }
-
-        @Override
-        public boolean onSurfaceTextureDestroyed(SurfaceTexture texture) {
-            synchronized (mCameraStateLock) {
-                mPreviewSize = null;
-            }
-            return true;
-        }
-
-        @Override
-        public void onSurfaceTextureUpdated(SurfaceTexture texture) {
-
-            if (is_findcoupling & !isCameraBusy) {
-                //Log.i(TAG, "Lens Calibration in progress");
-                global_bitmap = mTextureView.getBitmap();
-                global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), mTextureView.getTransform(null), true);
-
-                // START THREAD AND ALIGN THE LENS
-                if (is_findcoupling_coarse) {
-                    run_calibration_thread_coarse thread_1 = new run_calibration_thread_coarse("CoarseThread");
-                } else if (is_findcoupling_fine) {
-                    run_calibration_thread_fine thread_2 = new run_calibration_thread_fine("FineThread");
-                }
-
-
-            }
-        }
-    };
-
-    /**
-     * An {@link AutoFitTextureView} for camera preview.
-     */
-    private AutoFitTextureView mTextureView;
-
-    /**
-     * An additional thread for running tasks that shouldn't block the UI.  This is used for all
-     * callbacks from the {@link CameraDevice} and {@link CameraCaptureSession}s.
-     */
-    private HandlerThread mBackgroundThread;
+    static {
+        ORIENTATIONS.append(Surface.ROTATION_0, 0);
+        ORIENTATIONS.append(Surface.ROTATION_90, 90);
+        ORIENTATIONS.append(Surface.ROTATION_180, 180);
+        ORIENTATIONS.append(Surface.ROTATION_270, 270);
+    }
 
     /**
      * A counter for tracking corresponding {@link CaptureRequest}s and {@link CaptureResult}s
      * across the {@link CameraCaptureSession} capture callbacks.
      */
     private final AtomicInteger mRequestCounter = new AtomicInteger();
-
     /**
      * A {@link Semaphore} to prevent the app from exiting before closing the camera.
      */
     private final Semaphore mCameraOpenCloseLock = new Semaphore(1);
-
     /**
      * A lock protecting camera state.
      */
     private final Object mCameraStateLock = new Object();
-
-    // *********************************************************************************************
-    // State protected by mCameraStateLock.
-    //
-    // The following state is used across both the UI and background threads.  Methods with "Locked"
-    // in the name expect mCameraStateLock to be held while calling.
-
-    /**
-     * ID of the current {@link CameraDevice}.
-     */
-    private String mCameraId;
-
-    /**
-     * A {@link CameraCaptureSession } for camera preview.
-     */
-    private CameraCaptureSession mCaptureSession;
-
-    /**
-     * A reference to the open {@link CameraDevice}.
-     */
-    private CameraDevice mCameraDevice;
-
-    /**
-     * The {@link Size} of camera preview.
-     */
-    private Size mPreviewSize;
-
-    /**
-     * The {@link CameraCharacteristics} for the currently configured camera device.
-     */
-    private CameraCharacteristics mCharacteristics;
-
-    /**
-     * A {@link Handler} for running tasks in the background.
-     */
-    private Handler mBackgroundHandler;
-
-
-    /**
-     * A reference counted holder wrapping the {@link ImageReader} that handles RAW image captures.
-     * This is used to allow us to clean up the {@link ImageReader} when all background tasks using
-     * its {@link Image}s have completed.
-     */
-    private RefCountedAutoCloseable<ImageReader> mImageReader;
-
-    private RefCountedAutoCloseable<ImageReader> mJPEGImageReader;
-
-    /**
-     * Whether or not the currently configured camera device is fixed-focus.
-     */
-    private boolean mNoAFRun = true;
-
-    /**
-     * Number of pending user requests to capture a photo.
-     */
-    private int mPendingUserCaptures = 0;
-
     /**
      * Request ID to {@link ImageSaver.ImageSaverBuilder} mapping for in-progress RAW captures.
      */
     private final TreeMap<Integer, ImageSaver.ImageSaverBuilder> mRawResultQueue = new TreeMap<>();
-
-    /**
-     * {@link CaptureRequest.Builder} for the camera preview
-     */
-    private CaptureRequest.Builder mPreviewRequestBuilder;
-
-    /**
-     * The state of the camera device.
-     *
-     * @see #mPreCaptureCallback
-     */
-    private int mState = STATE_CLOSED;
-
-    /**
-     * Timer to use with pre-capture sequence to ensure a timely capture if 3A convergence is
-     * taking too long.
-     */
-    private long mCaptureTimer;
-
-    //**********************************************************************************************
-
-    /**
-     * {@link CameraDevice.StateCallback} is called when the currently active {@link CameraDevice}
-     * changes its state.
-     */
-    private final CameraDevice.StateCallback mStateCallback = new CameraDevice.StateCallback() {
-
-        @Override
-        public void onOpened(CameraDevice cameraDevice) {
-            // This method is called when the camera is opened.  We start camera preview here if
-            // the TextureView displaying this has been set up.
-            synchronized (mCameraStateLock) {
-                mState = STATE_OPENED;
-                mCameraOpenCloseLock.release();
-                mCameraDevice = cameraDevice;
-
-                // Start the preview session if the TextureView has been set up already.
-                if (mPreviewSize != null && mTextureView.isAvailable()) {
-                    createCameraPreviewSessionLocked();
-                }
-            }
-        }
-
-        @Override
-        public void onDisconnected(CameraDevice cameraDevice) {
-            synchronized (mCameraStateLock) {
-                mState = STATE_CLOSED;
-                mCameraOpenCloseLock.release();
-                cameraDevice.close();
-                mCameraDevice = null;
-            }
-        }
-
-        @Override
-        public void onError(CameraDevice cameraDevice, int error) {
-            Log.e(TAG, "Received camera device error: " + error);
-            synchronized (mCameraStateLock) {
-                mState = STATE_CLOSED;
-                mCameraOpenCloseLock.release();
-                cameraDevice.close();
-                mCameraDevice = null;
-            }
-
-        }
-
-    };
-
-
-    /**
-     * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
-     * RAW image is ready to be saved.
-     */
-    private final ImageReader.OnImageAvailableListener mOnImageAvailableListener
-            = new ImageReader.OnImageAvailableListener() {
-
-        @Override
-        public void onImageAvailable(ImageReader reader) {
-            dequeueAndSaveImage(mRawResultQueue, mImageReader);
-        }
-
-    };
-
-
     /**
      * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
      * still image is ready to be saved.
@@ -1082,7 +358,136 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
 
     };
+    /**
+     * A {@link Handler} for showing {@link Toast}s on the UI thread.
+     */
+    private final Handler mMessageHandler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(Message msg) {
+            Toast.makeText(AcquireActivity.this, (String) msg.obj, Toast.LENGTH_SHORT).show();
+        }
+    };
 
+
+    private Image mRawLastReceivedImage = null;
+    ImageReader.OnImageAvailableListener mImageListener =
+            new ImageReader.OnImageAvailableListener() {
+                @Override
+                public void onImageAvailable(ImageReader reader) {
+                    Image img = reader.acquireLatestImage();
+                    if (img == null) {
+                        Log.e(TAG, "Null image returned YUV1");
+                        return;
+                    }
+
+                    if (mRawLastReceivedImage != null) {
+                        mRawLastReceivedImage.close();
+                    }
+
+                    Image.Plane plane0 = img.getPlanes()[0];
+                    buffer = plane0.getBuffer();
+
+                    final byte[] DateBuf;
+                    if (buffer.hasArray()) {
+                        DateBuf = buffer.array();
+                    } else {
+                        DateBuf = new byte[buffer.capacity()];
+                        buffer.get(DateBuf);
+                    }
+
+                    mRawLastReceivedImage = img;
+                    Log.d(TAG, "mImageListener RECIEVE img!!!");
+                }
+            };
+    /**
+     * An {@link OrientationEventListener} used to determine when device rotation has occurred.
+     * This is mainly necessary for when the device is rotated by 180 degrees, in which case
+     * onCreate or onConfigurationChanged is not called as the view dimensions remain the same,
+     * but the orientation of the has changed, and thus the preview rotation must be updated.
+     */
+    private OrientationEventListener mOrientationListener;
+    /**
+     * An {@link AutoFitTextureView} for camera preview.
+     */
+    private AutoFitTextureView mTextureView;
+    /**
+     * An additional thread for running tasks that shouldn't block the UI.  This is used for all
+     * callbacks from the {@link CameraDevice} and {@link CameraCaptureSession}s.
+     */
+    private HandlerThread mBackgroundThread;
+    /**
+     * ID of the current {@link CameraDevice}.
+     */
+    private String mCameraId;
+    /**
+     * A {@link CameraCaptureSession } for camera preview.
+     */
+    private CameraCaptureSession mCaptureSession;
+    /**
+     * A reference to the open {@link CameraDevice}.
+     */
+    private CameraDevice mCameraDevice;
+    /**
+     * The {@link Size} of camera preview.
+     */
+    private Size mPreviewSize;
+    /**
+     * The {@link CameraCharacteristics} for the currently configured camera device.
+     */
+    private CameraCharacteristics mCharacteristics;
+
+    // *********************************************************************************************
+    // State protected by mCameraStateLock.
+    //
+    // The following state is used across both the UI and background threads.  Methods with "Locked"
+    // in the name expect mCameraStateLock to be held while calling.
+    /**
+     * A {@link Handler} for running tasks in the background.
+     */
+    private Handler mBackgroundHandler;
+    /**
+     * A reference counted holder wrapping the {@link ImageReader} that handles RAW image captures.
+     * This is used to allow us to clean up the {@link ImageReader} when all background tasks using
+     * its {@link Image}s have completed.
+     */
+    private RefCountedAutoCloseable<ImageReader> mImageReader;
+    /**
+     * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
+     * RAW image is ready to be saved.
+     */
+    private final ImageReader.OnImageAvailableListener mOnImageAvailableListener
+            = new ImageReader.OnImageAvailableListener() {
+
+        @Override
+        public void onImageAvailable(ImageReader reader) {
+            dequeueAndSaveImage(mRawResultQueue, mImageReader);
+        }
+
+    };
+    private RefCountedAutoCloseable<ImageReader> mJPEGImageReader;
+    /**
+     * Whether or not the currently configured camera device is fixed-focus.
+     */
+    private boolean mNoAFRun = true;
+    /**
+     * Number of pending user requests to capture a photo.
+     */
+    private int mPendingUserCaptures = 0;
+    /**
+     * {@link CaptureRequest.Builder} for the camera preview
+     */
+    private CaptureRequest.Builder mPreviewRequestBuilder;
+    /**
+     * The state of the camera device.
+     *
+     * @see #mPreCaptureCallback
+     */
+    private int mState = STATE_CLOSED;
+    /**
+     * Timer to use with pre-capture sequence to ensure a timely capture if 3A convergence is
+     * taking too long.
+     */
+    private long mCaptureTimer;
     /**
      * A {@link CameraCaptureSession.CaptureCallback} that handles events for the preview and
      * pre-capture sequence.
@@ -1090,6 +495,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     private CameraCaptureSession.CaptureCallback mPreCaptureCallback
             = new CameraCaptureSession.CaptureCallback() {
 
+        @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
         private void process(CaptureResult result) {
             synchronized (mCameraStateLock) {
                 switch (mState) {
@@ -1164,7 +570,95 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
 
     };
+    /**
+     * {@link TextureView.SurfaceTextureListener} handles several lifecycle events of a
+     * {@link TextureView}.
+     */
+    private final TextureView.SurfaceTextureListener mSurfaceTextureListener
+            = new TextureView.SurfaceTextureListener() {
 
+        @Override
+        public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
+            configureTransform(width, height);
+        }
+
+        @Override
+        public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
+            configureTransform(width, height);
+        }
+
+        @Override
+        public boolean onSurfaceTextureDestroyed(SurfaceTexture texture) {
+            synchronized (mCameraStateLock) {
+                mPreviewSize = null;
+            }
+            return true;
+        }
+
+        @Override
+        public void onSurfaceTextureUpdated(SurfaceTexture texture) {
+
+            if (is_findcoupling & !isCameraBusy) {
+                //Log.i(TAG, "Lens Calibration in progress");
+                global_bitmap = mTextureView.getBitmap();
+                global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), mTextureView.getTransform(null), true);
+
+                // START THREAD AND ALIGN THE LENS
+                if (is_findcoupling_coarse) {
+                    run_calibration_thread_coarse thread_1 = new run_calibration_thread_coarse("CoarseThread");
+                } else if (is_findcoupling_fine) {
+                    run_calibration_thread_fine thread_2 = new run_calibration_thread_fine("FineThread");
+                }
+
+
+            }
+        }
+    };
+    /**
+     * {@link CameraDevice.StateCallback} is called when the currently active {@link CameraDevice}
+     * changes its state.
+     */
+    private final CameraDevice.StateCallback mStateCallback = new CameraDevice.StateCallback() {
+
+        @Override
+        public void onOpened(CameraDevice cameraDevice) {
+            // This method is called when the camera is opened.  We start camera preview here if
+            // the TextureView displaying this has been set up.
+            synchronized (mCameraStateLock) {
+                mState = STATE_OPENED;
+                mCameraOpenCloseLock.release();
+                mCameraDevice = cameraDevice;
+
+                // Start the preview session if the TextureView has been set up already.
+                if (mPreviewSize != null && mTextureView.isAvailable()) {
+                    createCameraPreviewSessionLocked();
+                }
+            }
+        }
+
+        @Override
+        public void onDisconnected(CameraDevice cameraDevice) {
+            synchronized (mCameraStateLock) {
+                mState = STATE_CLOSED;
+                mCameraOpenCloseLock.release();
+                cameraDevice.close();
+                mCameraDevice = null;
+            }
+        }
+
+        @Override
+        public void onError(CameraDevice cameraDevice, int error) {
+            Log.e(TAG, "Received camera device error: " + error);
+            synchronized (mCameraStateLock) {
+                mState = STATE_CLOSED;
+                mCameraOpenCloseLock.release();
+                cameraDevice.close();
+                mCameraDevice = null;
+            }
+
+        }
+
+    };
     /**
      * A {@link CameraCaptureSession.CaptureCallback} that handles the still JPEG and RAW capture
      * request.
@@ -1178,9 +672,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             File imageFile = null;
 
             // setting the filepath
+            String mytimestamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS", Locale.US).format(new Date());
             if (isRaw)
-                imageFile = new File(myfullpath_measurements, fullfilename_measurements + ".DNG");
-            else imageFile = new File(myfullpath_measurements, fullfilename_measurements + ".JPG");
+                imageFile = new File(myfullpath_measurements, mytimestamp + ".DNG");
+            else imageFile = new File(myfullpath_measurements, mytimestamp + ".JPG");
 
             // Look up the ImageSaverBuilder for this request and update it with the file name
             // based on the capture start time.
@@ -1233,16 +728,591 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     };
 
-    /**
-     * A {@link Handler} for showing {@link Toast}s on the UI thread.
-     */
-    private final Handler mMessageHandler = new Handler(Looper.getMainLooper()) {
-        @Override
-        public void handleMessage(Message msg) {
-            Toast.makeText(AcquireActivity.this, (String) msg.obj, Toast.LENGTH_SHORT).show();
-        }
-    };
+    public AcquireActivity() {
+        Log.i(TAG, "Instantiated new " + this.getClass());
+    }
 
+    //**********************************************************************************************
+
+    /**
+     * Given {@code choices} of {@code Size}s supported by a camera, choose the smallest one that
+     * is at least as large as the respective texture view size, and that is at most as large as the
+     * respective max size, and whose aspect ratio matches with the specified value. If such size
+     * doesn't exist, choose the largest one that is at most as large as the respective max size,
+     * and whose aspect ratio matches with the specified value.
+     *
+     * @param choices           The list of sizes that the camera supports for the intended output
+     *                          class
+     * @param textureViewWidth  The width of the texture view relative to sensor coordinate
+     * @param textureViewHeight The height of the texture view relative to sensor coordinate
+     * @param maxWidth          The maximum width that can be chosen
+     * @param maxHeight         The maximum height that can be chosen
+     * @param aspectRatio       The aspect ratio
+     * @return The optimal {@code Size}, or an arbitrary one if none were big enough
+     */
+    private static Size chooseOptimalSize(Size[] choices, int textureViewWidth,
+                                          int textureViewHeight, int maxWidth, int maxHeight, Size aspectRatio) {
+        // Collect the supported resolutions that are at least as big as the preview Surface
+        List<Size> bigEnough = new ArrayList<>();
+        // Collect the supported resolutions that are smaller than the preview Surface
+        List<Size> notBigEnough = new ArrayList<>();
+        int w = aspectRatio.getWidth();
+        int h = aspectRatio.getHeight();
+        for (Size option : choices) {
+            if (option.getWidth() <= maxWidth && option.getHeight() <= maxHeight &&
+                    option.getHeight() == option.getWidth() * h / w) {
+                if (option.getWidth() >= textureViewWidth &&
+                        option.getHeight() >= textureViewHeight) {
+                    bigEnough.add(option);
+                } else {
+                    notBigEnough.add(option);
+                }
+            }
+        }
+
+        // Pick the smallest of those big enough. If there is no one big enough, pick the
+        // largest of those not big enough.
+        if (bigEnough.size() > 0) {
+            return Collections.min(bigEnough, new CompareSizesByArea());
+        } else if (notBigEnough.size() > 0) {
+            return Collections.max(notBigEnough, new CompareSizesByArea());
+        } else {
+            Log.e("Camera2Raw", "Couldn't find any suitable preview size");
+            return choices[0];
+        }
+    }
+
+    /**
+     * Generate a string containing a formatted timestamp with the current date and time.
+     *
+     * @return a {@link String} representing a time.
+     */
+    private static String generateTimestamp() {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS", Locale.US);
+        return sdf.format(new Date());
+    }
+
+    /**
+     * Cleanup the given {@link OutputStream}.
+     *
+     * @param outputStream the stream to close.
+     */
+    private static void closeOutput(OutputStream outputStream) {
+        if (null != outputStream) {
+            try {
+                outputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Return true if the given array contains the given integer.
+     *
+     * @param modes array to check.
+     * @param mode  integer to get for.
+     * @return true if the array contains the given integer, otherwise false.
+     */
+    private static boolean contains(int[] modes, int mode) {
+        if (modes == null) {
+            return false;
+        }
+        for (int i : modes) {
+            if (i == mode) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Return true if the two given {@link Size}s have the same aspect ratio.
+     *
+     * @param a first {@link Size} to compare.
+     * @param b second {@link Size} to compare.
+     * @return true if the sizes have the same aspect ratio, otherwise false.
+     */
+    private static boolean checkAspectsEqual(Size a, Size b) {
+        double aAspect = a.getWidth() / (double) a.getHeight();
+        double bAspect = b.getWidth() / (double) b.getHeight();
+        return Math.abs(aAspect - bAspect) <= ASPECT_RATIO_TOLERANCE;
+    }
+
+    /**
+     * Rotation need to transform from the camera sensor orientation to the device's current
+     * orientation.
+     *
+     * @param c                 the {@link CameraCharacteristics} to query for the camera sensor
+     *                          orientation.
+     * @param deviceOrientation the current device orientation relative to the native device
+     *                          orientation.
+     * @return the total rotation from the sensor orientation to the current device orientation.
+     */
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private static int sensorToDeviceRotation(CameraCharacteristics c, int deviceOrientation) {
+        int sensorOrientation = c.get(CameraCharacteristics.SENSOR_ORIENTATION);
+
+        // Get device orientation in degrees
+        deviceOrientation = ORIENTATIONS.get(deviceOrientation);
+
+        // Reverse device orientation for front-facing cameras
+        if (c.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
+            deviceOrientation = -deviceOrientation;
+        }
+
+        // Calculate desired JPEG orientation relative to camera orientation to make
+        // the image upright relative to the device orientation
+        return (sensorOrientation + deviceOrientation + 360) % 360;
+    }
+
+    // taken from killerink/freedcam
+    public static long getMilliSecondStringFromShutterString(String shuttervalue) {
+        float a;
+        if (shuttervalue.contains("/")) {
+            String[] split = shuttervalue.split("/");
+            a = Float.parseFloat(split[0]) / Float.parseFloat(split[1]) * 1000000f;
+        } else
+            a = Float.parseFloat(shuttervalue) * 1000000f;
+        a = Math.round(a);
+        return (long) a;
+    }
+
+
+    //**********************************************************************************************
+    //  Method onCreate
+    //**********************************************************************************************
+    @SuppressLint("ClickableViewAccessibility")
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_acquire);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
+        // Initialize OpenCV using external library for now //TODO use internal!
+        OpenCVLoader.initDebug();
+        //OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
+
+        // Load previously saved settings and set GUIelements
+        SharedPreferences sharedPref = this.getSharedPreferences(
+                PREFERENCE_FILE_KEY, Context.MODE_PRIVATE);
+        editor = sharedPref.edit();
+        setGUIelements(sharedPref);
+
+        // build the pop-up settings activity
+        settingsDialogFragment = new AcquireSettings();
+
+        // start MQTT
+        initialConfig();
+        if (isNetworkAvailable()) {
+            Toast.makeText(this, "Connecting MQTT", Toast.LENGTH_SHORT).show();
+            initialConfig();
+        } else
+            Toast.makeText(this, "We don't have network", Toast.LENGTH_SHORT).show();
+
+        // *****************************************************************************************
+        //  Camera STUFF
+        //******************************************************************************************
+        // Setup a new OrientationEventListener.  This is used to handle rotation events like a
+        // 180 degree rotation that do not normally trigger a call to onCreate to do view re-layout
+        // or otherwise cause the preview TextureView's size to change.
+        mTextureView = (AutoFitTextureView) this.findViewById(R.id.texture);
+        mOrientationListener = new OrientationEventListener(this,
+                SensorManager.SENSOR_DELAY_NORMAL) {
+            @Override
+            public void onOrientationChanged(int orientation) {
+                if (mTextureView != null && mTextureView.isAvailable()) {
+                    configureTransform(mTextureView.getWidth(), mTextureView.getHeight());
+                }
+            }
+        };
+
+        // Create the ISO-List
+        List<String> isolist = new ArrayList<>();
+        isolist.add(String.valueOf(100));
+        isolist.add(String.valueOf(200));
+        isolist.add(String.valueOf(300));
+        isolist.add(String.valueOf(1000));
+        isolist.add(String.valueOf(1500));
+        isolist.add(String.valueOf(2000));
+        isolist.add(String.valueOf(3200));
+        isolist.add(String.valueOf(6400));
+        isolist.add(String.valueOf(12800));
+        isovalues = new String[isolist.size()];
+        isolist.toArray(isovalues);
+
+        // Create the Shutter-List
+        texpvalues = "1/100000,1/6000,1/4000,1/2000,1/1000,1/500,1/250,1/125,1/60,1/30,1/15,1/8,1/4,1/2,2,4,8,15,30,32".split(",");
+
+        /**
+        GUI-STUFF
+         */
+        btn_x_lens_plus = findViewById(R.id.button_x_lens_plus);
+        btn_x_lens_minus = findViewById(R.id.button_x_lens_minus);
+        btnCapture = findViewById(R.id.btnCapture);
+        btnSetup = findViewById(R.id.btnSetup);
+        btnStartMeasurement = findViewById(R.id.btnStart);
+        btnStopMeasurement = findViewById(R.id.btnStop);
+
+        textViewGuiText = findViewById(R.id.textViewGuiText);
+        textView_shutter = findViewById(R.id.textView_shutter);
+        textView_iso = findViewById(R.id.textView_iso);
+
+        acquireProgressBar = (ProgressBar) findViewById(R.id.acquireProgressBar);
+        acquireProgressBar.setVisibility(View.INVISIBLE); // Make invisible at first, then have it pop up
+
+
+
+        /*
+        Seekbar for the ISO-Setting
+         */
+        seekbar_iso = findViewById(R.id.seekBar_iso);
+        seekbar_iso.setVisibility(View.GONE);
+        seekbar_shutter = findViewById(R.id.seekBar_shutter);
+        seekbar_shutter.setVisibility(View.GONE);
+
+        seekbar_iso.setMax(isovalues.length - 1);
+        seekbar_iso.setProgress(val_iso_index); // 50x16=800
+        textView_iso.setText("Iso:" + isovalues[val_iso_index]);
+
+        seekbar_iso.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (mPreviewRequestBuilder != null && fromUser) {
+                    editor.putString("val_iso_index", String.valueOf(progress));
+                    editor.commit();
+
+                    textView_iso.setText("Iso:" + isovalues[progress]);
+                    global_isoval = isovalues[progress];
+                    setIso(global_isoval);
+                    try {
+                        mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mPreCaptureCallback, mBackgroundHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
+
+        /*
+        Seekbar for the ISO-Setting
+         */
+        seekbar_shutter.setMax(texpvalues.length - 1);
+        seekbar_shutter.setProgress(val_texp_index); // == 1/30
+        textView_shutter.setText("Shutter:" + texpvalues[val_texp_index]);
+
+        seekbar_shutter.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (mPreviewRequestBuilder != null && fromUser) {
+                    editor.putString("val_texp_index", String.valueOf(progress));
+                    editor.commit();
+
+                    global_expval = texpvalues[progress];
+                    textView_shutter.setText("Shutter:" + texpvalues[progress]);
+                    setExposureTime(texpvalues[progress]);
+                    try {
+                        mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mPreCaptureCallback, mBackgroundHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
+
+        /*
+        Seekbar for Lens in X-direction
+         */
+        seekBarLensX = (SeekBar) findViewById(R.id.seekBarLensX);
+        seekBarLensX.setMax(PWM_RES);
+        seekBarLensX.setProgress(0);
+
+        textViewLensX = (TextView) findViewById(R.id.textViewLensX);
+        String text_lens_x_pre = "Lens (X): ";
+        textViewLensX.setText(text_lens_x_pre + seekBarLensX.getProgress());
+
+        seekBarLensX.setOnSeekBarChangeListener(
+                new SeekBar.OnSeekBarChangeListener() {
+
+                    @Override
+                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                        val_lens_x_global = progress;
+                        setLensX(val_lens_x_global);
+                        textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                    }
+
+                    @Override
+                    public void onStartTrackingTouch(SeekBar seekBar) {
+                        textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                    }
+
+                    @Override
+                    public void onStopTrackingTouch(SeekBar seekBar) {
+                        textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                    }
+                }
+        );
+
+
+        /*
+        Seekbar for Lens in X-direction
+         */
+        seekBarLensZ = (SeekBar) findViewById(R.id.seekBarLensZ);
+        seekBarLensZ.setMax(PWM_RES);
+        seekBarLensZ.setProgress(val_lens_z_global);
+
+        textViewLensZ = (TextView) findViewById(R.id.textViewLensZ);
+        String text_lens_z_pre = "Lens (Z): ";
+        textViewLensZ.setText(text_lens_z_pre + seekBarLensZ.getProgress());
+
+        seekBarLensZ.setOnSeekBarChangeListener(
+                new SeekBar.OnSeekBarChangeListener() {
+
+                    @Override
+                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                        val_lens_z_global = progress;
+                        setLensZ(val_lens_z_global);
+                        textViewLensZ.setText(text_lens_z_pre + val_lens_z_global * 1.);
+                    }
+
+                    @Override
+                    public void onStartTrackingTouch(SeekBar seekBar) {
+                        textViewLensZ.setText(text_lens_z_pre + val_lens_z_global * 1.);
+                    }
+
+                    @Override
+                    public void onStopTrackingTouch(SeekBar seekBar) {
+                        textViewLensZ.setText(text_lens_z_pre + val_lens_z_global * 1.);
+                    }
+                }
+
+        );
+
+        /*
+        Seekbar for Lens in X-direction
+         */
+        seekBarLaser = (SeekBar) findViewById(R.id.seekBarLaser);
+        seekBarLaser.setMax(PWM_RES);
+        seekBarLaser.setProgress(0);
+
+        textViewLaser = (TextView) findViewById(R.id.textViewLaser);
+        String text_laser_pre = "Laser (I): ";
+        textViewLaser.setText(text_laser_pre + seekBarLaser.getProgress());
+
+        seekBarLaser.setOnSeekBarChangeListener(
+                new SeekBar.OnSeekBarChangeListener() {
+
+                    @Override
+                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                        val_laser_red_global = progress;
+                        setLaser(val_laser_red_global);
+                        textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
+                    }
+
+                    @Override
+                    public void onStartTrackingTouch(SeekBar seekBar) {
+                        textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
+                    }
+
+                    @Override
+                    public void onStopTrackingTouch(SeekBar seekBar) {
+                        textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
+                    }
+                }
+        );
+
+
+        //Create second surface with another holder (holderTransparent) for drawing the rectangle
+        SurfaceView transparentView = (SurfaceView) findViewById(R.id.TransparentView);
+        transparentView.setBackgroundColor(Color.TRANSPARENT);
+        transparentView.setZOrderOnTop(true);    // necessary
+        SurfaceHolder holderTransparent = transparentView.getHolder();
+        holderTransparent.setFormat(PixelFormat.TRANSPARENT);
+        //TODO holderTransparent.addCallback(callBack);
+
+
+
+        /*
+        Assign GUI-Elements to actions
+         */
+        acquireSettingsSOFIToggle = this.findViewById(R.id.btnSofi);
+        acquireSettingsSOFIToggle.setText("SOFI (x): 0");
+        acquireSettingsSOFIToggle.setTextOn("SOFI (x): 1");
+        acquireSettingsSOFIToggle.setTextOff("SOFI (x): 0");
+
+        btnSetup.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                openSettingsDialog();
+            }
+        });
+
+
+        //******************* SOFI-Mode  ********************************************//
+        // This is to let the lens vibrate by a certain amount
+        acquireSettingsSOFIToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    Log.i(TAG, "Checked");
+                    // turn on fluctuation
+                    publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
+                } else {
+                    publishMessage(topic_lens_sofi_z, String.valueOf(0));
+                }
+            }
+
+        });
+
+        //******************* Move X ++ ********************************************//
+        btn_x_lens_plus.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                val_lens_x_global = val_lens_x_global+10;
+                setLensX(val_lens_x_global);
+                textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                seekBarLensX.setProgress(val_lens_x_global);
+            }
+
+        });
+
+        //******************* Move X -- ********************************************//
+        btn_x_lens_minus.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                val_lens_x_global = val_lens_x_global-10;
+                setLensX(val_lens_x_global);
+                textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                seekBarLensX.setProgress(val_lens_x_global);
+            }
+
+        });
+
+        //******************* Make snapshot ********************************************//
+        btnCapture.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                //
+                //Log.i(TAG, "Set is_find_coupling to true!");
+                //if (!is_findcoupling) is_findcoupling = true;
+                //takePicture(); //TODO integrate
+                showToast("Taking a snapshot.");
+                // turn on the laser
+                setLaser(val_laser_red_global);
+                Log.i(TAG, "Lens Calibration in progress");
+                String my_gui_text = "Lens Calibration in progress";
+                is_findcoupling = true;
+                is_measurement = false;
+                textViewGuiText.setText(my_gui_text);
+                setState(STATE_CALIBRATION);
+            }
+        });
+
+        //******************* Start MEasurement ********************************************//
+        btnStartMeasurement.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if(!is_measurement&!is_findcoupling){
+                    is_measurement = true;
+                    new run_sofimeasurement().execute();
+                }
+            }
+        });
+
+        //******************* Stop Measurement ********************************************//
+        btnStopMeasurement.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                is_measurement = false;
+                is_findcoupling = false;
+                is_findcoupling_coarse = false;
+                is_findcoupling_coarse = true;
+            }
+        });
+
+    }
+
+
+    //**********************************************************************************************
+    //  Method OnPause
+    //**********************************************************************************************
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.e(TAG, "onPause");
+
+        if (mOrientationListener != null) {
+            mOrientationListener.disable();
+        }
+        closeCamera();
+        super.onPause();
+        stopBackgroundThread();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        startBackgroundThread();
+        openCamera();
+        if (mTextureView.isAvailable()) {
+            configureTransform(mTextureView.getWidth(), mTextureView.getHeight());
+        } else {
+            mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
+        }
+        if (mOrientationListener != null && mOrientationListener.canDetectOrientation()) {
+            mOrientationListener.enable();
+        }
+
+
+        // SET CAMERA PARAMETERS FROM GUI
+        try {
+            global_isoval = isovalues[val_iso_index];
+            setIso(global_isoval);
+            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mPreCaptureCallback, mBackgroundHandler);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        try {
+            global_expval = texpvalues[val_texp_index];
+            setExposureTime(global_expval);
+            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mPreCaptureCallback, mBackgroundHandler);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+    public void onDestroy() {
+        super.onDestroy();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
@@ -1257,9 +1327,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
-
-//takePicture(); ???? //TODO integrate
-
 
     /**
      * Sets up state related to camera that is needed before opening a {@link CameraDevice}.
@@ -1413,13 +1480,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     }
 
     /**
-     * Gets whether you should show UI with rationale for requesting the permissions.
-     *
-     * @return True if the UI should be shown.
-     */
-
-
-    /**
      * Shows that this app really needs the permission and finishes the app.
      */
     private void showMissingPermissionError() {
@@ -1429,7 +1489,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             activity.finish();
         }
     }
-
 
     /**
      * Closes the current {@link CameraDevice}.
@@ -1560,7 +1619,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     }
 
-
     private void setExposureTime(String val) {
         int msexpo = (int) getMilliSecondStringFromShutterString(val);
 
@@ -1578,14 +1636,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         mPreviewRequestBuilder.set(CaptureRequestEx.HUAWEI_SENSOR_ISO_VALUE, Integer.parseInt(iso));
     }
 
-    /**
-     * Configure the given {@link CaptureRequest.Builder} to use auto-focus, auto-exposure, and
-     * auto-white-balance controls if available.
-     * <p/>
-     * Call this only with {@link #mCameraStateLock} held.
-     *
-     * @param builder the builder to configure.
-     */
     private void setup3AControlsLocked(CaptureRequest.Builder builder) {
         // Enable auto-magical 3A run by camera device
         builder.set(CaptureRequest.CONTROL_MODE,
@@ -1621,16 +1671,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         setIso(global_isoval);
     }
 
-    /**
-     * Configure the necessary {@link android.graphics.Matrix} transformation to `mTextureView`,
-     * and start/restart the preview capture session if necessary.
-     * <p/>
-     * This method should be called after the camera state has been initialized in
-     * setUpCameraOutputs.
-     *
-     * @param viewWidth  The width of `mTextureView`
-     * @param viewHeight The height of `mTextureView`
-     */
     private void configureTransform(int viewWidth, int viewHeight) {
         Activity activity = AcquireActivity.this;
         synchronized (mCameraStateLock) {
@@ -1743,6 +1783,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
     }
 
+    // Utility classes and methods:
+    // *********************************************************************************************
+
     /**
      * Initiate a still image capture.
      * <p/>
@@ -1813,7 +1856,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
             // Use the same AE and AF modes as the preview.
             setup3AControlsLocked(captureBuilder);
-
 
             // Set orientation.
             int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
@@ -1913,7 +1955,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     @Override
     public void onDialogPositiveClick(DialogFragment dialog) {
-
     }
 
     @Override
@@ -1921,6 +1962,545 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     }
 
+    /**
+     * Shows a {@link Toast} on the UI thread.
+     *
+     * @param text The message to show.
+     */
+    private void showToast(String text) {
+        // We show a Toast by sending request message to mMessageHandler. This makes sure that the
+        // Toast is shown on the UI thread.
+        Message message = Message.obtain();
+        message.obj = text;
+        mMessageHandler.sendMessage(message);
+    }
+
+    /**
+     * If the given request has been completed, remove it from the queue of active requests and
+     * send an {@link ImageSaver} with the results from this request to a background thread to
+     * save a file.
+     * <p/>
+     * Call this only with {@link #mCameraStateLock} held.
+     *
+     * @param requestId the ID of the {@link CaptureRequest} to handle.
+     * @param builder   the {@link ImageSaver.ImageSaverBuilder} for this request.
+     * @param queue     the queue to remove this request from, if completed.
+     */
+    private void handleCompletionLocked(int requestId, ImageSaver.ImageSaverBuilder builder,
+                                        TreeMap<Integer, ImageSaver.ImageSaverBuilder> queue) {
+        if (builder == null) return;
+        ImageSaver saver = builder.buildIfComplete();
+        if (saver != null) {
+            queue.remove(requestId);
+            AsyncTask.THREAD_POOL_EXECUTOR.execute(saver);
+        }
+    }
+
+    /**
+     * Check if we are using a device that only supports the LEGACY hardware level.
+     * <p/>
+     * Call this only with {@link #mCameraStateLock} held.
+     *
+     * @return true if this is a legacy device.
+     */
+    private boolean isLegacyLocked() {
+        return mCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) ==
+                CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY;
+    }
+
+    /**
+     * Start the timer for the pre-capture sequence.
+     * <p/>
+     * Call this only with {@link #mCameraStateLock} held.
+     */
+    private void startTimerLocked() {
+        mCaptureTimer = SystemClock.elapsedRealtime();
+    }
+
+    /**
+     * Check if the timer for the pre-capture sequence has been hit.
+     * <p/>
+     * Call this only with {@link #mCameraStateLock} held.
+     *
+     * @return true if the timeout occurred.
+     */
+    private boolean hitTimeoutLocked() {
+        return (SystemClock.elapsedRealtime() - mCaptureTimer) > PRECAPTURE_TIMEOUT_MS;
+    }
+
+    private void setUpMediaRecorder() throws IOException {
+        final Activity activity = this; //getActivity();
+        if (null == activity) {
+            return;
+        }
+        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+        /**
+         * create video output file
+         */
+        mCurrentFile = myVideoFileName;
+        /**
+         * set output file in media recorder
+         */
+        mMediaRecorder.setOutputFile(mCurrentFile.getAbsolutePath());
+        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P);
+        mMediaRecorder.setVideoFrameRate(20);
+        mMediaRecorder.setVideoSize(profile.videoFrameWidth, profile.videoFrameHeight);
+        mMediaRecorder.setVideoEncodingBitRate(profile.videoBitRate);
+        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+        mMediaRecorder.setAudioEncodingBitRate(profile.audioBitRate);
+        mMediaRecorder.setAudioSamplingRate(profile.audioSampleRate);
+
+        int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+
+        mMediaRecorder.setOrientationHint(ORIENTATIONS.get(rotation));
+
+        mMediaRecorder.prepare();
+    }
+
+
+    private void closePreviewSession() {
+        if (mCaptureSession != null) {
+            mCaptureSession.close();
+            mCaptureSession = null;
+        }
+    }
+
+    /**
+     * Start the camera preview.
+     */
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private void startPreview() {
+        if (null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
+            return;
+        }
+        try {
+            closePreviewSession();
+            SurfaceTexture texture = mTextureView.getSurfaceTexture();
+            assert texture != null;
+            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+
+            // Use the same AE and AF  modes as the preview.
+            setup3AControlsLocked(mPreviewRequestBuilder);
+
+            Surface previewSurface = new Surface(texture);
+            mPreviewRequestBuilder.addTarget(previewSurface);
+
+            mCameraDevice.createCaptureSession(Collections.singletonList(previewSurface),
+                    new CameraCaptureSession.StateCallback() {
+
+                        @Override
+                        public void onConfigured(@NonNull CameraCaptureSession session) {
+                            mCaptureSession = session;
+                            updatePreview();
+                        }
+
+                        @Override
+                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+                            Activity activity = AcquireActivity.this;
+                            if (null != activity) {
+                                Toast.makeText(activity, "Failed", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void startRecordingVideo() {
+        if (null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
+            return;
+        }
+        try {
+            closePreviewSession();
+
+            setUpMediaRecorder();
+            SurfaceTexture texture = mTextureView.getSurfaceTexture();
+            assert texture != null;
+            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+
+            // Use the same AE and AF  modes as the preview.
+            setup3AControlsLocked(mPreviewRequestBuilder);
+
+
+            List<Surface> surfaces = new ArrayList<>();
+            /**
+             * Surface for the camera preview set up
+             */
+            Surface previewSurface = new Surface(texture);
+            surfaces.add(previewSurface);
+            mPreviewRequestBuilder.addTarget(previewSurface);
+            //MediaRecorder setup for surface
+            Surface recorderSurface = mMediaRecorder.getSurface();
+            surfaces.add(recorderSurface);
+            mPreviewRequestBuilder.addTarget(recorderSurface);
+            // Start a capture session
+
+            mCameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
+                    mCaptureSession = cameraCaptureSession;
+                    updatePreview();
+                    runOnUiThread(() -> {
+                        mIsRecordingVideo = true;
+                        // Start recording
+                        try {
+                            mMediaRecorder.prepare();
+                            mMediaRecorder.start();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+                    });
+                }
+
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
+                    Log.e(TAG, "onConfigureFailed: Failed");
+                }
+            }, mBackgroundHandler);
+
+        } catch (CameraAccessException | IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Update the camera preview. {@link startPreview()} needs to be called in advance.
+     */
+    private void updatePreview() {
+        if (null == mCameraDevice) {
+            return;
+        }
+        try {
+            setUpCaptureRequestBuilder(mPreviewRequestBuilder);
+            HandlerThread thread = new HandlerThread("CameraPreview");
+            thread.start();
+            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), null, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void setUpCaptureRequestBuilder(CaptureRequest.Builder builder) {
+        builder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+    }
+
+    public void stopRecordingVideo() throws Exception {
+        // UI
+        mIsRecordingVideo = false;
+        try {
+            mCaptureSession.stopRepeating();
+            mCaptureSession.abortCaptures();
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+        // Stop recording
+        mMediaRecorder.stop();
+        mMediaRecorder.reset();
+
+        startPreview();
+    }
+
+    private void saveFile(byte[] Data, int w, int h, int type) {
+        String filename = "";
+        String filetype = "";
+        try {
+            switch (type) {
+                case 0:
+                    filetype = "JPG";
+                    break;
+                case 1:
+                    filetype = "yuv";
+                    break;
+                case 2:
+                    filetype = "raw";
+                    break;
+                default:
+                    Log.w(TAG, "unknow file type");
+            }
+
+            filename = String.format("/sdcard/DCIM/Camera/SNAP_%dx%d_%d.%s", w, h, System.currentTimeMillis(), filetype);
+            File file;
+            while (true) {
+                file = new File(filename);
+                if (file.createNewFile()) {
+                    break;
+                }
+            }
+
+            long t0 = SystemClock.uptimeMillis();
+            OutputStream os = new FileOutputStream(file);
+            os.write(Data);
+            os.flush();
+            os.close();
+            long t1 = SystemClock.uptimeMillis();
+
+            Log.d(TAG, String.format("Wrote data(%d) %d bytes as %s in %.3f seconds;%s", type,
+                    Data.length, file, (t1 - t0) * 0.001, filename));
+        } catch (IOException e) {
+            Log.e(TAG, "Error creating new file: ", e);
+        }
+    }
+
+    private void initialConfig() {
+        mqttAndroidClient = new MqttAndroidClient(getApplicationContext(), "tcp://" + myIPAddress, MQTT_CLIENTID);
+        mqttAndroidClient.setCallback(new MqttCallbackExtended() {
+            @Override
+            public void connectComplete(boolean reconnect, String myIPAddress) {
+
+                if (reconnect) {
+                    //addToHistory("Reconnected to : " + myIPAddress);
+                    // Because Clean Session is true, we need to re-subscribe
+                    // subscribeToTopic();
+                } else {
+                    //addToHistory("Connected to: " + myIPAddress);
+                }
+            }
+
+            @Override
+            public void connectionLost(Throwable cause) {
+                //addToHistory("The Connection was lost.");
+            }
+
+            @Override
+            public void messageArrived(String topic, MqttMessage message) throws Exception {
+                //addToHistory("Incoming message: " + new String(message.getPayload()));
+            }
+
+            @Override
+            public void deliveryComplete(IMqttDeliveryToken token) {
+
+            }
+        });
+
+        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
+        mqttConnectOptions.setAutomaticReconnect(true);
+        mqttConnectOptions.setCleanSession(false);
+        mqttConnectOptions.setUserName(MQTT_USER);
+        mqttConnectOptions.setPassword(MQTT_PASS.toCharArray());
+        mqttConnectOptions.setAutomaticReconnect(true);
+        mqttConnectOptions.setCleanSession(false);
+
+        try {
+            //addToHistory("Connecting to " + myIPAddress);
+            mqttAndroidClient.connect(mqttConnectOptions, null, new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    DisconnectedBufferOptions disconnectedBufferOptions = new DisconnectedBufferOptions();
+                    disconnectedBufferOptions.setBufferEnabled(true);
+                    disconnectedBufferOptions.setBufferSize(100);
+                    disconnectedBufferOptions.setPersistBuffer(false);
+                    disconnectedBufferOptions.setDeleteOldestMessages(false);
+                    mqttAndroidClient.setBufferOpts(disconnectedBufferOptions);
+
+                    publishMessage("A phone has connected.", "");
+                    // subscribeToTopic();
+
+                    Toast.makeText(AcquireActivity.this, "Connected", Toast.LENGTH_SHORT).show();
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    //addToHistory("Failed to connect to: " + myIPAddress);
+                    Toast.makeText(AcquireActivity.this, "Connection attemp failed", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+
+        } catch (MqttException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager
+                = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+    }
+
+    public void publishMessage(String pub_topic, String publishMessage) {
+
+        Log.i(TAG, pub_topic + " " + publishMessage);
+        try {
+            MqttMessage message = new MqttMessage();
+            message.setPayload(publishMessage.getBytes());
+            mqttAndroidClient.publish(pub_topic, message);
+            //addToHistory("Message Published");
+            if (!mqttAndroidClient.isConnected()) {
+                //addToHistory(mqttAndroidClient.getBufferedMessageCount() + " messages in buffer.");
+            }
+            Log.i(TAG, "Message sent: " + pub_topic + message);
+        } catch (MqttException e) {
+            Toast.makeText(this, "Error while sending data", Toast.LENGTH_SHORT).show();
+            //System.err.println("Error Publishing: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void stopConnection() {
+        try {
+            mqttAndroidClient.close();
+            Toast.makeText(AcquireActivity.this, "Connection closed - on purpose?", Toast.LENGTH_SHORT).show();
+        } catch (Throwable e) {
+            Toast.makeText(AcquireActivity.this, "Something went wrong - propbably no connection established?", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, String.valueOf(e));
+        }
+    }
+
+    // -------------------------------
+    // ------ MQTT STUFFF -----------
+    //- ------------------------------
+
+    public void setIPAddress(String mIPaddress) {
+        myIPAddress = mIPaddress;
+    }
+
+    public void setSOFIX(boolean misSOFI_X, int mvalSOFIX) {
+        val_sofi_amplitude_x = mvalSOFIX;
+        is_SOFI_x = misSOFI_X;
+        publishMessage(topic_lens_sofi_x, String.valueOf(val_sofi_amplitude_x));
+    }
+
+    public void setSOFIZ(boolean misSOFI_Z, int mvalSOFIZ) {
+        val_sofi_amplitude_z = mvalSOFIZ;
+        is_SOFI_z = misSOFI_Z;
+        publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
+    }
+
+    public void setValSOFIX(int mval_sofi_amplitude_x) {
+        val_sofi_amplitude_x = mval_sofi_amplitude_x;
+        // Save the IP address for next start
+        editor.putString("mval_sofi_amplitude_x", String.valueOf(mval_sofi_amplitude_x));
+        editor.commit();
+    }
+
+    public void setValSOFIZ(int mval_sofi_amplitude_z) {
+        val_sofi_amplitude_z = mval_sofi_amplitude_z;
+        // Save the IP address for next start
+        editor.putString("mval_sofi_amplitude_z", String.valueOf(mval_sofi_amplitude_z));
+        editor.commit();
+    }
+
+    public void setValDurationMeas(int mval_duration_measurement) {
+        val_duration_measurement = mval_duration_measurement;
+        // Save the IP address for next start
+        editor.putString("val_duration_measurement", String.valueOf(mval_duration_measurement));
+        editor.commit();
+    }
+
+    public void setValPeriodMeas(int mval_period_measurement) {
+        val_period_measurement = mval_period_measurement;
+        // Save the IP address for next start
+        editor.putString("val_period_measurement", String.valueOf(mval_period_measurement));
+        editor.commit();
+    }
+
+    public void setNValPeriodCalibration(int mval_period_calibration) {
+        val_nperiods_calibration = mval_period_calibration;
+        // Save the IP address for next start
+        editor.putString("val_nperiods_calibration", String.valueOf(mval_period_calibration));
+        editor.commit();
+    }
+
+    void MQTT_Reconnect(String mIP) {
+
+        myIPAddress = mIP;
+        Toast.makeText(AcquireActivity.this, "IP-Address set to: " + myIPAddress, Toast.LENGTH_SHORT).show();
+        stopConnection();
+        initialConfig();
+
+        // Save the IP address for next start
+        editor.putString("myIPAddress", myIPAddress);
+        editor.commit();
+    }
+
+    protected String wifiIpAddress(Context context) {
+        WifiManager wifiManager = (WifiManager) context.getSystemService(WIFI_SERVICE);
+        int ipAddress = wifiManager.getConnectionInfo().getIpAddress();
+
+        // Convert little-endian to big-endianif needed
+        if (ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN)) {
+            ipAddress = Integer.reverseBytes(ipAddress);
+        }
+
+        byte[] ipByteArray = BigInteger.valueOf(ipAddress).toByteArray();
+
+        String ipAddressString;
+        try {
+            ipAddressString = InetAddress.getByAddress(ipByteArray).getHostAddress();
+        } catch (UnknownHostException ex) {
+            Log.e("WIFIIP", "Unable to get host address.");
+            ipAddressString = null;
+        }
+
+        return ipAddressString;
+    }
+
+    // SOME I/O thingys
+    public int lin2qudratic(int input, int mymax) {
+        double normalizedval = (double) input / (double) mymax;
+        double quadraticval = Math.pow(normalizedval, 2);
+        int laserintensitypow = (int) (quadraticval * (double) mymax);
+        return laserintensitypow;
+    }
+
+    public void setLaser(int laserintensity) {
+        if (laserintensity < PWM_RES && laserintensity>=0 ) {
+            if (laserintensity ==  0)laserintensity=1;
+            publishMessage(topic_laser, String.valueOf(lin2qudratic(laserintensity, PWM_RES)));
+            // Wait until the command was actually sent
+            if(is_findcoupling){
+                try {
+                    Thread.sleep(MQTT_SLEEP);
+                } catch (Exception e) {
+                    Log.e(TAG, String.valueOf(e));
+                }
+            }
+        }
+    }
+
+    public void setState(String mystate) {
+        publishMessage(topic_state, mystate);
+    }
+
+
+
+    void setLensX(int lensposition) {
+        if ((lensposition < PWM_RES) && (lensposition >=0)) {
+            if (lensposition ==  0)lensposition=1;
+            publishMessage(topic_lens_x, String.valueOf(lin2qudratic(lensposition, PWM_RES)));
+            // Wait until the command was actually sent
+            if(is_findcoupling){
+            try {
+                Thread.sleep(MQTT_SLEEP);
+            } catch (Exception e) {
+                Log.e(TAG, String.valueOf(e));
+            }
+            }
+        }
+    }
+
+    void setLensZ(int lensposition) {
+        if (lensposition < PWM_RES && lensposition >= 0) {
+            if (lensposition ==  0)lensposition=1;
+            publishMessage(topic_lens_z, String.valueOf(lin2qudratic(lensposition, PWM_RES)));
+            // Wait until the command was actually sent
+            if(is_findcoupling){
+                try {
+                    Thread.sleep(MQTT_SLEEP);
+                } catch (Exception e) {
+                    Log.e(TAG, String.valueOf(e));
+                }
+            }
+        }
+    }
 
     /**
      * Runnable that saves an {@link Image} into the specified {@link File}, and updates
@@ -2110,9 +2690,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
     }
 
-    // Utility classes and methods:
-    // *********************************************************************************************
-
     /**
      * Comparator based on area of the given {@link Size} objects.
      */
@@ -2223,203 +2800,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     }
 
     /**
-     * Given {@code choices} of {@code Size}s supported by a camera, choose the smallest one that
-     * is at least as large as the respective texture view size, and that is at most as large as the
-     * respective max size, and whose aspect ratio matches with the specified value. If such size
-     * doesn't exist, choose the largest one that is at most as large as the respective max size,
-     * and whose aspect ratio matches with the specified value.
-     *
-     * @param choices           The list of sizes that the camera supports for the intended output
-     *                          class
-     * @param textureViewWidth  The width of the texture view relative to sensor coordinate
-     * @param textureViewHeight The height of the texture view relative to sensor coordinate
-     * @param maxWidth          The maximum width that can be chosen
-     * @param maxHeight         The maximum height that can be chosen
-     * @param aspectRatio       The aspect ratio
-     * @return The optimal {@code Size}, or an arbitrary one if none were big enough
-     */
-    private static Size chooseOptimalSize(Size[] choices, int textureViewWidth,
-                                          int textureViewHeight, int maxWidth, int maxHeight, Size aspectRatio) {
-        // Collect the supported resolutions that are at least as big as the preview Surface
-        List<Size> bigEnough = new ArrayList<>();
-        // Collect the supported resolutions that are smaller than the preview Surface
-        List<Size> notBigEnough = new ArrayList<>();
-        int w = aspectRatio.getWidth();
-        int h = aspectRatio.getHeight();
-        for (Size option : choices) {
-            if (option.getWidth() <= maxWidth && option.getHeight() <= maxHeight &&
-                    option.getHeight() == option.getWidth() * h / w) {
-                if (option.getWidth() >= textureViewWidth &&
-                        option.getHeight() >= textureViewHeight) {
-                    bigEnough.add(option);
-                } else {
-                    notBigEnough.add(option);
-                }
-            }
-        }
-
-        // Pick the smallest of those big enough. If there is no one big enough, pick the
-        // largest of those not big enough.
-        if (bigEnough.size() > 0) {
-            return Collections.min(bigEnough, new CompareSizesByArea());
-        } else if (notBigEnough.size() > 0) {
-            return Collections.max(notBigEnough, new CompareSizesByArea());
-        } else {
-            Log.e("Camera2Raw", "Couldn't find any suitable preview size");
-            return choices[0];
-        }
-    }
-
-    /**
-     * Generate a string containing a formatted timestamp with the current date and time.
-     *
-     * @return a {@link String} representing a time.
-     */
-    private static String generateTimestamp() {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS", Locale.US);
-        return sdf.format(new Date());
-    }
-
-    /**
-     * Cleanup the given {@link OutputStream}.
-     *
-     * @param outputStream the stream to close.
-     */
-    private static void closeOutput(OutputStream outputStream) {
-        if (null != outputStream) {
-            try {
-                outputStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    /**
-     * Return true if the given array contains the given integer.
-     *
-     * @param modes array to check.
-     * @param mode  integer to get for.
-     * @return true if the array contains the given integer, otherwise false.
-     */
-    private static boolean contains(int[] modes, int mode) {
-        if (modes == null) {
-            return false;
-        }
-        for (int i : modes) {
-            if (i == mode) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Return true if the two given {@link Size}s have the same aspect ratio.
-     *
-     * @param a first {@link Size} to compare.
-     * @param b second {@link Size} to compare.
-     * @return true if the sizes have the same aspect ratio, otherwise false.
-     */
-    private static boolean checkAspectsEqual(Size a, Size b) {
-        double aAspect = a.getWidth() / (double) a.getHeight();
-        double bAspect = b.getWidth() / (double) b.getHeight();
-        return Math.abs(aAspect - bAspect) <= ASPECT_RATIO_TOLERANCE;
-    }
-
-    /**
-     * Rotation need to transform from the camera sensor orientation to the device's current
-     * orientation.
-     *
-     * @param c                 the {@link CameraCharacteristics} to query for the camera sensor
-     *                          orientation.
-     * @param deviceOrientation the current device orientation relative to the native device
-     *                          orientation.
-     * @return the total rotation from the sensor orientation to the current device orientation.
-     */
-    private static int sensorToDeviceRotation(CameraCharacteristics c, int deviceOrientation) {
-        int sensorOrientation = c.get(CameraCharacteristics.SENSOR_ORIENTATION);
-
-        // Get device orientation in degrees
-        deviceOrientation = ORIENTATIONS.get(deviceOrientation);
-
-        // Reverse device orientation for front-facing cameras
-        if (c.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
-            deviceOrientation = -deviceOrientation;
-        }
-
-        // Calculate desired JPEG orientation relative to camera orientation to make
-        // the image upright relative to the device orientation
-        return (sensorOrientation + deviceOrientation + 360) % 360;
-    }
-
-    /**
-     * Shows a {@link Toast} on the UI thread.
-     *
-     * @param text The message to show.
-     */
-    private void showToast(String text) {
-        // We show a Toast by sending request message to mMessageHandler. This makes sure that the
-        // Toast is shown on the UI thread.
-        Message message = Message.obtain();
-        message.obj = text;
-        mMessageHandler.sendMessage(message);
-    }
-
-    /**
-     * If the given request has been completed, remove it from the queue of active requests and
-     * send an {@link ImageSaver} with the results from this request to a background thread to
-     * save a file.
-     * <p/>
-     * Call this only with {@link #mCameraStateLock} held.
-     *
-     * @param requestId the ID of the {@link CaptureRequest} to handle.
-     * @param builder   the {@link ImageSaver.ImageSaverBuilder} for this request.
-     * @param queue     the queue to remove this request from, if completed.
-     */
-    private void handleCompletionLocked(int requestId, ImageSaver.ImageSaverBuilder builder,
-                                        TreeMap<Integer, ImageSaver.ImageSaverBuilder> queue) {
-        if (builder == null) return;
-        ImageSaver saver = builder.buildIfComplete();
-        if (saver != null) {
-            queue.remove(requestId);
-            AsyncTask.THREAD_POOL_EXECUTOR.execute(saver);
-        }
-    }
-
-    /**
-     * Check if we are using a device that only supports the LEGACY hardware level.
-     * <p/>
-     * Call this only with {@link #mCameraStateLock} held.
-     *
-     * @return true if this is a legacy device.
-     */
-    private boolean isLegacyLocked() {
-        return mCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) ==
-                CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY;
-    }
-
-    /**
-     * Start the timer for the pre-capture sequence.
-     * <p/>
-     * Call this only with {@link #mCameraStateLock} held.
-     */
-    private void startTimerLocked() {
-        mCaptureTimer = SystemClock.elapsedRealtime();
-    }
-
-    /**
-     * Check if the timer for the pre-capture sequence has been hit.
-     * <p/>
-     * Call this only with {@link #mCameraStateLock} held.
-     *
-     * @return true if the timeout occurred.
-     */
-    private boolean hitTimeoutLocked() {
-        return (SystemClock.elapsedRealtime() - mCaptureTimer) > PRECAPTURE_TIMEOUT_MS;
-    }
-
-    /**
      * A dialog that explains about the necessary permissions.
      */
     public static class PermissionConfirmationDialog extends DialogFragment {
@@ -2453,473 +2833,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     }
 
-
-    private void setUpMediaRecorder() throws IOException {
-        final Activity activity = this; //getActivity();
-        if (null == activity) {
-            return;
-        }
-        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        /**
-         * create video output file
-         */
-        mCurrentFile = myVideoFileName;
-        /**
-         * set output file in media recorder
-         */
-        mMediaRecorder.setOutputFile(mCurrentFile.getAbsolutePath());
-        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P);
-        mMediaRecorder.setVideoFrameRate(20);
-        mMediaRecorder.setVideoSize(profile.videoFrameWidth, profile.videoFrameHeight);
-        mMediaRecorder.setVideoEncodingBitRate(profile.videoBitRate);
-        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-        mMediaRecorder.setAudioEncodingBitRate(profile.audioBitRate);
-        mMediaRecorder.setAudioSamplingRate(profile.audioSampleRate);
-        int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
-
-        mMediaRecorder.setOrientationHint(ORIENTATIONS.get(rotation));
-
-        mMediaRecorder.prepare();
-    }
-
-    private void closePreviewSession() {
-        if (mCaptureSession != null) {
-            mCaptureSession.close();
-            mCaptureSession = null;
-        }
-    }
-
-    /**
-     * Start the camera preview.
-     */
-    private void startPreview() {
-        if (null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
-            return;
-        }
-        try {
-            closePreviewSession();
-            SurfaceTexture texture = mTextureView.getSurfaceTexture();
-            assert texture != null;
-            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-            mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-
-            // Use the same AE and AF  modes as the preview.
-            setup3AControlsLocked(mPreviewRequestBuilder);
-
-            Surface previewSurface = new Surface(texture);
-            mPreviewRequestBuilder.addTarget(previewSurface);
-
-            mCameraDevice.createCaptureSession(Collections.singletonList(previewSurface),
-                    new CameraCaptureSession.StateCallback() {
-
-                        @Override
-                        public void onConfigured(@NonNull CameraCaptureSession session) {
-                            mCaptureSession = session;
-                            updatePreview();
-                        }
-
-                        @Override
-                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-                            Activity activity = AcquireActivity.this;
-                            if (null != activity) {
-                                Toast.makeText(activity, "Failed", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    }, mBackgroundHandler);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    public void startRecordingVideo() {
-        if (null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
-            return;
-        }
-        try {
-            closePreviewSession();
-
-            setUpMediaRecorder();
-            SurfaceTexture texture = mTextureView.getSurfaceTexture();
-            assert texture != null;
-            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-            mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-
-            // Use the same AE and AF  modes as the preview.
-            setup3AControlsLocked(mPreviewRequestBuilder);
-
-
-            List<Surface> surfaces = new ArrayList<>();
-            /**
-             * Surface for the camera preview set up
-             */
-            Surface previewSurface = new Surface(texture);
-            surfaces.add(previewSurface);
-            mPreviewRequestBuilder.addTarget(previewSurface);
-            //MediaRecorder setup for surface
-            Surface recorderSurface = mMediaRecorder.getSurface();
-            surfaces.add(recorderSurface);
-            mPreviewRequestBuilder.addTarget(recorderSurface);
-            // Start a capture session
-            mCameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
-                @Override
-                public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
-                    mCaptureSession = cameraCaptureSession;
-                    updatePreview();
-                    runOnUiThread(() -> {
-                        mIsRecordingVideo = true;
-                        // Start recording
-                        mMediaRecorder.start();
-                    });
-                }
-
-                @Override
-                public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
-                    Log.e(TAG, "onConfigureFailed: Failed");
-                }
-            }, mBackgroundHandler);
-        } catch (CameraAccessException | IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Update the camera preview. {@link startPreview()} needs to be called in advance.
-     */
-    private void updatePreview() {
-        if (null == mCameraDevice) {
-            return;
-        }
-        try {
-            setUpCaptureRequestBuilder(mPreviewRequestBuilder);
-            HandlerThread thread = new HandlerThread("CameraPreview");
-            thread.start();
-            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), null, mBackgroundHandler);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void setUpCaptureRequestBuilder(CaptureRequest.Builder builder) {
-        builder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-    }
-
-
-    public void stopRecordingVideo() throws Exception {
-        // UI
-        mIsRecordingVideo = false;
-        try {
-            mCaptureSession.stopRepeating();
-            mCaptureSession.abortCaptures();
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-        // Stop recording
-        mMediaRecorder.stop();
-        mMediaRecorder.reset();
-
-        startPreview();
-    }
-
-
-    // taken from killerink/freedcam
-    public static long getMilliSecondStringFromShutterString(String shuttervalue) {
-        float a;
-        if (shuttervalue.contains("/")) {
-            String[] split = shuttervalue.split("/");
-            a = Float.parseFloat(split[0]) / Float.parseFloat(split[1]) * 1000000f;
-        } else
-            a = Float.parseFloat(shuttervalue) * 1000000f;
-        a = Math.round(a);
-        return (long) a;
-    }
-
-
-    ImageReader.OnImageAvailableListener mImageListener =
-            new ImageReader.OnImageAvailableListener() {
-                @Override
-                public void onImageAvailable(ImageReader reader) {
-                    Image img = reader.acquireLatestImage();
-                    if (img == null) {
-                        Log.e(TAG, "Null image returned YUV1");
-                        return;
-                    }
-
-                    if (mRawLastReceivedImage != null) {
-                        mRawLastReceivedImage.close();
-                    }
-
-                    Image.Plane plane0 = img.getPlanes()[0];
-                    buffer = plane0.getBuffer();
-
-                    final byte[] DateBuf;
-                    if (buffer.hasArray()) {
-                        DateBuf = buffer.array();
-                    } else {
-                        DateBuf = new byte[buffer.capacity()];
-                        buffer.get(DateBuf);
-                    }
-
-                    mRawLastReceivedImage = img;
-                    Log.d(TAG, "mImageListener RECIEVE img!!!");
-                }
-            };
-
-
-    private void saveFile(byte[] Data, int w, int h, int type) {
-        String filename = "";
-        String filetype = "";
-        try {
-            switch (type) {
-                case 0:
-                    filetype = "JPG";
-                    break;
-                case 1:
-                    filetype = "yuv";
-                    break;
-                case 2:
-                    filetype = "raw";
-                    break;
-                default:
-                    Log.w(TAG, "unknow file type");
-            }
-
-            filename = String.format("/sdcard/DCIM/Camera/SNAP_%dx%d_%d.%s", w, h, System.currentTimeMillis(), filetype);
-            File file;
-            while (true) {
-                file = new File(filename);
-                if (file.createNewFile()) {
-                    break;
-                }
-            }
-
-            long t0 = SystemClock.uptimeMillis();
-            OutputStream os = new FileOutputStream(file);
-            os.write(Data);
-            os.flush();
-            os.close();
-            long t1 = SystemClock.uptimeMillis();
-
-            Log.d(TAG, String.format("Wrote data(%d) %d bytes as %s in %.3f seconds;%s", type,
-                    Data.length, file, (t1 - t0) * 0.001, filename));
-        } catch (IOException e) {
-            Log.e(TAG, "Error creating new file: ", e);
-        }
-    }
-
-
-    // -------------------------------
-    // ------ MQTT STUFFF -----------
-    //- ------------------------------
-
-
-    private void initialConfig() {
-        mqttAndroidClient = new MqttAndroidClient(getApplicationContext(), "tcp://" + myIPAddress, clientId);
-        mqttAndroidClient.setCallback(new MqttCallbackExtended() {
-            @Override
-            public void connectComplete(boolean reconnect, String myIPAddress) {
-
-                if (reconnect) {
-                    //addToHistory("Reconnected to : " + myIPAddress);
-                    // Because Clean Session is true, we need to re-subscribe
-                    // subscribeToTopic();
-                } else {
-                    //addToHistory("Connected to: " + myIPAddress);
-                }
-            }
-
-            @Override
-            public void connectionLost(Throwable cause) {
-                //addToHistory("The Connection was lost.");
-            }
-
-            @Override
-            public void messageArrived(String topic, MqttMessage message) throws Exception {
-                //addToHistory("Incoming message: " + new String(message.getPayload()));
-            }
-
-            @Override
-            public void deliveryComplete(IMqttDeliveryToken token) {
-
-            }
-        });
-
-        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
-        mqttConnectOptions.setAutomaticReconnect(true);
-        mqttConnectOptions.setCleanSession(false);
-        mqttConnectOptions.setUserName(mqttUser);
-        mqttConnectOptions.setPassword(mqttPass.toCharArray());
-        mqttConnectOptions.setAutomaticReconnect(true);
-        mqttConnectOptions.setCleanSession(false);
-
-        try {
-            //addToHistory("Connecting to " + myIPAddress);
-            mqttAndroidClient.connect(mqttConnectOptions, null, new IMqttActionListener() {
-                @Override
-                public void onSuccess(IMqttToken asyncActionToken) {
-                    DisconnectedBufferOptions disconnectedBufferOptions = new DisconnectedBufferOptions();
-                    disconnectedBufferOptions.setBufferEnabled(true);
-                    disconnectedBufferOptions.setBufferSize(100);
-                    disconnectedBufferOptions.setPersistBuffer(false);
-                    disconnectedBufferOptions.setDeleteOldestMessages(false);
-                    mqttAndroidClient.setBufferOpts(disconnectedBufferOptions);
-
-                    publishMessage("A phone has connected.", "");
-                    // subscribeToTopic();
-
-                    Toast.makeText(AcquireActivity.this, "Connected", Toast.LENGTH_SHORT).show();
-                }
-
-                @Override
-                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                    //addToHistory("Failed to connect to: " + myIPAddress);
-                    Toast.makeText(AcquireActivity.this, "Connection attemp failed", Toast.LENGTH_SHORT).show();
-                }
-            });
-
-
-        } catch (MqttException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    private boolean isNetworkAvailable() {
-        ConnectivityManager connectivityManager
-                = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
-    }
-
-
-    public void publishMessage(String pub_topic, String publishMessage) {
-
-        Log.i(TAG, pub_topic + " " + publishMessage);
-        try {
-            MqttMessage message = new MqttMessage();
-            message.setPayload(publishMessage.getBytes());
-            mqttAndroidClient.publish(pub_topic, message);
-            //addToHistory("Message Published");
-            if (!mqttAndroidClient.isConnected()) {
-                //addToHistory(mqttAndroidClient.getBufferedMessageCount() + " messages in buffer.");
-            }
-            Log.i(TAG, "Message sent: " + pub_topic + message);
-        } catch (MqttException e) {
-            Toast.makeText(this, "Error while sending data", Toast.LENGTH_SHORT).show();
-            //System.err.println("Error Publishing: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-
-    private void stopConnection() {
-        try {
-            mqttAndroidClient.close();
-            Toast.makeText(AcquireActivity.this, "Connection closed - on purpose?", Toast.LENGTH_SHORT).show();
-        } catch (Throwable e) {
-            Toast.makeText(AcquireActivity.this, "Something went wrong - propbably no connection established?", Toast.LENGTH_SHORT).show();
-            Log.e(TAG, String.valueOf(e));
-        }
-    }
-
-
-    public void setIPAddress(String mIPaddress) {
-        myIPAddress = mIPaddress;
-    }
-
-    public void setSOFIX(boolean misSOFI_X, int mvalSOFIX) {
-        val_sofi_amplitude_x = mvalSOFIX;
-        is_SOFI_x = misSOFI_X;
-        publishMessage(topic_lens_sofi_x, String.valueOf(val_sofi_amplitude_x));
-    }
-
-    public void setSOFIZ(boolean misSOFI_Z, int mvalSOFIZ) {
-        val_sofi_amplitude_z = mvalSOFIZ;
-        is_SOFI_z = misSOFI_Z;
-        publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
-    }
-
-    public void setValSOFIX(int mval_sofi_amplitude_x) {
-        val_sofi_amplitude_x = mval_sofi_amplitude_x;
-
-        // Save the IP address for next start
-        editor.putString("mval_sofi_amplitude_x", String.valueOf(mval_sofi_amplitude_x));
-        editor.commit();
-    }
-
-    public void setValSOFIZ(int mval_sofi_amplitude_z) {
-        val_sofi_amplitude_z = mval_sofi_amplitude_z;
-
-        // Save the IP address for next start
-        editor.putString("mval_sofi_amplitude_z", String.valueOf(mval_sofi_amplitude_z));
-        editor.commit();
-    }
-
-
-    public void setValDurationMeas(int mval_duration_measurement) {
-        val_duration_measurement = mval_duration_measurement;
-
-        // Save the IP address for next start
-        editor.putString("val_duration_measurement", String.valueOf(mval_duration_measurement));
-        editor.commit();
-    }
-
-    public void setValPeriodMeas(int mval_period_measurement) {
-        val_period_measurement = mval_period_measurement;
-
-        // Save the IP address for next start
-        editor.putString("val_period_measurement", String.valueOf(mval_period_measurement));
-        editor.commit();
-    }
-
-    public void setNValPeriodCalibration(int mval_period_calibration) {
-        val_nperiods_calibration = mval_period_calibration;
-
-        // Save the IP address for next start
-        editor.putString("val_nperiods_calibration", String.valueOf(mval_period_calibration));
-        editor.commit();
-    }
-
-    void mqtt_reconenect(String mIP) {
-
-        myIPAddress = mIP;
-        Toast.makeText(AcquireActivity.this, "IP-Address set to: " + myIPAddress, Toast.LENGTH_SHORT).show();
-        stopConnection();
-        initialConfig();
-
-        // Save the IP address for next start
-        editor.putString("myIPAddress", myIPAddress);
-        editor.commit();
-
-    }
-
-
-    protected String wifiIpAddress(Context context) {
-        WifiManager wifiManager = (WifiManager) context.getSystemService(WIFI_SERVICE);
-        int ipAddress = wifiManager.getConnectionInfo().getIpAddress();
-
-        // Convert little-endian to big-endianif needed
-        if (ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN)) {
-            ipAddress = Integer.reverseBytes(ipAddress);
-        }
-
-        byte[] ipByteArray = BigInteger.valueOf(ipAddress).toByteArray();
-
-        String ipAddressString;
-        try {
-            ipAddressString = InetAddress.getByAddress(ipByteArray).getHostAddress();
-        } catch (UnknownHostException ex) {
-            Log.e("WIFIIP", "Unable to get host address.");
-            ipAddressString = null;
-        }
-
-        return ipAddressString;
-    }
-
-
-    private class run_meas extends AsyncTask<Void, Void, Void> {
+    private class run_sofimeasurement extends AsyncTask<Void, Void, Void> {
 
         String my_gui_text = "";
         long t = 0;
@@ -2944,33 +2858,27 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 val_laser_red_global = 2000;
             }
 
-            is_findcoupling = true;
-
             // Set some GUI components
             acquireProgressBar.setVisibility(View.VISIBLE); // Make invisible at first, then have it pop up
             acquireProgressBar.setMax(n_meas);
+
             Toast.makeText(AcquireActivity.this, "Start Measurements", Toast.LENGTH_SHORT).show();
 
-            // Wait a moment until the door ist closed!
-            int waitsecs = 5;
-            /*
-            for (int isecs = waitsecs; isecs > 0; isecs--) {
-
-                my_gui_text = "Wait for the user to close the door:" + String.valueOf(isecs) + "/" + String.valueOf(waitsecs) + "secs";
-                textViewGuiText.setText(my_gui_text);
-                mSleep(1000);
-            }
-            */
         }
 
         @Override
         protected void onProgressUpdate(Void... params) {
             acquireProgressBar.setProgress(i_meas);
             textViewGuiText.setText(my_gui_text);
+            btnStartMeasurement.setEnabled(false);
+
             // Update GUI
             String text_lens_x_pre = "Lens (X): ";
             textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
             seekBarLensX.setProgress(val_lens_x_global);
+
+            String text_laser_pre = "Laser: ";
+            textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
             seekBarLaser.setProgress(val_laser_red_global);
         }
 
@@ -2988,19 +2896,27 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             // Wait for the data to propigate down the chain
             t = SystemClock.elapsedRealtime();
 
-            // Start with a video measurement for XXX-seconds 
-            i_meas = 0;
+            // Start with a video measurement for XXX-seconds
+            i_meas = 1;
             while (is_measurement) {
-
-
-                // if no coupling has to be done -> measure!
-                if (!is_findcoupling) {
-                    // Once in a while update the GUI
-                    my_gui_text = "Measurement: " + String.valueOf(i_meas + 1) + '/' + String.valueOf(n_meas);
-                    publishProgress();
-
-                    // only perform the measurements if the camera is not looking for best coupling
+                // Do recalibration every  10 measurements
+                // do lens calibration every n-th step
+                if ((i_meas % val_nperiods_calibration) == 0) {
+                    // turn on the laser
+                    setLaser(val_laser_red_global);
+                    Log.i(TAG, "Lens Calibration in progress");
+                    my_gui_text = "Lens Calibration in progress";
+                    is_findcoupling = true;
+                    is_measurement = false;
                     i_meas++;
+                    publishProgress();
+                    setState(STATE_CALIBRATION);
+                }
+                else if(!is_findcoupling&is_measurement) {// if no coupling has to be done -> measure!
+                    setState(STATE_RECORD);
+                    // Once in a while update the GUI
+                    my_gui_text = "Measurement: " + String.valueOf(i_meas ) + '/' + String.valueOf(n_meas);
+                    publishProgress();
 
                     // set lens to correct position
                     setLensX(val_lens_x_global);
@@ -3010,7 +2926,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     Log.i(TAG, "Saving file here:" + String.valueOf(myVideoFileName));
 
                     // turn on the laser
-                    setLaser(PWM_RES / 2);
+                    setLaser(val_laser_red_global);
 
                     // start video-capture
                     if (!mIsRecordingVideo) {
@@ -3034,23 +2950,28 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                             e.printStackTrace();
                         }
                     }
-                    //mSleep(5000); //Let AEC stabalize if it's on
 
                     // turn off the laser
-                    setLaser(0);
-                }
+                    setLaser(1);
 
-                // Do recalibration every  10 measurements
-                // do lens calibration every n-th step
-                if ((i_meas % val_duration_measurement) == 0) {
-                    // turn on the laser
-                    setLaser(PWM_RES / 2);
+                    //TODO : Dirty hack for now since we don't have a proper laser
+                    mSleep(200); //Let AEC stabalize if it's on
+                    setLensX(1); // Heavily detune the lens to reduce phototoxicity
 
-                    Log.i(TAG, "Lens Calibration in progress");
-                    my_gui_text = "Lens Calibration in progress";
-                    is_findcoupling = true;
-                    i_meas++;
+                    // Once in a while update the GUI
+                    my_gui_text = "Waiting for next measurements....";
                     publishProgress();
+                    setState(STATE_WAIT);
+
+                    // only perform the measurements if the camera is not looking for best coupling
+                    i_meas++;
+
+                    for(int iwait = 0; iwait<val_period_measurement*10; iwait++){
+                        if(!is_measurement)break;
+                        my_gui_text = "Waiting: "+String.valueOf(iwait/10) + "/" +String.valueOf(val_period_measurement)+"s";
+                        publishProgress();
+                        mSleep(100);
+                    }
                 }
             }
             return null;
@@ -3063,6 +2984,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             // Set some GUI components
             acquireProgressBar.setVisibility(View.GONE); // Make invisible at first, then have it pop up
             textViewGuiText.setText("Done Measurements.");
+            btnStartMeasurement.setEnabled(true);
 
             // Switch off laser
             setLaser(0);
@@ -3074,14 +2996,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
     }
 
-
     class run_calibration_thread_coarse implements Runnable {
 
+        Thread mythread;
         // to stop the thread
         private boolean exit;
-
         private String name;
-        Thread mythread;
 
         run_calibration_thread_coarse(String threadname) {
             name = threadname;
@@ -3099,21 +3019,16 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 // convert the Bitmap coming from the camera frame to MAT
                 Mat src = new Mat();
                 Mat dst = new Mat();
-                MatOfDouble tmp_mean = new MatOfDouble();
-                MatOfDouble tmp_std = new MatOfDouble();
 
                 Utils.bitmapToMat(global_bitmap, src);
                 Imgproc.cvtColor(src, dst, Imgproc.COLOR_BGRA2BGR);
 
 
-                // We want only the center part assuming the illuminated wave guide is in the center
-                int mysize_subroi = 512;
-                Rect roi = new Rect((int)dst.width()/2-mysize_subroi/2, (int)dst.height()/2-mysize_subroi/2, mysize_subroi, mysize_subroi);
-                Mat dst_cropped = new Mat(dst, roi);
+
 
 
                 // reset the lens's position in the first iteration by some value
-                if (i_search_maxintensity == 0) {
+                    if (i_search_maxintensity == 0) {
                     val_lens_x_global_old = val_lens_x_global; // Save the value for later
                     val_lens_x_global = 0;
                     val_mean_max = 0;
@@ -3121,32 +3036,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     setLensX(val_lens_x_global);
                 }
                 else {
-                    double i_mean = Core.mean(dst_cropped).val[0];
-                    Core.meanStdDev(dst_cropped, tmp_mean, tmp_std);
-
-                    // Estimate Entropy in Image
-                    Mat dst_tmp = new Mat();
-                    dst_cropped.convertTo(dst_cropped, CV_32F);
-
-                    Core.pow(dst_cropped, 2., dst_tmp);
-
-                    double myL2norm = Core.norm(dst_cropped,Core.NORM_L2);
-                    double myL1norm = Core.norm(dst_cropped,Core.NORM_L1);
-                    double myMinMaxnorm = Core.norm(dst_cropped,Core.NORM_MINMAX);
-
-
-                /*
-                Core.MinMaxLocResult myMinMax = Core.minMaxLoc(dst_cropped);
-                int mymin = (int) myMinMax.minVal;
-                int mymax = (int) myMinMax.maxVal;
-
-
-                Log.i(TAG, "My Mean/STDV (coarse) is:" + String.valueOf(i_mean) + "/" + String.valueOf(Core.mean(dst).val[0]) + "/" + String.valueOf(mymin) + "/" + String.valueOf(mymax) + "@" + String.valueOf(val_lens_x_global));
-
-                 */
-                    Log.i(TAG, "My Mean/STDV (coarse) is:" + String.valueOf(i_mean) + "/" + String.valueOf(Core.mean(dst).val[0]) + " / " +  " / " + String.valueOf(myL2norm) +" @ " + String.valueOf(val_lens_x_global));
-                    imwrite(Environment.getExternalStorageDirectory() + "/STORMimager/mytest"+String.valueOf(i_search_maxintensity)+"_mean_" + String.valueOf(i_mean) + "_stdv_" + String.valueOf(Core.mean(tmp_std).val[0]) + "_L2_" + String.valueOf(myL2norm) +"_L1_" + String.valueOf(myL1norm) +"_MinMax_" + String.valueOf(myMinMaxnorm) +"_L2_" + String.valueOf(myL2norm) +"@" + String.valueOf(val_lens_x_global)+".png", dst_cropped);
-
+                        int i_mean = (int)measureCoupling(dst, ROI_SIZE, 9);
+                        Log.i(TAG, "Coupling (fine) @ "+String.valueOf(i_search_maxintensity)+" is "+String.valueOf(i_mean)+"with max: "+String.valueOf(val_mean_max));
                     if (i_mean > val_mean_max) {
                         // Save the position with maximum intensity
                         val_mean_max = i_mean;
@@ -3175,8 +3066,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     setLensX(val_lens_x_global);
                     // free memory
                     System.gc();
-                    tmp_mean.release();
-                    tmp_std.release();
                     src.release();
                     dst.release();
                     global_bitmap.recycle();
@@ -3201,15 +3090,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             }
         }
 
-
-
         class run_calibration_thread_fine implements Runnable {
 
+            Thread mythread;
             // to stop the thread
             private boolean exit;
-
             private String name;
-            Thread mythread;
 
             run_calibration_thread_fine(String threadname) {
                 name = threadname;
@@ -3238,14 +3124,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     i_search_maxintensity++;
 
 
-                    double i_mean = Core.mean(dst).val[0];
-                    MatOfDouble tmp_mean = new MatOfDouble();
-                    MatOfDouble tmp_std = new MatOfDouble();
-                    Core.meanStdDev(dst, tmp_mean, tmp_std);
-                    ;
-                    //i_mean = Core.mean(dst).val[0];
-
-                    Log.i(TAG, "My Mean/STDV (fine) is:" + String.valueOf(i_mean) + "/" + String.valueOf(Core.mean(dst).val[0]) + "@" + String.valueOf(val_lens_x_global));
+                    int i_mean = (int)measureCoupling(dst, ROI_SIZE, 9);
+                    Log.i(TAG, "Coupling (coarse) @ "+String.valueOf(i_search_maxintensity)+" is "+String.valueOf(i_mean)+"with max: "+String.valueOf(val_mean_max));
                     if (i_mean > val_mean_max) {
                         // Save the position with maximum intensity
                         val_mean_max = i_mean;
@@ -3267,7 +3147,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                         is_findcoupling_fine = false;
                         is_findcoupling_coarse = true;
                         Log.i(TAG, "My final Mean/STDV (fine) is:" + String.valueOf(val_mean_max) + "@" + String.valueOf(val_lens_x_maxintensity));
-
+                        setLaser(0);
                     }
 
                     // increase the lens position
@@ -3297,56 +3177,57 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
 
 
+    double measureCoupling(Mat inputmat, int mysize, int ksize){
+        // reserve some memory
+        MatOfDouble tmp_mean = new MatOfDouble();
+        MatOfDouble tmp_std = new MatOfDouble();
 
-    // SOME I/O thingys
-    public int lin2qudratic(int input, int mymax) {
-        double normalizedval = (double) input / (double) mymax;
-        double quadraticval = Math.pow(normalizedval, 2);
-        int laserintensitypow = (int) (quadraticval * (double) mymax);
-        return laserintensitypow;
+        // crop the matrix
+        // We want only the center part assuming the illuminated wave guide is in the center
+        Rect roi = new Rect((int)inputmat.width()/2-mysize/2, (int)inputmat.height()/2-mysize/2, mysize, mysize);
+        Mat dst_cropped = new Mat(inputmat, roi);
+        // Median filter the image
+        Imgproc.medianBlur(dst_cropped, dst_cropped, ksize);
+
+        Core.meanStdDev(dst_cropped, tmp_mean, tmp_std);
+        double mystd = Core.mean(tmp_std).val[0];
+
+        /*
+        // Estimate Entropy in Image
+        double i_mean = Core.mean(dst_cropped).val[0];
+
+        Mat dst_tmp = new Mat();
+        dst_cropped.convertTo(dst_cropped, CV_32F);
+
+        Core.pow(dst_cropped, 2., dst_tmp);
+
+        double myL2norm = Core.norm(dst_cropped,Core.NORM_L2);
+        double myL1norm = Core.norm(dst_cropped,Core.NORM_L1);
+        //double myMinMaxnorm = Core.norm(dst_cropped,Core.NORM_MINMAX);
+        //Core.MinMaxLocResult myMinMax = Core.minMaxLoc(dst_cropped);
+        int mymin = 0;//(int) myMinMax.minVal;
+        int mymax = 0;//(int) myMinMax.maxVal;
+        */
+
+        //imwrite(Environment.getExternalStorageDirectory() + "/STORMimager/mytest"+String.valueOf(i_search_maxintensity)+"_mean_" + String.valueOf(i_mean) + "_stdv_" + String.valueOf(Core.mean(tmp_std).val[0]) + "_L2_" + String.valueOf(myL2norm) +"_L1_" + String.valueOf(myL1norm) +"_Min_" + String.valueOf(mymin)+"_Max_" + String.valueOf(mymax) +"_L2_" + String.valueOf(myL2norm) +"@" + String.valueOf(val_lens_x_global)+".png", dst_cropped);
+
+        tmp_mean.release();
+        tmp_std.release();
+
+        return mystd;
+
     }
 
-    public void setLaser(int laserintensity) {
-        if ((laserintensity < PWM_RES ) && (laserintensity > 0)) {
-            publishMessage(topic_laser, String.valueOf(lin2qudratic(laserintensity, PWM_RES)));
-            // Wait until the command was actually sent
-            if(is_findcoupling){
-                try {
-                    Thread.sleep(MQTT_SLEEP);
-                } catch (Exception e) {
-                    Log.e(TAG, String.valueOf(e));
-                }
-            }
-        }
-    }
 
-    void setLensX(int lensposition) {
-        if ((lensposition < PWM_RES) && (lensposition > 0)) {
-            publishMessage(topic_lens_x, String.valueOf(lin2qudratic(lensposition, PWM_RES)));
-            // Wait until the command was actually sent
-            if(is_findcoupling){
-            try {
-                Thread.sleep(MQTT_SLEEP);
-            } catch (Exception e) {
-                Log.e(TAG, String.valueOf(e));
-            }
-            }
-        }
+    void setGUIelements(SharedPreferences sharedPref){
+        myIPAddress = sharedPref.getString("myIPAddress", myIPAddress);
+        val_nperiods_calibration = Integer.parseInt(sharedPref.getString("val_nperiods_calibration", String.valueOf(val_nperiods_calibration)));
+        val_period_measurement = Integer.parseInt(sharedPref.getString("val_period_measurement", String.valueOf(val_period_measurement)));
+        val_duration_measurement = Integer.parseInt(sharedPref.getString("val_duration_measurement", String.valueOf(val_duration_measurement)));
+        val_sofi_amplitude_x = Integer.parseInt(sharedPref.getString("val_sofi_amplitude_x", String.valueOf(val_sofi_amplitude_x)));
+        val_sofi_amplitude_z = Integer.parseInt(sharedPref.getString("val_sofi_amplitude_z", String.valueOf(val_sofi_amplitude_z)));
+        val_iso_index = Integer.parseInt(sharedPref.getString("val_iso_index", String.valueOf(val_iso_index)));
+        val_texp_index = Integer.parseInt(sharedPref.getString("val_texp_index", String.valueOf(val_texp_index)));
     }
-
-    void setLensZ(int lensposition) {
-        if (lensposition < PWM_RES && lensposition > 0) {
-            publishMessage(topic_lens_z, String.valueOf(lin2qudratic(lensposition, PWM_RES)));
-            // Wait until the command was actually sent
-            if(is_findcoupling){
-                try {
-                    Thread.sleep(MQTT_SLEEP);
-                } catch (Exception e) {
-                    Log.e(TAG, String.valueOf(e));
-                }
-            }
-        }
-    }
-
 
 }

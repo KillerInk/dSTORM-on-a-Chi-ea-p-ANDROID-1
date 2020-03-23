@@ -3,8 +3,25 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:background="@android:color/black"
     android:keepScreenOn="true"
     tools:context="de.nanoimaging.stormimager.activity.MainActivity">
+
+
+    <ImageView
+        android:id="@+id/imgLogo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_centerVertical="true"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginVertical="20dp"
+        android:adjustViewBounds="true"
+        android:minHeight="500dp"
+        android:minWidth="500dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/logo_leibnizipht_negativ" />
+
 
     <TextView
         android:id="@+id/connStatusTextView"
@@ -41,32 +58,37 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/btnStartActivity1"
-        android:text="No Function" />
+        android:text="No Function"
+        android:visibility="gone"/>
 
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/btnAcquireActivity2"
+        android:visibility="gone"
         android:text="No Function" />
 
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:id="@+id/btnFindCentre"
+        android:visibility="gone"
         android:text="No Function" />
 
     <Button
+        android:id="@+id/btnAcqActivity"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/btnAcqActivity"
-        android:text="Get Best Illumination Source" />
+        android:text="Start Measurement"
+        android:textColor="@color/ANTIQUEWHITE" />
 
 
     <Button
+        android:id="@+id/btnGammaCalibration"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/btnGammaCalibration"
-        android:text="Gamma Calibration" />
+        android:text="Complain"
+        android:textColor="@color/ANTIQUEWHITE" />
 
 
     <TextView

@@ -808,6 +808,7 @@ drawable img7
 drawable img8
 drawable img9
 drawable launcher
+drawable logo_leibnizipht_negativ
 drawable marker
 drawable marker2
 drawable microscope_icon
@@ -915,6 +916,7 @@ id btnCapture
 id btnFindCentre
 id btnGammaCalibration
 id btnSetup
+id btnSofi
 id btnStart
 id btnStartActivity1
 id btnStartLSMeasurement
@@ -1059,6 +1061,7 @@ id text
 id text2
 id textSpacerNoButtons
 id textSpacerNoTitle
+id textView
 id textView1
 id textView2
 id textView3
