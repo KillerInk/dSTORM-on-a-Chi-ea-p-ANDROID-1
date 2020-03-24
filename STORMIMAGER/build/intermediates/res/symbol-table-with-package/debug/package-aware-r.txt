@@ -912,7 +912,7 @@ id blocking
 id bottom
 id btnAcqActivity
 id btnAcquireActivity2
-id btnCapture
+id btnCalib
 id btnFindCentre
 id btnGammaCalibration
 id btnSetup

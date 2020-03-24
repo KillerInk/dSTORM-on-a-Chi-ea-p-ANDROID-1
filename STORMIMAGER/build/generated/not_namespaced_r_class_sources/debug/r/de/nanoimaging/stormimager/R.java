@@ -3190,7 +3190,7 @@ public final class R {
     public static final int bottom=0x7f07004a;
     public static final int btnAcqActivity=0x7f07004b;
     public static final int btnAcquireActivity2=0x7f07004c;
-    public static final int btnCapture=0x7f07004d;
+    public static final int btnCalib=0x7f07004d;
     public static final int btnFindCentre=0x7f07004e;
     public static final int btnGammaCalibration=0x7f07004f;
     public static final int btnSetup=0x7f070050;

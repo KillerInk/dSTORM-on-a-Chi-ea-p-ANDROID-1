@@ -361,13 +361,13 @@
                     android:text="Setup" />
 
                 <Button
-                    android:id="@+id/btnCapture"
+                    android:id="@+id/btnCalib"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentRight="true"
                     android:layout_alignParentBottom="true"
                     android:layout_weight="1"
-                    android:text="Snap!" />
+                    android:text="Calib!" />
 
 
             </LinearLayout>

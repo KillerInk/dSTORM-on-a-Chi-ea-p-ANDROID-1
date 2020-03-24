@@ -115,6 +115,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import de.nanoimaging.stormimager.R;
+import de.nanoimaging.stormimager.process.VideoProcessor;
 
 import static de.nanoimaging.stormimager.acquisition.CaptureRequestEx.HUAWEI_DUAL_SENSOR_MODE;
 import static org.opencv.core.Core.norm;
@@ -948,7 +949,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
          */
         btn_x_lens_plus = findViewById(R.id.button_x_lens_plus);
         btn_x_lens_minus = findViewById(R.id.button_x_lens_minus);
-        btnCapture = findViewById(R.id.btnCapture);
+        btnCapture = findViewById(R.id.btnCalib);
         btnSetup = findViewById(R.id.btnSetup);
         btnStartMeasurement = findViewById(R.id.btnStart);
         btnStopMeasurement = findViewById(R.id.btnStop);
@@ -1113,7 +1114,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         Seekbar for Lens in X-direction
          */
         seekBarLaser = (SeekBar) findViewById(R.id.seekBarLaser);
-        seekBarLaser.setMax(PWM_RES);
+        seekBarLaser.setMax(PWM_RES-10); // just make sure there is no overlow!
         seekBarLaser.setProgress(0);
 
         textViewLaser = (TextView) findViewById(R.id.textViewLaser);
@@ -2978,14 +2979,24 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     setState(STATE_WAIT);
 
                     // only perform the measurements if the camera is not looking for best coupling
-                    i_meas++;
+
+                    my_gui_text = "Processing Video...";
+                    publishProgress();
+                    VideoProcessor vidproc = new VideoProcessor(String.valueOf(myVideoFileName), ROI_SIZE, global_framerate);
+                    vidproc.setupvideo();
+                    vidproc.process(10);
+                    vidproc.saveresult(mypath + File.separator + "VID_" + String.valueOf(i_meas) + ".png");
 
                     for(int iwait = 0; iwait<val_period_measurement*10; iwait++){
                         if(!is_measurement)break;
                         my_gui_text = "Waiting: "+String.valueOf(iwait/10) + "/" +String.valueOf(val_period_measurement)+"s";
                         publishProgress();
                         mSleep(100);
+
+
                     }
+
+                    i_meas++;
                 }
             }
             return null;
@@ -3038,11 +3049,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 Imgproc.cvtColor(src, dst, Imgproc.COLOR_BGRA2BGR);
 
 
-
-
-
                 // reset the lens's position in the first iteration by some value
-                    if (i_search_maxintensity == 0) {
+                if (i_search_maxintensity == 0) {
                     val_lens_x_global_old = val_lens_x_global; // Save the value for later
                     val_lens_x_global = 0;
                     val_mean_max = 0;
@@ -3051,7 +3059,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 }
                 else {
                         int i_mean = (int)measureCoupling(dst, ROI_SIZE, 9);
-                        Log.i(TAG, "Coupling (fine) @ "+String.valueOf(i_search_maxintensity)+" is "+String.valueOf(i_mean)+"with max: "+String.valueOf(val_mean_max));
+                        String mycouplingtext = "Coupling (coarse) @ "+String.valueOf(i_search_maxintensity)+" is "+String.valueOf(i_mean)+"with max: "+String.valueOf(val_mean_max);
+                        textViewGuiText.post(new Runnable() {
+                            public void run() {
+                                textViewGuiText.setText(mycouplingtext);
+                            }
+                        });
+                        Log.i(TAG, mycouplingtext);
                     if (i_mean > val_mean_max) {
                         // Save the position with maximum intensity
                         val_mean_max = i_mean;
@@ -3139,7 +3153,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
 
                     int i_mean = (int)measureCoupling(dst, ROI_SIZE, 9);
-                    Log.i(TAG, "Coupling (coarse) @ "+String.valueOf(i_search_maxintensity)+" is "+String.valueOf(i_mean)+"with max: "+String.valueOf(val_mean_max));
+                    String mycouplingtext = "Coupling (fine) @ "+String.valueOf(i_search_maxintensity)+" is "+String.valueOf(i_mean)+"with max: "+String.valueOf(val_mean_max);
+                    textViewGuiText.post(new Runnable() {
+                        public void run() {
+                            textViewGuiText.setText(mycouplingtext);
+                        }
+                    });
+                    Log.i(TAG, mycouplingtext);
                     if (i_mean > val_mean_max) {
                         // Save the position with maximum intensity
                         val_mean_max = i_mean;

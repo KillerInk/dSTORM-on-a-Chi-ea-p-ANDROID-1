@@ -911,7 +911,7 @@ int id blocking 0x7f070049
 int id bottom 0x7f07004a
 int id btnAcqActivity 0x7f07004b
 int id btnAcquireActivity2 0x7f07004c
-int id btnCapture 0x7f07004d
+int id btnCalib 0x7f07004d
 int id btnFindCentre 0x7f07004e
 int id btnGammaCalibration 0x7f07004f
 int id btnSetup 0x7f070050
