@@ -131,7 +131,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      */
     MqttAndroidClient mqttAndroidClient;
 
-    String myIPAddress = "0.0.0.0";             // IP for the MQTT Broker, format tcp://ipaddress
+    String myIPAddress = "192.168.43.88";             // IP for the MQTT Broker, format tcp://ipaddress
     public static final String topic_lens_z = "lens/right/z";
     public static final String topic_lens_x = "lens/right/x";
     public static final String topic_laser = "laser/red";
@@ -202,7 +202,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     private MediaRecorder mMediaRecorder;               // MediaRecorder
     private File mCurrentFile;
     int global_framerate = 20;
-    int global_cameraquality = CamcorderProfile.QUALITY_1080P; //CamcorderProfile.QUALITY_2160P;
+    int global_cameraquality = CamcorderProfile.QUALITY_1080P;
 
     /**
      * HARDWARE Settings for MQTT related values
@@ -349,9 +349,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             int nPixelStride = image.getPlanes()[0].getPixelStride();
             image.close();
             try {
-                //TextResult[] results = mBarcodeReader.decodeBuffer(bytes, mImageReader.getWidth(), mImageReader.getHeight(), nRowStride * nPixelStride, EnumImagePixelFormat.IPF_NV21, "");
                 String output = "";
-
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -2044,8 +2042,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
          * set output file in media recorder
          */
         mMediaRecorder.setOutputFile(mCurrentFile.getAbsolutePath());
-        CamcorderProfile profile = CamcorderProfile.get(CamcorderProfile.QUALITY_1080P);
-        mMediaRecorder.setVideoFrameRate(20);
+        CamcorderProfile profile = CamcorderProfile.get(global_cameraquality);
+        mMediaRecorder.setVideoFrameRate(global_framerate);
         mMediaRecorder.setVideoSize(profile.videoFrameWidth, profile.videoFrameHeight);
         mMediaRecorder.setVideoEncodingBitRate(profile.videoBitRate);
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
@@ -2141,29 +2139,30 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             mPreviewRequestBuilder.addTarget(recorderSurface);
             // Start a capture session
 
-            mCameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
-                @Override
-                public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
-                    mCaptureSession = cameraCaptureSession;
-                    updatePreview();
-                    runOnUiThread(() -> {
-                        mIsRecordingVideo = true;
-                        // Start recording
-                        try {
-                            mMediaRecorder.prepare();
-                            mMediaRecorder.start();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                mCameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
+                    @Override
+                    public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
+                        mCaptureSession = cameraCaptureSession;
+                        updatePreview();
+                        runOnUiThread(() -> {
+                            mIsRecordingVideo = true;
+                            // Start recording
+                            try {
+                                //mMediaRecorder.prepare();
+                                mMediaRecorder.start();
+                            } catch (IllegalStateException e) {
+                                Log.e(TAG, String.valueOf(e));
+                            }
+                        });
+                    }
 
-                    });
-                }
-
-                @Override
-                public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
-                    Log.e(TAG, "onConfigureFailed: Failed");
-                }
-            }, mBackgroundHandler);
+                    @Override
+                    public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
+                        Log.e(TAG, "onConfigureFailed: Failed");
+                    }
+                }, mBackgroundHandler);
+            }
 
         } catch (CameraAccessException | IOException e) {
             e.printStackTrace();
@@ -2360,18 +2359,24 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     public void setIPAddress(String mIPaddress) {
         myIPAddress = mIPaddress;
+        editor.putString("myIPAddress", String.valueOf(myIPAddress));
+        editor.commit();
     }
 
     public void setSOFIX(boolean misSOFI_X, int mvalSOFIX) {
         val_sofi_amplitude_x = mvalSOFIX;
         is_SOFI_x = misSOFI_X;
         publishMessage(topic_lens_sofi_x, String.valueOf(val_sofi_amplitude_x));
+        editor.putString("val_sofi_amplitude_x", String.valueOf(val_sofi_amplitude_x));
+        editor.commit();
     }
 
     public void setSOFIZ(boolean misSOFI_Z, int mvalSOFIZ) {
         val_sofi_amplitude_z = mvalSOFIZ;
         is_SOFI_z = misSOFI_Z;
         publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
+        editor.putString("val_sofi_amplitude_z", String.valueOf(val_sofi_amplitude_z));
+        editor.commit();
     }
 
     public void setValSOFIX(int mval_sofi_amplitude_x) {
@@ -2484,6 +2489,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 Log.e(TAG, String.valueOf(e));
             }
             }
+            editor.putString("val_lens_x_global", String.valueOf(lensposition));
+            editor.commit();
+
+
         }
     }
 
@@ -2499,6 +2508,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     Log.e(TAG, String.valueOf(e));
                 }
             }
+            editor.putString("val_lens_z_global", String.valueOf(lensposition));
+            editor.commit();
+
         }
     }
 
@@ -2860,7 +2872,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
             // Set some GUI components
             acquireProgressBar.setVisibility(View.VISIBLE); // Make invisible at first, then have it pop up
-            acquireProgressBar.setMax(n_meas);
+            acquireProgressBar.setMax(val_nperiods_calibration);
 
             Toast.makeText(AcquireActivity.this, "Start Measurements", Toast.LENGTH_SHORT).show();
 
@@ -2869,6 +2881,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         @Override
         protected void onProgressUpdate(Void... params) {
             acquireProgressBar.setProgress(i_meas);
+
+            // some GUI interaction
             textViewGuiText.setText(my_gui_text);
             btnStartMeasurement.setEnabled(false);
 
@@ -2959,7 +2973,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     setLensX(1); // Heavily detune the lens to reduce phototoxicity
 
                     // Once in a while update the GUI
-                    my_gui_text = "Waiting for next measurements....";
+                    my_gui_text = "Waiting for next measurements. "+String.valueOf(val_nperiods_calibration-i_meas)+"/"+String.valueOf(val_nperiods_calibration)+"left until recalibration";
                     publishProgress();
                     setState(STATE_WAIT);
 
@@ -3228,6 +3242,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         val_sofi_amplitude_z = Integer.parseInt(sharedPref.getString("val_sofi_amplitude_z", String.valueOf(val_sofi_amplitude_z)));
         val_iso_index = Integer.parseInt(sharedPref.getString("val_iso_index", String.valueOf(val_iso_index)));
         val_texp_index = Integer.parseInt(sharedPref.getString("val_texp_index", String.valueOf(val_texp_index)));
+        val_lens_x_global = Integer.parseInt(sharedPref.getString("val_lens_x_global", String.valueOf(val_lens_x_global)));
+        val_lens_z_global = Integer.parseInt(sharedPref.getString("val_lens_z_global", String.valueOf(val_lens_z_global)));
+        val_laser_red_global = Integer.parseInt(sharedPref.getString("val_laser_red_global", String.valueOf(val_laser_red_global)));
     }
 
 }
