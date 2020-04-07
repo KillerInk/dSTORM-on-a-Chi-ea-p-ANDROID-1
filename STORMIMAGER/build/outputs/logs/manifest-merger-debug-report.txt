@@ -9,6 +9,7 @@ MERGED from [com.android.support:support-v4:26.1.0] /Users/bene/.gradle/caches/t
 MERGED from [com.android.support:cardview-v7:26.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/807ac336d88c889e208ec7b9f73d5b08/cardview-v7-26.1.0/AndroidManifest.xml:17:1-28:12
 MERGED from [com.android.support.constraint:constraint-layout:1.1.3] /Users/bene/.gradle/caches/transforms-2/files-2.1/88180c2d9df321ed403965b1f5904015/constraint-layout-1.1.3/AndroidManifest.xml:2:1-11:12
 MERGED from [:openCVLibrary344] /Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/openCVLibrary344/build/intermediates/library_manifest/debug/AndroidManifest.xml:2:1-11:12
+MERGED from [org.tensorflow:tensorflow-lite:2.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/ee73e8a0c45d604d596ec28e5a73da67/tensorflow-lite-2.1.0/AndroidManifest.xml:2:1-10:12
 MERGED from [com.android.support:support-media-compat:26.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/971a5b69b89846008f16f9726686958d/support-media-compat-26.1.0/AndroidManifest.xml:17:1-31:12
 MERGED from [com.android.support:support-fragment:26.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/8a8c7d53542ab2c848ae5b8b6026706d/support-fragment-26.1.0/AndroidManifest.xml:17:1-31:12
 MERGED from [com.android.support:support-core-utils:26.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/c09b57d019897d7ffda25f0a8ed175eb/support-core-utils-26.1.0/AndroidManifest.xml:17:1-31:12
@@ -117,6 +118,8 @@ MERGED from [com.android.support:cardview-v7:26.1.0] /Users/bene/.gradle/caches/
 MERGED from [com.android.support:cardview-v7:26.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/807ac336d88c889e208ec7b9f73d5b08/cardview-v7-26.1.0/AndroidManifest.xml:22:5-26:19
 MERGED from [com.android.support.constraint:constraint-layout:1.1.3] /Users/bene/.gradle/caches/transforms-2/files-2.1/88180c2d9df321ed403965b1f5904015/constraint-layout-1.1.3/AndroidManifest.xml:9:5-20
 MERGED from [com.android.support.constraint:constraint-layout:1.1.3] /Users/bene/.gradle/caches/transforms-2/files-2.1/88180c2d9df321ed403965b1f5904015/constraint-layout-1.1.3/AndroidManifest.xml:9:5-20
+MERGED from [org.tensorflow:tensorflow-lite:2.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/ee73e8a0c45d604d596ec28e5a73da67/tensorflow-lite-2.1.0/AndroidManifest.xml:8:5-20
+MERGED from [org.tensorflow:tensorflow-lite:2.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/ee73e8a0c45d604d596ec28e5a73da67/tensorflow-lite-2.1.0/AndroidManifest.xml:8:5-20
 MERGED from [com.android.support:support-media-compat:26.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/971a5b69b89846008f16f9726686958d/support-media-compat-26.1.0/AndroidManifest.xml:25:5-29:19
 MERGED from [com.android.support:support-media-compat:26.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/971a5b69b89846008f16f9726686958d/support-media-compat-26.1.0/AndroidManifest.xml:25:5-29:19
 MERGED from [com.android.support:support-fragment:26.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/8a8c7d53542ab2c848ae5b8b6026706d/support-fragment-26.1.0/AndroidManifest.xml:25:5-29:19
@@ -209,6 +212,8 @@ MERGED from [com.android.support.constraint:constraint-layout:1.1.3] /Users/bene
 MERGED from [com.android.support.constraint:constraint-layout:1.1.3] /Users/bene/.gradle/caches/transforms-2/files-2.1/88180c2d9df321ed403965b1f5904015/constraint-layout-1.1.3/AndroidManifest.xml:5:5-7:41
 MERGED from [:openCVLibrary344] /Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/openCVLibrary344/build/intermediates/library_manifest/debug/AndroidManifest.xml:7:5-9:41
 MERGED from [:openCVLibrary344] /Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/openCVLibrary344/build/intermediates/library_manifest/debug/AndroidManifest.xml:7:5-9:41
+MERGED from [org.tensorflow:tensorflow-lite:2.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/ee73e8a0c45d604d596ec28e5a73da67/tensorflow-lite-2.1.0/AndroidManifest.xml:5:5-6:41
+MERGED from [org.tensorflow:tensorflow-lite:2.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/ee73e8a0c45d604d596ec28e5a73da67/tensorflow-lite-2.1.0/AndroidManifest.xml:5:5-6:41
 MERGED from [com.android.support:support-media-compat:26.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/971a5b69b89846008f16f9726686958d/support-media-compat-26.1.0/AndroidManifest.xml:21:5-23:63
 MERGED from [com.android.support:support-media-compat:26.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/971a5b69b89846008f16f9726686958d/support-media-compat-26.1.0/AndroidManifest.xml:21:5-23:63
 MERGED from [com.android.support:support-fragment:26.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/8a8c7d53542ab2c848ae5b8b6026706d/support-fragment-26.1.0/AndroidManifest.xml:21:5-23:60
@@ -236,6 +241,7 @@ INJECTED from /Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROI
 	android:minSdkVersion
 		INJECTED from /Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/AndroidManifest.xml
 		ADDED from /Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/AndroidManifest.xml
+		MERGED from /Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/AndroidManifest.xml
 		INJECTED from /Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/src/main/AndroidManifest.xml
 meta-data#android.support.VERSION
 ADDED from [com.android.support:support-v13:26.1.0] /Users/bene/.gradle/caches/transforms-2/files-2.1/baa46286eba7cc6c8a706f0ddaa15535/support-v13-26.1.0/AndroidManifest.xml:26:9-28:38

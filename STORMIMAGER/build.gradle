@@ -12,6 +12,10 @@ android {
         versionName "3.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
+    aaptOptions {
+        noCompress "tflite"
+        noCompress "lite"
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -39,4 +43,5 @@ dependencies {
     implementation files('src/main/libs/org.eclipse.paho.android.service-1.1.1.jar')
     implementation files('src/main/libs/org.eclipse.paho.client.mqttv3-1.1.1.jar')
 
+    implementation 'org.tensorflow:tensorflow-lite:+'
 }

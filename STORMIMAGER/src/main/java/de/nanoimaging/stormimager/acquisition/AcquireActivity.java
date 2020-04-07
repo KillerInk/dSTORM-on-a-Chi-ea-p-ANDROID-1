@@ -55,6 +55,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.support.v13.app.FragmentCompat;
 import android.support.v4.app.ActivityCompat;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.util.Rational;
 import android.util.Size;
@@ -90,6 +91,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
 import org.opencv.core.Rect;
 import org.opencv.imgproc.Imgproc;
+import org.tensorflow.lite.Interpreter;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -116,6 +118,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import de.nanoimaging.stormimager.R;
 import de.nanoimaging.stormimager.process.VideoProcessor;
+import de.nanoimaging.stormimager.tflite.TFLitePredict;
 
 import static de.nanoimaging.stormimager.acquisition.CaptureRequestEx.HUAWEI_DUAL_SENSOR_MODE;
 import static org.opencv.core.Core.norm;
@@ -246,6 +249,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     private ProgressBar acquireProgressBar;
 
 
+    private TFLitePredict mypredictor;
 
     /**
      * CAMERA-Related stuff
@@ -893,6 +897,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         OpenCVLoader.initDebug();
         //OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
 
+        // load tensorflow stuff
+        String mymodelfile = "converted_model.tflite";
+        mypredictor = new TFLitePredict(AcquireActivity.this, mymodelfile);
         // Load previously saved settings and set GUIelements
         SharedPreferences sharedPref = this.getSharedPreferences(
                 PREFERENCE_FILE_KEY, Context.MODE_PRIVATE);
@@ -1209,6 +1216,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         //******************* Make snapshot ********************************************//
         btnCapture.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+
+                mypredictor.predict();
                 //
                 //Log.i(TAG, "Set is_find_coupling to true!");
                 //if (!is_findcoupling) is_findcoupling = true;
