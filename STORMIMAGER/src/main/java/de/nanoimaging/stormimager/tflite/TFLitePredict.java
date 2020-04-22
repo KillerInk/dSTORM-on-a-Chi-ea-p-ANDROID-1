@@ -1,12 +1,12 @@
 package de.nanoimaging.stormimager.tflite;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
 import org.tensorflow.lite.Interpreter;
 
 import java.io.FileInputStream;
@@ -14,8 +14,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-
-import de.nanoimaging.stormimager.acquisition.AcquireActivity;
 
 public class TFLitePredict {
 
@@ -26,58 +24,58 @@ public class TFLitePredict {
     Context context;
 
     // define input/output shapes
-    int Nx_in = 200;
-    int Ny_in = 200;
+    int Nx = 50;
+    int Ny = 50;
     int Ntime = 50;
-
-    int Nx_out = Nx_in;
-    int Ny_out = Ny_in;
+    int Nscale = 1;
 
 
     static String TAG = "TFLitePredictor";
 
 
-    public TFLitePredict(Context context, String mymodelfile) {
+    public TFLitePredict(Context context, String mymodelfile, int Nx, int Ny, int Ntime, int Nscale) {
         this.MODEL_PATH = mymodelfile;
         this.context = context;
 
-        Log.i(TAG, "Loading the TFLite model");
+        Log.i(TAG, "Loading the TFLite model: "+mymodelfile);
         loadModel(context, this.MODEL_PATH);
 
+        this.Nx = Nx;
+        this.Ny = Ny;
+        this.Ntime = Ntime;
+        this.Nscale = Nscale;
+
     }
 
-    public void predict() {
+    public TFLitePredict(Context context, String mymodelfile, int Nx, int Ny, int Ntime) {
+        this.MODEL_PATH = mymodelfile;
+        this.context = context;
+
+        Log.i(TAG, "Loading the TFLite model: "+mymodelfile);
+        loadModel(context, this.MODEL_PATH);
+
+        this.Nx = Nx;
+        this.Ny = Ny;
+        this.Ntime = Ntime;
+
+    }
+
+    public Mat predict(float[] TF_input) {
 
         Log.i(TAG, "Predicting using the TFLite model");
-        float[][][][] inputstack = new float[1][Nx_in][Ny_in][Ntime];
-        float[][] output = doInference(inputstack);
-/*        int direction = 0;
-        Move move;
-        boolean[] validMoves = {true, true, true, true};
+        float[] output = doInference(TF_input);
+        Mat outmat  = new Mat(this.Nx*this.Nscale, this.Nx*this.Nscale, CvType.CV_32F);
+        outmat.put( 0,0, output);
 
-        do {
-            float max = 0.0f;
-            for (int i = 0; i < 4; ++i) {
-                if (predictions[0][i] > max) {
-                    if(validMoves[i]) {
-                        max = predictions[0][i];
-                        direction = i;
-                    }
-                }
-            }
-
-            validMoves[direction] = false;
-            move = Move.toMove(direction);
-        }while(move == Move.toOpposite(aiLastMove) || !puzzle.checkMove(move));
-*/
+        return outmat;
     }
 
-    private float[][] doInference(float[][][][] inputBoard) {
+    private float[]doInference(float[] inputval) {
 
         Log.i(TAG, "Do Inference using the TFLite model");
-        float[][] outputVal = new float[Nx_out][Ny_out];
+        float[]outputVal = new float[this.Nx*this.Ny*(this.Nscale*2)];
         try{
-            tflite.run(inputBoard, outputVal);
+            tflite.run(inputval, outputVal);
         }
         catch(Error e){
             Log.e(TAG, String.valueOf(e));

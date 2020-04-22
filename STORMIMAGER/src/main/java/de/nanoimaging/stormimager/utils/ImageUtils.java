@@ -8,6 +8,7 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 
 import java.util.ArrayList;
@@ -15,7 +16,10 @@ import java.util.List;
 
 import static java.lang.Math.cos;
 import static java.lang.Math.sin;
+import static org.opencv.core.Core.NORM_MINMAX;
 import static org.opencv.core.Core.mulSpectrums;
+import static org.opencv.core.Core.normalize;
+import static org.opencv.imgcodecs.Imgcodecs.imwrite;
 
 public class ImageUtils {
 
@@ -73,6 +77,65 @@ public class ImageUtils {
         Core.split(inputMat_sub,temp_bgr); //split source
         return inputMat_sub = temp_bgr.get(cchannel); //green channel; red=2; blue=0
     }
+
+
+    public static Mat preprocess(Mat Mat_input){
+        // tune the data to -1..1
+        // read one cellSTORM frame
+        if(true) {
+            normalize(Mat_input, Mat_input, 0, 1, NORM_MINMAX);
+        }
+        else {
+            // / Localizing the best match with minMaxLoc
+            Core.MinMaxLocResult mymmr = Core.minMaxLoc(Mat_input);
+            int mymax = (int) mymmr.maxVal;
+            Core.divide(Mat_input, new Scalar(mymax), Mat_input);
+            Core.multiply(Mat_input, new Scalar(2), Mat_input);
+            Core.subtract(Mat_input, new Scalar(1), Mat_input);
+        }
+
+        return Mat_input;
+    }
+
+    public static Mat deprocess(Mat Mat_input){
+        // tune the data to 0.1
+        // read one cellSTORM frame
+        if(false) {
+            normalize(Mat_input, Mat_input, 0, 1, NORM_MINMAX);
+        }
+        else {
+            // / Localizing the best match with minMaxLoc
+            Core.add(Mat_input, new Scalar(1), Mat_input);
+            Core.divide(Mat_input, new Scalar(2), Mat_input);
+        }
+
+
+        return Mat_input;
+    }
+
+
+
+    public static void imwriteNorm(Bitmap Bitmap_input, String filename){
+        // Save image from light-source
+        Mat Mat_norm = new Mat ();
+        Utils.bitmapToMat(Bitmap_input, Mat_norm);
+        normalize(Mat_norm, Mat_norm, 0, 255, NORM_MINMAX);
+        Mat_norm.convertTo(Mat_norm, CvType.CV_8UC1);
+        imwrite(filename, Mat_norm);
+
+    }
+
+
+
+    public static Mat imwriteNorm(Mat Mat_input, String filename){
+        // save image
+        Mat Mat_norm = new Mat();
+        normalize(Mat_input, Mat_norm, 0, 255, NORM_MINMAX);
+        Mat_norm.convertTo(Mat_norm, CvType.CV_8UC1);
+        imwrite(filename, Mat_norm);
+        return Mat_norm;
+    }
+
 
 
 

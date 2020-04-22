@@ -43,5 +43,5 @@ dependencies {
     implementation files('src/main/libs/org.eclipse.paho.android.service-1.1.1.jar')
     implementation files('src/main/libs/org.eclipse.paho.client.mqttv3-1.1.1.jar')
 
-    implementation 'org.tensorflow:tensorflow-lite:+'
+    implementation  'org.tensorflow:tensorflow-lite:0.0.0-nightly'// 'org.tensorflow:tensorflow-lite:+'
 }

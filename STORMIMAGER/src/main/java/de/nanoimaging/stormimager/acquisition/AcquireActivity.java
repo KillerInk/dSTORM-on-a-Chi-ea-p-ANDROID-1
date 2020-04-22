@@ -55,7 +55,6 @@ import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.support.v13.app.FragmentCompat;
 import android.support.v4.app.ActivityCompat;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.util.Rational;
 import android.util.Size;
@@ -69,6 +68,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -87,11 +87,13 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
+import org.opencv.core.MatOfFloat;
 import org.opencv.core.Rect;
 import org.opencv.imgproc.Imgproc;
-import org.tensorflow.lite.Interpreter;
+//import org.opencv.core.Size;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -119,10 +121,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import de.nanoimaging.stormimager.R;
 import de.nanoimaging.stormimager.process.VideoProcessor;
 import de.nanoimaging.stormimager.tflite.TFLitePredict;
+import de.nanoimaging.stormimager.utils.ImageUtils;
 
 import static de.nanoimaging.stormimager.acquisition.CaptureRequestEx.HUAWEI_DUAL_SENSOR_MODE;
-import static org.opencv.core.Core.norm;
-import static org.opencv.imgcodecs.Imgcodecs.imwrite;
+import static de.nanoimaging.stormimager.utils.ImageUtils.preprocess;
 
 /**
  * Created by Bene on 26.09.2015.
@@ -227,6 +229,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      GUI-Settings
      */
     ToggleButton acquireSettingsSOFIToggle;
+    ToggleButton btnLiveProcessToggle;
     private Button btn_x_lens_plus;
     private Button btn_x_lens_minus;
     private Button btnStartMeasurement;
@@ -246,10 +249,38 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     private TextView textViewLaser;
     private TextView textViewGuiText;
 
+    private ImageView imageViewPreview;
+
     private ProgressBar acquireProgressBar;
+
+    // Tensorflow stuff
+    int Nx_in = 64;
+    int Ny_in = 64;
+    int N_time = 30;
+    int N_upscale = 2; // Upscalingfactor
+
+    int i_time = 0;     // global counter for timesteps to feed the neural network
+
+    boolean is_display_result = false;
+    Bitmap myresult_bmp = null;
+
 
 
     private TFLitePredict mypredictor;
+    private TFLitePredict mypredictor_mean;
+    private TFLitePredict mypredictor_stdv;
+    String mymodelfile = "converted_model.tflite";
+    String mymodelfile_mean = "converted_model_mean.tflite";
+    String mymodelfile_stdv = "converted_model_stdv.tflite";
+    List<Mat> listMat = new ArrayList<>();
+    // define ouput Data to store result
+    float[] TF_input = new float[(int)(Nx_in*Ny_in*N_time)];
+
+    // Need to convert TestMat to float array to feed into TF
+    MatOfFloat TF_input_f = new MatOfFloat(CvType.CV_32F);
+
+    boolean is_process_sofi = false;
+
 
     /**
      * CAMERA-Related stuff
@@ -602,19 +633,38 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         public void onSurfaceTextureUpdated(SurfaceTexture texture) {
 
             if (is_findcoupling & !isCameraBusy) {
-                //Log.i(TAG, "Lens Calibration in progress");
+                // Do lens aligning here
                 global_bitmap = mTextureView.getBitmap();
                 global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), mTextureView.getTransform(null), true);
 
                 // START THREAD AND ALIGN THE LENS
                 if (is_findcoupling_coarse) {
-                    run_calibration_thread_coarse thread_1 = new run_calibration_thread_coarse("CoarseThread");
+                    new run_calibration_thread_coarse("CoarseThread");
                 } else if (is_findcoupling_fine) {
-                    run_calibration_thread_fine thread_2 = new run_calibration_thread_fine("FineThread");
+                    new run_calibration_thread_fine("FineThread");
+                }
+            }
+            else if(is_process_sofi & !isCameraBusy){
+                // Collect images for SOFI-prediction
+                global_bitmap = mTextureView.getBitmap();
+                global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), mTextureView.getTransform(null), true);
+
+                new run_sofiprocessing_thread("ProcessingThread");
+            }
+            else if(is_display_result){
+                Log.i(TAG, "Displaying result of SOFI prediction");
+                imageViewPreview.setVisibility(View.VISIBLE);
+                try{
+                    imageViewPreview.setImageBitmap(myresult_bmp);
+                    is_display_result = false;
+                }
+                catch(Exception e){
+                    Log.i(TAG, "Could not display result...");
                 }
 
 
             }
+
         }
     };
     /**
@@ -898,8 +948,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         //OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
 
         // load tensorflow stuff
-        String mymodelfile = "converted_model.tflite";
-        mypredictor = new TFLitePredict(AcquireActivity.this, mymodelfile);
+        mypredictor = new TFLitePredict(AcquireActivity.this, mymodelfile, Nx_in, Ny_in, N_time, N_upscale);
+        mypredictor_mean = new TFLitePredict(AcquireActivity.this, mymodelfile_mean, Nx_in, Ny_in, N_time);
+        mypredictor_stdv = new TFLitePredict(AcquireActivity.this, mymodelfile_stdv, Nx_in, Ny_in, N_time);
+
         // Load previously saved settings and set GUIelements
         SharedPreferences sharedPref = this.getSharedPreferences(
                 PREFERENCE_FILE_KEY, Context.MODE_PRIVATE);
@@ -954,6 +1006,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         /**
         GUI-STUFF
          */
+        imageViewPreview = (ImageView) findViewById(R.id.imageViewPreview);
+
         btn_x_lens_plus = findViewById(R.id.button_x_lens_plus);
         btn_x_lens_minus = findViewById(R.id.button_x_lens_minus);
         btnCapture = findViewById(R.id.btnCalib);
@@ -1176,6 +1230,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         });
 
 
+        btnLiveProcessToggle = this.findViewById(R.id.btnLiveView);
+        btnLiveProcessToggle.setText("LIVE: 0");
+        btnLiveProcessToggle.setTextOn("LIVE: 1");
+        btnLiveProcessToggle.setTextOff("LIVE: 0");
+
+
+
         //******************* SOFI-Mode  ********************************************//
         // This is to let the lens vibrate by a certain amount
         acquireSettingsSOFIToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -1186,6 +1247,22 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
                 } else {
                     publishMessage(topic_lens_sofi_z, String.valueOf(0));
+                }
+            }
+
+        });
+
+        //******************* Live PRocessing-Mode  ********************************************//
+        // This is to let the lens vibrate by a certain amount
+        btnLiveProcessToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    Log.i(TAG, "Live PRocessing Checked");
+                    // turn on fluctuation
+                    is_process_sofi = true;
+                } else {
+                    is_process_sofi = false;
+                    imageViewPreview.setVisibility(View.GONE);
                 }
             }
 
@@ -1217,11 +1294,14 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         btnCapture.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
 
-                mypredictor.predict();
+                //mypredictor.predict();
                 //
                 //Log.i(TAG, "Set is_find_coupling to true!");
                 //if (!is_findcoupling) is_findcoupling = true;
                 //takePicture(); //TODO integrate
+
+
+
                 showToast("Taking a snapshot.");
                 // turn on the laser
                 setLaser(val_laser_red_global);
@@ -1231,6 +1311,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 is_measurement = false;
                 textViewGuiText.setText(my_gui_text);
                 setState(STATE_CALIBRATION);
+
             }
         });
 
@@ -3030,6 +3111,128 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
     }
 
+    class run_sofiprocessing_thread implements Runnable {
+
+        Thread mythread;
+        // to stop the thread
+        private boolean exit;
+        private String name;
+
+        run_sofiprocessing_thread(String threadname) {
+            name = threadname;
+            mythread = new Thread(this, name);
+            exit = false;
+            mythread.start(); // Starting the thread
+        }
+
+        // execution of thread starts from run() method
+        public void run() {
+            try {
+
+                isCameraBusy = true;
+                if(i_time < N_time & is_process_sofi){
+                    // convert the Bitmap coming from the camera frame to MAT and crop it
+                    Mat src = new Mat();
+                    Utils.bitmapToMat(global_bitmap, src);
+                    Mat grayMat = new Mat();
+                    Imgproc.cvtColor(src, grayMat, Imgproc.COLOR_BGRA2BGR);
+                    // Extract one frame channel
+                    List<Mat> rgb_list = new ArrayList(3);
+                    Core.split(grayMat,rgb_list);
+                    rgb_list.get(0).copyTo(grayMat);
+
+                    Rect roi = new Rect((int)src.width()/2-Nx_in/2, (int)src.height()/2-Ny_in/2, Nx_in, Ny_in);
+                    Mat dst = new Mat(grayMat, roi);
+
+
+                    // accumulate the result of all frames
+                    dst.convertTo(dst, CvType.CV_32FC1);
+
+                    // preprocess the frame
+                    // dst = preprocess(dst);
+                    Log.e(TAG,dst.dump());
+
+                    // convert MAT to MatOfFloat
+                    dst.convertTo(TF_input_f,CvType.CV_32F);
+                    //Log.e(TAG,dst.dump());
+
+                    // Add the frame to the list
+                    listMat.add(TF_input_f);
+                    i_time ++;
+
+                    // Release memory
+                    src.release();
+                    grayMat.release();
+                    dst.release();
+                }
+                else{
+                    // reset counters
+                    i_time = 0;
+                    //is_process_sofi = false;
+
+                    // If a stack of batch_size images is loaded, feed it into the TF object and run iference
+                    Mat tmp_dst = new Mat();
+                    Core.merge(listMat, tmp_dst); // Log.i(TAG, String.valueOf(tmp_dst));
+                    listMat = new ArrayList<>(); // reset the list
+
+                    // define ouput Data to store result
+                    // TF_output = new float[(int) (OUTPUT_SIZE[0]*OUTPUT_SIZE[1]*OUTPUT_SIZE[2]*OUTPUT_SIZE[3])];
+
+                    // get the frame/image and allocate it in the MOF object
+                    tmp_dst.get(0, 0, TF_input);
+
+                    tmp_dst.release();
+
+                    Log.i(TAG, "All frames have been accumulated");
+
+                    String is_output_nn = "nn_sofi"; // nn_stdv, nn_mean, nn_sofi
+                    Mat myresult = null;
+                    if(is_output_nn=="nn_sofi"){
+                        myresult = mypredictor.predict(TF_input);
+                    }
+                    else if(is_output_nn=="nn_sofi"){
+                        myresult = mypredictor_mean.predict(TF_input);
+                    }
+                    else{
+                        myresult = mypredictor_stdv.predict(TF_input);
+                    }
+                    is_display_result = true;
+
+                    String myresultpath = String.valueOf(Environment.getExternalStorageDirectory() + "/STORMimager/test.png");
+                    myresult = ImageUtils.imwriteNorm(myresult, myresultpath);
+
+                    myresult_bmp = Bitmap.createBitmap(Nx_in*N_upscale, Ny_in*N_upscale, Bitmap.Config.ARGB_8888);
+                    Utils.matToBitmap(myresult, myresult_bmp);
+                    // here we want to do the inference and predict the result
+                    // TODO
+                }
+
+
+
+
+
+                System.gc();
+                global_bitmap.recycle();
+                }
+
+
+            catch(Exception v){
+                System.out.println(v);
+                isCameraBusy=false;
+            }
+
+            isCameraBusy=false;
+            System.out.println(name + " Stopped.");
+        }
+
+        // for stopping the thread
+        public void stop ()
+        {
+            exit = true;
+        }
+    }
+
+
     class run_calibration_thread_coarse implements Runnable {
 
         Thread mythread;
@@ -3275,5 +3478,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         val_lens_z_global = Integer.parseInt(sharedPref.getString("val_lens_z_global", String.valueOf(val_lens_z_global)));
         val_laser_red_global = Integer.parseInt(sharedPref.getString("val_laser_red_global", String.valueOf(val_laser_red_global)));
     }
+
+
 
 }

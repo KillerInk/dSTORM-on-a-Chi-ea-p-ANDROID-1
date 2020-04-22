@@ -915,6 +915,7 @@ id btnAcquireActivity2
 id btnCalib
 id btnFindCentre
 id btnGammaCalibration
+id btnLiveView
 id btnSetup
 id btnSofi
 id btnStart
@@ -980,6 +981,7 @@ id ifRoom
 id image
 id imageView
 id imageView1
+id imageViewPreview
 id imgLogo
 id info
 id invisible

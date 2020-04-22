@@ -3,6 +3,7 @@
 <!-- Reference : https://github.com/googlesamples/android-Camera2Basic -->
 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/black">
@@ -13,6 +14,7 @@
 
         <de.nanoimaging.stormimager.acquisition.AutoFitTextureView
             android:id="@+id/texture"
+            android:layout_gravity="center"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
@@ -20,6 +22,7 @@
 
         <SurfaceView
             android:id="@+id/TransparentView"
+            android:layout_gravity="center"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_alignParentTop="true"
@@ -369,6 +372,15 @@
                     android:layout_weight="1"
                     android:text="Calib!" />
 
+                <ToggleButton
+                    android:id="@+id/btnLiveView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentRight="true"
+                    android:layout_alignParentBottom="true"
+                    android:layout_weight="1"
+                    android:text="LIVE" />
+
 
             </LinearLayout>
 
@@ -391,6 +403,13 @@
 
 
         </LinearLayout>
+
+        <ImageView
+            android:id="@+id/imageViewPreview"
+            android:layout_gravity="center"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"/>
 
 
     </FrameLayout>
