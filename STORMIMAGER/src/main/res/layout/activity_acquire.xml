@@ -167,23 +167,47 @@
                     android:layout_gravity="right|bottom">
 
 
-                    <TextView
-                        android:id="@+id/textViewLensZ"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_horizontal|bottom"
-                        android:text="Lens (Z): "
-                        android:textAppearance="?android:attr/textAppearanceLarge"
-                        android:textColor="@color/white" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="horizontal">
 
-                    <SeekBar
-                        android:id="@+id/seekBarLensZ"
-                        android:layout_width="252dp"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="left|center_vertical"
-                        android:layout_marginLeft="15dp"/>
+                        <Button
+                            android:id="@+id/button_z_focus_minus"
+                            android:layout_width="1pt"
+                            android:layout_height="25pt"
+                            android:layout_weight="1"
+                            android:text="-" />
 
+                        <FrameLayout
+                            android:id="@+id/controlLensZinner"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content">
 
+                            <TextView
+                                android:id="@+id/textViewLensZ"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_horizontal|bottom"
+                                android:text="Lens (Z): "
+                                android:textAppearance="?android:attr/textAppearanceLarge"
+                                android:textColor="@color/white" />
+
+                            <SeekBar
+                                android:id="@+id/seekBarLensZ"
+                                android:layout_width="252dp"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="left|center_vertical"
+                                android:layout_marginLeft="15dp" />
+                        </FrameLayout>
+
+                        <Button
+                            android:id="@+id/button_z_focus_plus"
+                            android:layout_width="1pt"
+                            android:layout_height="25pt"
+                            android:layout_weight="1"
+                            android:text="+" />
+                    </LinearLayout>
                 </FrameLayout>
 
 
@@ -371,6 +395,15 @@
                     android:layout_alignParentBottom="true"
                     android:layout_weight="1"
                     android:text="Calib!" />
+
+                <Button
+                    android:id="@+id/btnAutofocus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentRight="true"
+                    android:layout_alignParentBottom="true"
+                    android:layout_weight="1"
+                    android:text="Focus!" />
 
                 <ToggleButton
                     android:id="@+id/btnLiveView"

@@ -124,7 +124,6 @@ import de.nanoimaging.stormimager.tflite.TFLitePredict;
 import de.nanoimaging.stormimager.utils.ImageUtils;
 
 import static de.nanoimaging.stormimager.acquisition.CaptureRequestEx.HUAWEI_DUAL_SENSOR_MODE;
-import static de.nanoimaging.stormimager.utils.ImageUtils.preprocess;
 
 /**
  * Created by Bene on 26.09.2015.
@@ -144,6 +143,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     public static final String topic_lens_sofi_z = "lens/right/sofi/z";
     public static final String topic_lens_sofi_x = "lens/right/sofi/x";
     public static final String topic_state = "state";
+    public static final String topic_focus_z_fwd = "stepper/z/fwd";
+    public static final String topic_focus_z_bwd = "stepper/z/bwd";
+
     String STATE_CALIBRATION = "state_calib";       // STate signal sent to ESP for light signal
     String STATE_WAIT = "state_wait";               // STate signal sent to ESP for light signal
     String STATE_RECORD = "state_record";           // STate signal sent to ESP for light signal
@@ -189,12 +191,22 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     // settings for coupling
     double val_mean_max = 0;                            // for coupling intensity
+    double val_stdv_max = 0;                            // for focus stdv
     int i_search_maxintensity = 0;                      // global counter for number of search steps
     int val_lens_x_maxintensity = 0;                    // lens-position for maximum intensity
     int val_lens_x_global_old = 0;                      // last lens position before optimization
     int ROI_SIZE = 512;                                 // region which gets cropped to measure the coupling efficiencey
     boolean is_findcoupling_coarse = true;              // State if coupling is in fine mode
     boolean is_findcoupling_fine = false;               // State if coupling is in coarse mode
+
+    // settings for autofocus
+    int val_focus_pos_global_old = 0;
+    int val_focus_pos_global = 0;
+    int i_search_bestfocus = 0;
+    int val_focus_pos_best_global = 0;
+    int val_focus_searchradius = 40;
+    int val_focus_search_stepsize = 1;
+    boolean is_findfocus = false;
 
     // File IO parameters
     File myVideoFileName = new File("");
@@ -214,7 +226,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      * HARDWARE Settings for MQTT related values
      */
     int PWM_RES = (int) (Math.pow(2, 15)) - 1;          // bitrate of the PWM signal 15 bit
-
+    int val_stepsize_focus_z = 1;                      // Stepsize to move the objective lens
     int val_lens_x_global = 0;                          // global position for the x-lens
     int val_lens_z_global = 0;                          // global position for the z-lens
     int val_laser_red_global = 0;                       // global value for the laser
@@ -232,10 +244,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     ToggleButton btnLiveProcessToggle;
     private Button btn_x_lens_plus;
     private Button btn_x_lens_minus;
+    private Button btn_z_focus_plus;
+    private Button btn_z_focus_minus;
     private Button btnStartMeasurement;
     private Button btnStopMeasurement;
     private Button btnSetup;
-    private Button btnCapture;
+    private Button btnCalib;
+    private Button btnAutofocus;
 
     private SeekBar seekbar_iso;
     private SeekBar seekbar_shutter;
@@ -254,9 +269,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     private ProgressBar acquireProgressBar;
 
     // Tensorflow stuff
-    int Nx_in = 64;
-    int Ny_in = 64;
-    int N_time = 30;
+    int Nx_in = 128;
+    int Ny_in = Nx_in;
+    int N_time = 20;
     int N_upscale = 2; // Upscalingfactor
 
     int i_time = 0;     // global counter for timesteps to feed the neural network
@@ -264,12 +279,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     boolean is_display_result = false;
     Bitmap myresult_bmp = null;
 
-
-
     private TFLitePredict mypredictor;
     private TFLitePredict mypredictor_mean;
     private TFLitePredict mypredictor_stdv;
-    String mymodelfile = "converted_model.tflite";
+    String mymodelfile = "converted_model256_20.tflite";
     String mymodelfile_mean = "converted_model_mean.tflite";
     String mymodelfile_stdv = "converted_model_stdv.tflite";
     List<Mat> listMat = new ArrayList<>();
@@ -644,6 +657,15 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     new run_calibration_thread_fine("FineThread");
                 }
             }
+            else if(is_findfocus & !isCameraBusy) {
+                // Do autofocussing
+                global_bitmap = mTextureView.getBitmap();
+                global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), mTextureView.getTransform(null), true);
+
+                // START THREAD AND ALIGN THE LENS
+                new run_autofocus_thread("AutofocusThread");
+
+            }
             else if(is_process_sofi & !isCameraBusy){
                 // Collect images for SOFI-prediction
                 global_bitmap = mTextureView.getBitmap();
@@ -1007,10 +1029,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         GUI-STUFF
          */
         imageViewPreview = (ImageView) findViewById(R.id.imageViewPreview);
-
         btn_x_lens_plus = findViewById(R.id.button_x_lens_plus);
         btn_x_lens_minus = findViewById(R.id.button_x_lens_minus);
-        btnCapture = findViewById(R.id.btnCalib);
+        btn_z_focus_plus = findViewById(R.id.button_z_focus_plus);
+        btn_z_focus_minus = findViewById(R.id.button_z_focus_minus);
+
+        btnAutofocus = findViewById(R.id.btnAutofocus);
+        btnCalib = findViewById(R.id.btnCalib);
         btnSetup = findViewById(R.id.btnSetup);
         btnStartMeasurement = findViewById(R.id.btnStart);
         btnStopMeasurement = findViewById(R.id.btnStop);
@@ -1290,30 +1315,56 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         });
 
-        //******************* Make snapshot ********************************************//
-        btnCapture.setOnClickListener(new View.OnClickListener() {
+
+        //******************* Move X ++ ********************************************//
+        btn_z_focus_plus.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                setZFocus(val_stepsize_focus_z);
+            }
+
+        });
+
+        //******************* Move X -- ********************************************//
+        btn_z_focus_minus.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                setZFocus(-val_stepsize_focus_z);
+            }
+
+        });
+
+        //******************* Optimize Coupling ********************************************//
+        btnCalib.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
 
-                //mypredictor.predict();
-                //
-                //Log.i(TAG, "Set is_find_coupling to true!");
-                //if (!is_findcoupling) is_findcoupling = true;
-                //takePicture(); //TODO integrate
-
-
-
-                showToast("Taking a snapshot.");
+                showToast("Optimize  Coupling");
                 // turn on the laser
                 setLaser(val_laser_red_global);
                 Log.i(TAG, "Lens Calibration in progress");
                 String my_gui_text = "Lens Calibration in progress";
                 is_findcoupling = true;
                 is_measurement = false;
+
                 textViewGuiText.setText(my_gui_text);
                 setState(STATE_CALIBRATION);
 
             }
         });
+
+        //******************* Autofocus ********************************************//
+        btnAutofocus.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+
+                showToast("Start Autofocussing ");
+                // turn on the laser
+                Log.i(TAG, "Autofocussing in progress");
+                String my_gui_text = "Lens Calibration in progress";
+
+                textViewGuiText.setText(my_gui_text);
+                is_findfocus = true;
+
+            }
+        });
+
 
         //******************* Start MEasurement ********************************************//
         btnStartMeasurement.setOnClickListener(new View.OnClickListener() {
@@ -1332,6 +1383,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 is_findcoupling = false;
                 is_findcoupling_coarse = false;
                 is_findcoupling_coarse = true;
+                is_findfocus = false;
+
             }
         });
 
@@ -2566,6 +2619,14 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         publishMessage(topic_state, mystate);
     }
 
+    void setZFocus(int stepsize) {
+        if(stepsize>0) publishMessage(topic_focus_z_fwd, String.valueOf(Math.abs(stepsize)));
+        if(stepsize<0) publishMessage(topic_focus_z_bwd, String.valueOf(Math.abs(stepsize)));
+        if(is_findfocus){
+        try {Thread.sleep(stepsize*80); }
+        catch (Exception e) { Log.e(TAG, String.valueOf(e));}}
+    }
+
 
 
     void setLensX(int lensposition) {
@@ -3061,7 +3122,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                     //TODO : Dirty hack for now since we don't have a proper laser
                     mSleep(200); //Let AEC stabalize if it's on
-                    setLensX(1); // Heavily detune the lens to reduce phototoxicity
+                    //setLensX(1); // Heavily detune the lens to reduce phototoxicity
 
                     // Once in a while update the GUI
                     my_gui_text = "Waiting for next measurements. "+String.valueOf(val_nperiods_calibration-i_meas)+"/"+String.valueOf(val_nperiods_calibration)+"left until recalibration";
@@ -3146,11 +3207,11 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
 
                     // accumulate the result of all frames
-                    dst.convertTo(dst, CvType.CV_32FC1);
+                    //dst.convertTo(dst, CvType.CV_32FC1);
 
                     // preprocess the frame
                     // dst = preprocess(dst);
-                    Log.e(TAG,dst.dump());
+                    //Log.e(TAG,dst.dump());
 
                     // convert MAT to MatOfFloat
                     dst.convertTo(TF_input_f,CvType.CV_32F);
@@ -3190,7 +3251,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     if(is_output_nn=="nn_sofi"){
                         myresult = mypredictor.predict(TF_input);
                     }
-                    else if(is_output_nn=="nn_sofi"){
+                    else if(is_output_nn=="nn_stdv"){
                         myresult = mypredictor_mean.predict(TF_input);
                     }
                     else{
@@ -3198,13 +3259,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     }
                     is_display_result = true;
 
-                    String myresultpath = String.valueOf(Environment.getExternalStorageDirectory() + "/STORMimager/test.png");
+                    String mytimestamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS", Locale.US).format(new Date());
+                    String myresultpath = String.valueOf(Environment.getExternalStorageDirectory() + "/STORMimager/"+mytimestamp+"_test.png");
                     myresult = ImageUtils.imwriteNorm(myresult, myresultpath);
 
                     myresult_bmp = Bitmap.createBitmap(Nx_in*N_upscale, Ny_in*N_upscale, Bitmap.Config.ARGB_8888);
                     Utils.matToBitmap(myresult, myresult_bmp);
-                    // here we want to do the inference and predict the result
-                    // TODO
+
                 }
 
 
@@ -3421,6 +3482,110 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 exit = true;
             }
         }
+
+
+    class run_autofocus_thread implements Runnable {
+
+        Thread mythread;
+        // to stop the thread
+        private boolean exit;
+        private String name;
+
+        run_autofocus_thread(String threadname) {
+            name = threadname;
+            mythread = new Thread(this, name);
+            exit = false;
+            mythread.start(); // Starting the thread
+        }
+
+        // execution of thread starts from run() method
+        public void run() {
+
+            try {
+                isCameraBusy = true;
+
+                // convert the Bitmap coming from the camera frame to MAT
+                Mat src = new Mat();
+                Mat dst = new Mat();
+                Utils.bitmapToMat(global_bitmap, src);
+                Imgproc.cvtColor(src, dst, Imgproc.COLOR_BGRA2BGR);
+
+
+                // reset the lens's position in the first iteration by some value
+                if (i_search_bestfocus == 0) {
+                    val_stdv_max=0;
+                    val_focus_pos_global_old = 0; // Save the value for later
+                    val_focus_pos_global = - val_focus_searchradius;
+                    // reset lens position
+                    setZFocus(-val_focus_searchradius);
+                    try {Thread.sleep(3000);}
+                    catch (Exception e) {Log.e(TAG, String.valueOf(e));}
+                }
+                val_focus_pos_global = i_search_bestfocus;
+
+                // first increase the lens position
+                val_lens_x_global = val_lens_x_global + val_focus_search_stepsize;
+                setZFocus(val_focus_search_stepsize);
+
+                // then measure the focus quality
+                i_search_bestfocus = i_search_bestfocus + val_focus_search_stepsize;
+
+                double i_stdv = measureCoupling(dst, ROI_SIZE, 9);
+                String myfocusingtext = "Focus @ "+String.valueOf(i_search_bestfocus)+" is "+String.valueOf(i_stdv);
+                textViewGuiText.post(new Runnable() {
+                    public void run() {
+                        textViewGuiText.setText(myfocusingtext);
+                    }
+                });
+                Log.i(TAG, myfocusingtext);
+                if (i_stdv > val_stdv_max) {
+                    // Save the position with maximum intensity
+                    val_stdv_max = i_stdv;
+                    val_focus_pos_best_global = val_focus_pos_global;
+                }
+
+                // break if algorithm reaches the maximum of lens positions
+                if (i_search_bestfocus >= (2*val_focus_searchradius)) {
+                    // if maximum number of search iteration is reached, break
+                    if (val_focus_pos_best_global == 0) {
+                        val_focus_pos_best_global = val_focus_pos_global_old;
+                    }
+
+                    // Go to position with highest stdv
+                    setZFocus(-(2*val_focus_searchradius)+val_focus_pos_best_global);
+
+                    is_findfocus = false;
+                    i_search_bestfocus = 0;
+                    Log.i(TAG, "My final focus is at z=" + String.valueOf(val_focus_pos_best_global)+'@'+ String.valueOf(val_stdv_max));
+                }
+
+
+
+
+                // free memory
+                System.gc();
+                src.release();
+                dst.release();
+                global_bitmap.recycle();
+
+                isCameraBusy = false;
+
+
+            } catch (Exception v) {
+                System.out.println(v);
+            }
+
+            System.out.println(name + " Stopped.");
+        }
+
+        // for stopping the thread
+        public void c() {
+            exit = true;
+            is_findfocus = false;
+            i_search_bestfocus = 0;
+
+        }
+    }
 
 
     double measureCoupling(Mat inputmat, int mysize, int ksize){

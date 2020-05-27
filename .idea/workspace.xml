@@ -6,28 +6,30 @@
     </shared>
   </component>
   <component name="AndroidLogFilters">
+    <option name="TOOL_WINDOW_CUSTOM_FILTER" value="Focus" />
     <option name="TOOL_WINDOW_LOG_LEVEL" value="verbose" />
     <option name="TOOL_WINDOW_CONFIGURED_FILTER" value="Show only selected application" />
     <option name="TOOL_WINDOW_REGEXP_FILTER" value="false" />
   </component>
+  <component name="BookmarkManager">
+    <bookmark url="file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java" description="if(stepsize&gt;0) publishMessage(topic_focus_z_fwd, S..." line="2590" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="4f9de21b-4a84-48c3-91c0-f4c25546d6bc" name="Default" comment="">
-      <change afterPath="$PROJECT_DIR$/STORMIMAGER/src/main/assets/converted_model_mean.tflite" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/STORMIMAGER/src/main/assets/converted_model_stdv.tflite" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/STORMIMAGER/src/main/assets/converted_model128_30.tflite" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/STORMIMAGER/src/main/assets/converted_model256_20.tflite" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/STORMIMAGER/src/main/assets/converted_model_.tflite" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/5.4.1/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/5.4.1/executionHistory/executionHistory.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/5.4.1/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/5.4.1/executionHistory/executionHistory.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/5.4.1/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/5.4.1/fileHashes/fileHashes.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/5.4.1/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/5.4.1/fileHashes/fileHashes.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/5.4.1/javaCompile/classAnalysis.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/5.4.1/javaCompile/classAnalysis.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/5.4.1/javaCompile/javaCompile.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/5.4.1/javaCompile/javaCompile.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/5.4.1/javaCompile/taskHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/5.4.1/javaCompile/taskHistory.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/outputFiles.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/outputFiles.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/caches/build_file_checksums.ser" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/build_file_checksums.ser" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/caches/gradle_models.ser" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/gradle_models.ser" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/STORMIMAGER.iml" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/STORMIMAGER.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/STORMIMAGER/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build.gradle" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/generated/not_namespaced_r_class_sources/debug/r/android/support/compat/R.java" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/generated/not_namespaced_r_class_sources/debug/r/android/support/compat/R.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/generated/not_namespaced_r_class_sources/debug/r/android/support/constraint/R.java" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/generated/not_namespaced_r_class_sources/debug/r/android/support/constraint/R.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/generated/not_namespaced_r_class_sources/debug/r/android/support/coreui/R.java" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/generated/not_namespaced_r_class_sources/debug/r/android/support/coreui/R.java" afterDir="false" />
@@ -41,10 +43,6 @@
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/generated/not_namespaced_r_class_sources/debug/r/android/support/v7/appcompat/R.java" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/generated/not_namespaced_r_class_sources/debug/r/android/support/v7/appcompat/R.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/generated/not_namespaced_r_class_sources/debug/r/de/nanoimaging/stormimager/R.java" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/generated/not_namespaced_r_class_sources/debug/r/de/nanoimaging/stormimager/R.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/generated/not_namespaced_r_class_sources/debug/r/org/opencv/R.java" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/generated/not_namespaced_r_class_sources/debug/r/org/opencv/R.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/blame/res/debug/multi-v2/debug.json" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/blame/res/debug/multi-v2/debug.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/blame/res/debug/single/debug.json" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/blame/res/debug/single/debug.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/incremental/debug-mergeJavaRes/merge-state" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/incremental/debug-mergeJavaRes/merge-state" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/incremental/debug-mergeNativeLibs/merge-state" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/incremental/debug-mergeNativeLibs/merge-state" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/incremental/mergeDebugAssets/merger.xml" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/incremental/mergeDebugAssets/merger.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/incremental/mergeDebugResources/compile-file-map.properties" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/incremental/mergeDebugResources/compile-file-map.properties" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/incremental/packageDebug/tmp/debug/dex-renamer-state.txt" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/incremental/packageDebug/tmp/debug/dex-renamer-state.txt" afterDir="false" />
@@ -106,7 +104,7 @@
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/javac/debug/classes/de/nanoimaging/stormimager/acquisition/AcquireActivity.class" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/javac/debug/classes/de/nanoimaging/stormimager/acquisition/AcquireActivity.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/javac/debug/classes/de/nanoimaging/stormimager/acquisition/AcquireResultActivity.class" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/javac/debug/classes/de/nanoimaging/stormimager/acquisition/AcquireResultActivity.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/javac/debug/classes/de/nanoimaging/stormimager/acquisition/AcquireSettings.class" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/javac/debug/classes/de/nanoimaging/stormimager/acquisition/AcquireSettings.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/javac/debug/classes/de/nanoimaging/stormimager/utils/ImageUtils.class" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/javac/debug/classes/de/nanoimaging/stormimager/utils/ImageUtils.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/javac/debug/classes/de/nanoimaging/stormimager/activity/MainActivity.class" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/javac/debug/classes/de/nanoimaging/stormimager/activity/MainActivity.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/javac/debug/classes/org/opencv/R$id.class" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/javac/debug/classes/org/opencv/R$id.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/processed_res/debug/processDebugResources/out/resources-debug.ap_" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/processed_res/debug/processDebugResources/out/resources-debug.ap_" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/res/merged/debug/layout_activity_acquire.xml.flat" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/res/merged/debug/layout_activity_acquire.xml.flat" afterDir="false" />
@@ -169,14 +167,14 @@
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/transforms/dexBuilder/debug/0/de/nanoimaging/stormimager/acquisition/AcquireActivity.dex" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/transforms/dexBuilder/debug/0/de/nanoimaging/stormimager/acquisition/AcquireActivity.dex" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/transforms/dexBuilder/debug/0/de/nanoimaging/stormimager/acquisition/AcquireResultActivity.dex" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/transforms/dexBuilder/debug/0/de/nanoimaging/stormimager/acquisition/AcquireResultActivity.dex" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/transforms/dexBuilder/debug/0/de/nanoimaging/stormimager/acquisition/AcquireSettings.dex" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/transforms/dexBuilder/debug/0/de/nanoimaging/stormimager/acquisition/AcquireSettings.dex" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/transforms/dexBuilder/debug/0/de/nanoimaging/stormimager/utils/ImageUtils.dex" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/transforms/dexBuilder/debug/0/de/nanoimaging/stormimager/utils/ImageUtils.dex" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/transforms/dexBuilder/debug/0/de/nanoimaging/stormimager/activity/MainActivity.dex" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/transforms/dexBuilder/debug/0/de/nanoimaging/stormimager/activity/MainActivity.dex" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/transforms/dexBuilder/debug/0/org/opencv/R$id.dex" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/intermediates/transforms/dexBuilder/debug/0/org/opencv/R$id.dex" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/outputs/apk/debug/STORMIMAGER-debug.apk" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/outputs/apk/debug/STORMIMAGER-debug.apk" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/STORMIMAGER/build/outputs/logs/manifest-merger-debug-report.txt" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/build/outputs/logs/manifest-merger-debug-report.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/src/main/assets/converted_model.tflite" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/src/main/assets/converted_model.tflite" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/STORMIMAGER/src/main/assets/converted_model_mean.tflite" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/src/main/assets/converted_model_mean.tflite" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/STORMIMAGER/src/main/assets/converted_model_stdv.tflite" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/src/main/assets/converted_model_stdv.tflite" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/tflite/TFLitePredict.java" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/tflite/TFLitePredict.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/utils/ImageUtils.java" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/utils/ImageUtils.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/STORMIMAGER/src/main/res/layout/activity_acquire.xml" beforeDir="false" afterPath="$PROJECT_DIR$/STORMIMAGER/src/main/res/layout/activity_acquire.xml" afterDir="false" />
     </list>
     <ignored path="Beamerscope.iws" />
@@ -224,12 +222,49 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="210">
-              <caret line="3152" column="20" selection-start-line="3152" selection-start-column="20" selection-end-line="3152" selection-end-column="20" />
+            <state relative-caret-position="15">
+              <caret line="3530" column="34" selection-start-line="3530" selection-start-column="16" selection-end-line="3530" selection-end-column="34" />
               <folding>
                 <element signature="imports" expanded="true" />
-                <element signature="e#49299#49300#0" expanded="true" />
-                <element signature="e#49351#49352#0" expanded="true" />
+                <element signature="e#31703#31704#0" expanded="true" />
+                <element signature="e#31768#31769#0" expanded="true" />
+                <element signature="e#50561#50562#0" expanded="true" />
+                <element signature="e#50613#50614#0" expanded="true" />
+                <element signature="e#53465#53466#0" expanded="true" />
+                <element signature="e#53528#53529#0" expanded="true" />
+                <element signature="e#53745#53746#0" expanded="true" />
+                <element signature="e#53809#53810#0" expanded="true" />
+                <element signature="e#57608#57609#0" expanded="true" />
+                <element signature="e#57641#57642#0" expanded="true" />
+                <element signature="e#57684#57685#0" expanded="true" />
+                <element signature="e#57715#57716#0" expanded="true" />
+                <element signature="e#57757#57758#0" expanded="true" />
+                <element signature="e#57787#57788#0" expanded="true" />
+                <element signature="e#62198#62236#0" expanded="true" />
+                <element signature="e#64604#64631#0" expanded="true" />
+                <element signature="e#87537#87538#0" expanded="true" />
+                <element signature="e#87598#87599#0" expanded="true" />
+                <element signature="e#105484#105485#0" expanded="true" />
+                <element signature="e#105536#105537#0" expanded="true" />
+                <element signature="e#112289#112290#0" expanded="true" />
+                <element signature="e#112339#112340#0" expanded="true" />
+                <element signature="e#115030#115031#0" expanded="true" />
+                <element signature="e#115095#115096#0" expanded="true" />
+                <element signature="e#117144#117145#0" expanded="true" />
+                <element signature="e#117182#117183#0" expanded="true" />
+                <element signature="e#118335#118362#0" expanded="true" />
+                <element signature="e#130531#130532#0" expanded="true" />
+                <element signature="e#130566#130567#0" expanded="true" />
+                <element signature="e#132206#132207#0" expanded="true" />
+                <element signature="e#132309#132310#0" expanded="true" />
+                <element signature="e#134232#134233#0" expanded="true" />
+                <element signature="e#134275#134276#0" expanded="true" />
+                <element signature="e#135904#135905#0" expanded="true" />
+                <element signature="e#135999#136000#0" expanded="true" />
+                <element signature="e#137942#137943#0" expanded="true" />
+                <element signature="e#137985#137986#0" expanded="true" />
+                <element signature="e#140010#140011#0" expanded="true" />
+                <element signature="e#140097#140098#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -237,12 +272,12 @@
       </file>
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/res/layout/activity_acquire.xml">
-          <provider editor-type-id="android-designer2" />
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="360">
-              <caret line="24" column="43" selection-start-line="24" selection-start-column="43" selection-end-line="24" selection-end-column="43" />
+            <state relative-caret-position="294">
+              <caret line="399" column="49" selection-start-line="399" selection-start-column="37" selection-end-line="399" selection-end-column="49" />
             </state>
           </provider>
+          <provider editor-type-id="android-designer2" />
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
@@ -255,28 +290,10 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/STORMIMAGER/build.gradle">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="675">
-              <caret line="45" column="4" selection-start-line="45" selection-start-column="4" selection-end-line="45" selection-end-column="67" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/utils/ImageUtils.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1080">
-              <caret line="91" column="32" selection-start-line="91" selection-start-column="32" selection-end-line="91" selection-end-column="32" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/tflite/TFLitePredict.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1080">
-              <caret line="85" selection-start-line="85" selection-end-line="85" />
+            <state relative-caret-position="1095">
+              <caret line="87" column="5" selection-start-line="87" selection-start-column="5" selection-end-line="87" selection-end-column="5" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -287,8 +304,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/process/VideoProcessor.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1125">
-              <caret line="94" column="61" selection-start-line="94" selection-start-column="61" selection-end-line="94" selection-end-column="61" />
+            <state relative-caret-position="510">
+              <caret line="53" column="16" selection-start-line="53" selection-start-column="16" selection-end-line="53" selection-end-column="16" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -317,36 +334,36 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>&lt;</find>
-      <find>isCameraBusy</find>
-      <find>matoff</find>
-      <find>matofflo</find>
-      <find>TFLitepr</find>
-      <find>gete</find>
-      <find>Ntime</find>
-      <find>N_time</find>
-      <find>mymodelfile</find>
-      <find>mypredictor_mean</find>
-      <find>mypredictor</find>
-      <find>TF_input</find>
-      <find>n_scale</find>
-      <find>64</find>
-      <find>CameraPreview</find>
-      <find>image</find>
-      <find>findView</find>
-      <find>predict</find>
-      <find>Nx_in</find>
-      <find>bitmap</find>
-      <find>global_bitmap</find>
-      <find>toggle</find>
-      <find>Toggle</find>
-      <find>acquireSettingsSOFIToggle</find>
-      <find>View.GONE</find>
-      <find>setVisibility</find>
-      <find>imageview</find>
-      <find>is_process_sofi</find>
-      <find>dump</find>
-      <find>preprocess</find>
+      <find>val_stepsize_focus_z</find>
+      <find>topic_focus_z_bwd</find>
+      <find>mqtt</find>
+      <find>proc</find>
+      <find>run_</find>
+      <find>focus</find>
+      <find>measureCoupling</find>
+      <find>val_mean_max</find>
+      <find>is_findcoupling</find>
+      <find>i_search_bestfocus</find>
+      <find>is_findcoupling_coarse</find>
+      <find>10;</find>
+      <find>sleep</find>
+      <find>Focus</find>
+      <find>val_focus_searchradius</find>
+      <find>setZfoc</find>
+      <find>1000</find>
+      <find>stepsi</find>
+      <find>calib</find>
+      <find>btnAut</find>
+      <find>btnCalib</find>
+      <find>is_findfocus</find>
+      <find>stop</find>
+      <find>btnautofo</find>
+      <find>val_focus_search_stepsize</find>
+      <find>val_stdv_max</find>
+      <find>toast</find>
+      <find>btnAutofocus</find>
+      <find>is_findfocus</find>
+      <find>setZFocus</find>
     </findStrings>
     <replaceStrings>
       <replace>global_na+30</replace>
@@ -378,6 +395,7 @@
       <replace>setGUIelements</replace>
       <replace>btn_x_lens_plus</replace>
       <replace>N_scale</replace>
+      <replace>val_focus_pos_best_global</replace>
     </replaceStrings>
     <dirStrings>
       <dir>$PROJECT_DIR$</dir>
@@ -443,9 +461,9 @@
         <option value="$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireSettings.java" />
         <option value="$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/process/VideoProcessor.java" />
         <option value="$PROJECT_DIR$/STORMIMAGER/build.gradle" />
+        <option value="$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/utils/ImageUtils.java" />
         <option value="$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/tflite/TFLitePredict.java" />
         <option value="$PROJECT_DIR$/STORMIMAGER/src/main/res/layout/activity_acquire.xml" />
-        <option value="$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/utils/ImageUtils.java" />
         <option value="$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java" />
       </list>
     </option>
@@ -465,8 +483,8 @@
     </navigator>
     <panes>
       <pane id="Scope" />
-      <pane id="AndroidView" />
       <pane id="PackagesPane" />
+      <pane id="AndroidView" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -508,6 +526,23 @@
               <item name="main" type="462c0819:PsiDirectoryNode" />
               <item name="java" type="462c0819:PsiDirectoryNode" />
             </path>
+            <path>
+              <item name="STORM_Imager" type="b2602c69:ProjectViewProjectNode" />
+              <item name="STORM_Imager" type="8a07ba80:GradleTreeStructureProvider$GradleModuleDirectoryNode" />
+              <item name="STORMIMAGER" type="8a07ba80:GradleTreeStructureProvider$GradleModuleDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+              <item name="res" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="STORM_Imager" type="b2602c69:ProjectViewProjectNode" />
+              <item name="STORM_Imager" type="8a07ba80:GradleTreeStructureProvider$GradleModuleDirectoryNode" />
+              <item name="STORMIMAGER" type="8a07ba80:GradleTreeStructureProvider$GradleModuleDirectoryNode" />
+              <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+              <item name="res" type="462c0819:PsiDirectoryNode" />
+              <item name="layout" type="462c0819:PsiDirectoryNode" />
+            </path>
           </expand>
           <select />
         </subPane>
@@ -535,23 +570,23 @@
     <option name="LAST_EDITED_BUILD_TYPE" value="release" />
   </component>
   <component name="RecentsManager">
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/STORMIMAGER/src/main/assets" />
-      <recent name="$PROJECT_DIR$/STORMIMAGER/src/main/res/drawable" />
-      <recent name="$PROJECT_DIR$/STORMIMAGER/src/main" />
-      <recent name="$PROJECT_DIR$" />
-      <recent name="$PROJECT_DIR$/STORMIMAGER/src/main/libs" />
-    </key>
-    <key name="CopyClassDialog.RECENTS_KEY">
-      <recent name="de.minispim.acquisition" />
-      <recent name="de.beamerscope.acquisition3" />
-    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/STORMIMAGER/src/main/assets" />
       <recent name="$PROJECT_DIR$/STORMIMAGER/src/main/jniLibs" />
       <recent name="$PROJECT_DIR$/STORMIMAGER/src/main/libs" />
       <recent name="$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging" />
       <recent name="$PROJECT_DIR$/beamerscope/src/main/java/de/obsolete/acquisition_BAK" />
+    </key>
+    <key name="CopyClassDialog.RECENTS_KEY">
+      <recent name="de.minispim.acquisition" />
+      <recent name="de.beamerscope.acquisition3" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/STORMIMAGER/src/main/assets" />
+      <recent name="$PROJECT_DIR$/STORMIMAGER/src/main/res/drawable" />
+      <recent name="$PROJECT_DIR$/STORMIMAGER/src/main" />
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/STORMIMAGER/src/main/libs" />
     </key>
   </component>
   <component name="RunDashboard">
@@ -1092,14 +1127,13 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="40" y="23" width="1379" height="877" extended-state="0" />
-    <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.7053232" visible="true" weight="0.27524307" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.69625247" visible="true" weight="0.27524307" />
       <window_info id="Structure" order="1" weight="0.2496318" />
       <window_info id="Designer" order="2" />
       <window_info id="Build Variants" order="3" sideWeight="0.50106156" side_tool="true" weight="0.2580404" />
       <window_info id="Image Layers" order="4" />
-      <window_info id="Captures" order="5" sideWeight="0.2946768" side_tool="true" visible="true" weight="0.27524307" />
+      <window_info id="Captures" order="5" sideWeight="0.30374753" side_tool="true" visible="true" weight="0.27524307" />
       <window_info id="Capture Tool" order="6" />
       <window_info id="Favorites" order="7" side_tool="true" />
       <window_info id="Nl-Palette" order="8" />
@@ -1119,9 +1153,9 @@
       <window_info anchor="bottom" id="Terminal" order="12" sideWeight="0.49139866" weight="0.32866243" />
       <window_info anchor="bottom" id="Messages" order="13" sideWeight="0.4854151" weight="0.3285151" />
       <window_info anchor="bottom" id="Android Profiler" order="14" sideWeight="0.52729994" weight="0.96178347" />
-      <window_info anchor="bottom" id="Logcat" order="15" sideWeight="0.5991025" weight="0.35414013" />
+      <window_info active="true" anchor="bottom" id="Logcat" order="15" sideWeight="0.5991025" visible="true" weight="0.35414013" />
       <window_info anchor="bottom" id="DevEco Output" order="16" weight="0.3299363" />
-      <window_info anchor="bottom" id="Build" order="17" sideWeight="0.49962604" visible="true" weight="0.3299363" />
+      <window_info anchor="bottom" id="Build" order="17" sideWeight="0.49962604" weight="0.33375797" />
       <window_info anchor="right" id="Commander" order="0" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -1136,6 +1170,7 @@
       <window_info anchor="right" id="Preview" order="11" weight="0.2685116" />
       <window_info anchor="right" id="StringPreview" order="12" />
       <window_info anchor="right" id="SDK &amp; Dev Tools" order="13" weight="0.32984293" />
+      <window_info anchor="right" id="Kit Assistant" order="14" weight="0.40164548" />
     </layout>
   </component>
   <component name="Vcs.Log.History.Properties">
@@ -1161,15 +1196,9 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java</url>
-          <line>447</line>
+          <line>449</line>
           <properties />
           <option name="timeStamp" value="47" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java</url>
-          <line>688</line>
-          <properties />
-          <option name="timeStamp" value="100" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/process/VideoProcessor.java</url>
@@ -1179,7 +1208,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java</url>
-          <line>3077</line>
+          <line>3103</line>
           <properties />
           <option name="timeStamp" value="162" />
         </line-breakpoint>
@@ -1196,52 +1225,52 @@
           <option name="timeStamp" value="164" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java</url>
-          <line>1296</line>
-          <properties />
-          <option name="timeStamp" value="165" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/tflite/TFLitePredict.java</url>
-          <line>111</line>
+          <line>121</line>
           <properties />
           <option name="timeStamp" value="177" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java</url>
-          <line>3201</line>
-          <properties />
-          <option name="timeStamp" value="214" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java</url>
-          <line>3200</line>
-          <properties />
-          <option name="timeStamp" value="216" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java</url>
-          <line>3147</line>
+          <line>3173</line>
           <properties />
           <option name="timeStamp" value="226" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java</url>
-          <line>3155</line>
-          <properties />
-          <option name="timeStamp" value="228" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java</url>
-          <line>3156</line>
+          <line>3182</line>
           <properties />
           <option name="timeStamp" value="229" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java</url>
-          <line>3159</line>
+          <line>659</line>
           <properties />
-          <option name="timeStamp" value="230" />
+          <option name="timeStamp" value="235" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java</url>
+          <line>3216</line>
+          <properties />
+          <option name="timeStamp" value="236" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java</url>
+          <line>3542</line>
+          <properties />
+          <option name="timeStamp" value="243" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java</url>
+          <line>2614</line>
+          <properties />
+          <option name="timeStamp" value="244" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java</url>
+          <line>2623</line>
+          <properties />
+          <option name="timeStamp" value="245" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
@@ -1341,12 +1370,12 @@
     <entry file="file://$PROJECT_DIR$/openCV4/build.gradle" />
     <entry file="file://$PROJECT_DIR$/openCV4/openCV4.iml" />
     <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/AndroidManifest.xml">
-      <provider editor-type-id="android-manifest" />
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="609">
           <caret line="65" column="61" selection-start-line="65" selection-start-column="61" selection-end-line="65" selection-end-column="61" />
         </state>
       </provider>
+      <provider editor-type-id="android-manifest" />
     </entry>
     <entry file="file://$PROJECT_DIR$/.gitignore">
       <provider selected="true" editor-type-id="text-editor" />
@@ -1367,12 +1396,12 @@
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/openCVLibrary344/src/main/AndroidManifest.xml">
-      <provider editor-type-id="android-manifest" />
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="90">
           <caret line="6" selection-start-line="6" selection-end-line="6" />
         </state>
       </provider>
+      <provider editor-type-id="android-manifest" />
     </entry>
     <entry file="file://$PROJECT_DIR$/settings.gradle">
       <provider selected="true" editor-type-id="text-editor">
@@ -1382,20 +1411,20 @@
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/res/layout/activity_main.xml">
-      <provider editor-type-id="android-designer2" />
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="360">
           <caret line="24" column="4" selection-start-line="24" selection-start-column="4" selection-end-line="24" selection-end-column="4" />
         </state>
       </provider>
+      <provider editor-type-id="android-designer2" />
     </entry>
     <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/res/layout/activity_splash.xml">
-      <provider editor-type-id="android-designer2" />
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="60">
           <caret line="4" column="4" selection-start-line="4" selection-start-column="4" selection-end-line="4" selection-end-column="45" />
         </state>
       </provider>
+      <provider editor-type-id="android-designer2" />
     </entry>
     <entry file="jar://$USER_HOME$/Library/Android/sdk/platforms/android-26/android.jar!/android/media/MediaRecorder.class">
       <provider selected="true" editor-type-id="text-editor">
@@ -1405,12 +1434,12 @@
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/res/layout/activity_acquire_settings.xml">
-      <provider editor-type-id="android-designer2" />
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="421">
           <caret line="60" selection-start-line="60" selection-end-line="60" />
         </state>
       </provider>
+      <provider editor-type-id="android-designer2" />
     </entry>
     <entry file="file://$USER_HOME$/Downloads/AcquireActivity.java" />
     <entry file="file://$USER_HOME$/Downloads/cellSTORM_TENSORFLOW-Lite/openCVLibrary341/src/main/java/org/opencv/android/Utils.java" />
@@ -1432,28 +1461,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireSettings.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2070">
-          <caret line="155" column="25" selection-start-line="155" selection-start-column="25" selection-end-line="155" selection-end-column="25" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/res/layout/activity_acquire.xml">
-      <provider editor-type-id="android-designer2" />
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="360">
-          <caret line="24" column="43" selection-start-line="24" selection-start-column="43" selection-end-line="24" selection-end-column="43" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AutoFitTextureView.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="150">
-          <caret line="12" column="13" selection-start-line="12" selection-start-column="13" selection-end-line="12" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/STORMIMAGER/build.gradle">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="675">
@@ -1468,10 +1475,17 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AutoFitTextureView.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="150">
+          <caret line="12" column="13" selection-start-line="12" selection-start-column="13" selection-end-line="12" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/tflite/TFLitePredict.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1080">
-          <caret line="85" selection-start-line="85" selection-end-line="85" />
+        <state relative-caret-position="1095">
+          <caret line="87" column="5" selection-start-line="87" selection-start-column="5" selection-end-line="87" selection-end-column="5" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
@@ -1480,8 +1494,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/process/VideoProcessor.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1125">
-          <caret line="94" column="61" selection-start-line="94" selection-start-column="61" selection-end-line="94" selection-end-column="61" />
+        <state relative-caret-position="510">
+          <caret line="53" column="16" selection-start-line="53" selection-start-column="16" selection-end-line="53" selection-end-column="16" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
@@ -1495,14 +1509,66 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireSettings.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2070">
+          <caret line="155" column="25" selection-start-line="155" selection-start-column="25" selection-end-line="155" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/res/layout/activity_acquire.xml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="294">
+          <caret line="399" column="49" selection-start-line="399" selection-start-column="37" selection-end-line="399" selection-end-column="49" />
+        </state>
+      </provider>
+      <provider editor-type-id="android-designer2" />
+    </entry>
     <entry file="file://$PROJECT_DIR$/STORMIMAGER/src/main/java/de/nanoimaging/stormimager/acquisition/AcquireActivity.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="210">
-          <caret line="3152" column="20" selection-start-line="3152" selection-start-column="20" selection-end-line="3152" selection-end-column="20" />
+        <state relative-caret-position="15">
+          <caret line="3530" column="34" selection-start-line="3530" selection-start-column="16" selection-end-line="3530" selection-end-column="34" />
           <folding>
             <element signature="imports" expanded="true" />
-            <element signature="e#49299#49300#0" expanded="true" />
-            <element signature="e#49351#49352#0" expanded="true" />
+            <element signature="e#31703#31704#0" expanded="true" />
+            <element signature="e#31768#31769#0" expanded="true" />
+            <element signature="e#50561#50562#0" expanded="true" />
+            <element signature="e#50613#50614#0" expanded="true" />
+            <element signature="e#53465#53466#0" expanded="true" />
+            <element signature="e#53528#53529#0" expanded="true" />
+            <element signature="e#53745#53746#0" expanded="true" />
+            <element signature="e#53809#53810#0" expanded="true" />
+            <element signature="e#57608#57609#0" expanded="true" />
+            <element signature="e#57641#57642#0" expanded="true" />
+            <element signature="e#57684#57685#0" expanded="true" />
+            <element signature="e#57715#57716#0" expanded="true" />
+            <element signature="e#57757#57758#0" expanded="true" />
+            <element signature="e#57787#57788#0" expanded="true" />
+            <element signature="e#62198#62236#0" expanded="true" />
+            <element signature="e#64604#64631#0" expanded="true" />
+            <element signature="e#87537#87538#0" expanded="true" />
+            <element signature="e#87598#87599#0" expanded="true" />
+            <element signature="e#105484#105485#0" expanded="true" />
+            <element signature="e#105536#105537#0" expanded="true" />
+            <element signature="e#112289#112290#0" expanded="true" />
+            <element signature="e#112339#112340#0" expanded="true" />
+            <element signature="e#115030#115031#0" expanded="true" />
+            <element signature="e#115095#115096#0" expanded="true" />
+            <element signature="e#117144#117145#0" expanded="true" />
+            <element signature="e#117182#117183#0" expanded="true" />
+            <element signature="e#118335#118362#0" expanded="true" />
+            <element signature="e#130531#130532#0" expanded="true" />
+            <element signature="e#130566#130567#0" expanded="true" />
+            <element signature="e#132206#132207#0" expanded="true" />
+            <element signature="e#132309#132310#0" expanded="true" />
+            <element signature="e#134232#134233#0" expanded="true" />
+            <element signature="e#134275#134276#0" expanded="true" />
+            <element signature="e#135904#135905#0" expanded="true" />
+            <element signature="e#135999#136000#0" expanded="true" />
+            <element signature="e#137942#137943#0" expanded="true" />
+            <element signature="e#137985#137986#0" expanded="true" />
+            <element signature="e#140010#140011#0" expanded="true" />
+            <element signature="e#140097#140098#0" expanded="true" />
           </folding>
         </state>
       </provider>

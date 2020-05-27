@@ -912,6 +912,7 @@ id blocking
 id bottom
 id btnAcqActivity
 id btnAcquireActivity2
+id btnAutofocus
 id btnCalib
 id btnFindCentre
 id btnGammaCalibration
@@ -932,6 +933,8 @@ id button_x_lens_minus
 id button_x_lens_plus
 id button_y_bwd
 id button_y_fwd
+id button_z_focus_minus
+id button_z_focus_plus
 id camera
 id cancel_action
 id chains
@@ -949,6 +952,7 @@ id controlLaser
 id controlLensX
 id controlLensXinner
 id controlLensZ
+id controlLensZinner
 id controlNA
 id custom
 id customPanel

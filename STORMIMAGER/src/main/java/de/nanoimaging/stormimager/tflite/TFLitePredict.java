@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Optional;
 
 public class TFLitePredict {
 
@@ -90,8 +91,17 @@ public class TFLitePredict {
     /** Load TF Lite model. */
     private synchronized void loadModel(Context context, String MODEL_PATH) {
         try {
+            /*
+            https://community.arm.com/developer/ip-products/processors/b/ml-ip-blog/posts/an-introduction-to-machine-learning-on-mobile
+            Interpreter.Options tfliteOptions = new Interpreter.Options();
+
+            tfliteOptions.setNumThreads(4);
+
+            Interpreter tfliteInterpreter = new Interpreter(model, tfliteOptions);
+             */
             ByteBuffer buffer = loadModelFile(this.context.getAssets(), MODEL_PATH);
             tflite = new Interpreter(buffer);
+            tflite.setNumThreads(4);
             Log.v(TAG, "TFLite model loaded.");
         } catch (IOException ex) {
             Log.e(TAG, ex.getMessage());

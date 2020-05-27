@@ -1,4 +1,4 @@
-#Wed Apr 22 17:59:22 CEST 2020
+#Wed May 27 18:30:10 CEST 2020
 base.0=/Users/bene/Dropbox/Dokumente/Promotion/PROJECTS/STORMoChip/ANDROID/STORM_Imager/STORMIMAGER/build/intermediates/dex/debug/mergeDexDebug/out/classes.dex
 path.0=classes.dex
 renamed.0=classes.dex
