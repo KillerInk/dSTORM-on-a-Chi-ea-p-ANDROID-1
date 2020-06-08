@@ -128,7 +128,7 @@ import static de.nanoimaging.stormimager.acquisition.CaptureRequestEx.HUAWEI_DUA
 /**
  * Created by Bene on 26.09.2015.
  */
-
+@RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class AcquireActivity extends Activity implements FragmentCompat.OnRequestPermissionsResultCallback, AcquireSettings.NoticeDialogListener {
 
     /**
@@ -363,11 +363,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     }
 
     /**
-     * A counter for tracking corresponding {@link CaptureRequest}s and {@link CaptureResult}s
-     * across the {@link CameraCaptureSession} capture callbacks.
-     */
-    private final AtomicInteger mRequestCounter = new AtomicInteger();
-    /**
      * A {@link Semaphore} to prevent the app from exiting before closing the camera.
      */
     private final Semaphore mCameraOpenCloseLock = new Semaphore(1);
@@ -375,36 +370,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      * A lock protecting camera state.
      */
     private final Object mCameraStateLock = new Object();
-    /**
-     * Request ID to {@link ImageSaver.ImageSaverBuilder} mapping for in-progress RAW captures.
-     */
-    private final TreeMap<Integer, ImageSaver.ImageSaverBuilder> mRawResultQueue = new TreeMap<>();
-    /**
-     * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
-     * still image is ready to be saved.
-     */
-    private final ImageReader.OnImageAvailableListener mOnRawImageAvailableListener
-            = new ImageReader.OnImageAvailableListener() {
 
-        @Override
-        public void onImageAvailable(ImageReader reader) {
-            Image image = reader.acquireLatestImage();
-            if (image == null) return;
-
-            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-            byte[] bytes = new byte[buffer.remaining()];
-            buffer.get(bytes);
-            int nRowStride = image.getPlanes()[0].getRowStride();
-            int nPixelStride = image.getPlanes()[0].getPixelStride();
-            image.close();
-            try {
-                String output = "";
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-    };
     /**
      * A {@link Handler} for showing {@link Toast}s on the UI thread.
      */
@@ -415,37 +381,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
     };
 
-
-    private Image mRawLastReceivedImage = null;
-    ImageReader.OnImageAvailableListener mImageListener =
-            new ImageReader.OnImageAvailableListener() {
-                @Override
-                public void onImageAvailable(ImageReader reader) {
-                    Image img = reader.acquireLatestImage();
-                    if (img == null) {
-                        Log.e(TAG, "Null image returned YUV1");
-                        return;
-                    }
-
-                    if (mRawLastReceivedImage != null) {
-                        mRawLastReceivedImage.close();
-                    }
-
-                    Image.Plane plane0 = img.getPlanes()[0];
-                    buffer = plane0.getBuffer();
-
-                    final byte[] DateBuf;
-                    if (buffer.hasArray()) {
-                        DateBuf = buffer.array();
-                    } else {
-                        DateBuf = new byte[buffer.capacity()];
-                        buffer.get(DateBuf);
-                    }
-
-                    mRawLastReceivedImage = img;
-                    Log.d(TAG, "mImageListener RECIEVE img!!!");
-                }
-            };
     /**
      * An {@link OrientationEventListener} used to determine when device rotation has occurred.
      * This is mainly necessary for when the device is rotated by 180 degrees, in which case
@@ -493,26 +428,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      */
     private Handler mBackgroundHandler;
     /**
-     * A reference counted holder wrapping the {@link ImageReader} that handles RAW image captures.
-     * This is used to allow us to clean up the {@link ImageReader} when all background tasks using
-     * its {@link Image}s have completed.
-     */
-    private RefCountedAutoCloseable<ImageReader> mImageReader;
-    /**
-     * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
-     * RAW image is ready to be saved.
-     */
-    private final ImageReader.OnImageAvailableListener mOnImageAvailableListener
-            = new ImageReader.OnImageAvailableListener() {
-
-        @Override
-        public void onImageAvailable(ImageReader reader) {
-            dequeueAndSaveImage(mRawResultQueue, mImageReader);
-        }
-
-    };
-    private RefCountedAutoCloseable<ImageReader> mJPEGImageReader;
-    /**
      * Whether or not the currently configured camera device is fixed-focus.
      */
     private boolean mNoAFRun = true;
@@ -530,11 +445,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      * @see #mPreCaptureCallback
      */
     private int mState = STATE_CLOSED;
-    /**
-     * Timer to use with pre-capture sequence to ensure a timely capture if 3A convergence is
-     * taking too long.
-     */
-    private long mCaptureTimer;
     /**
      * A {@link CameraCaptureSession.CaptureCallback} that handles events for the preview and
      * pre-capture sequence.
@@ -585,17 +495,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                         // If we haven't finished the pre-capture sequence but have hit our maximum
                         // wait timeout, too bad! Begin capture anyway.
-                        if (!readyToCapture && hitTimeoutLocked()) {
+                        if (!readyToCapture) {
                             Log.w(TAG, "Timed out waiting for pre-capture sequence to complete.");
                             readyToCapture = true;
                         }
 
                         if (readyToCapture && mPendingUserCaptures > 0) {
                             // Capture once for each user tap of the "Picture" button.
-                            while (mPendingUserCaptures > 0) {
-                                captureStillPictureLocked();
-                                mPendingUserCaptures--;
-                            }
                             // After this, the camera will go back to the normal state of preview.
                             mState = STATE_PREVIEW;
                         }
@@ -734,74 +640,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
 
     };
-    /**
-     * A {@link CameraCaptureSession.CaptureCallback} that handles the still JPEG and RAW capture
-     * request.
-     */
-    private final CameraCaptureSession.CaptureCallback mCaptureCallback
-            = new CameraCaptureSession.CaptureCallback() {
-        @Override
-        public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request,
-                                     long timestamp, long frameNumber) {
-            String currentDateTime = generateTimestamp();
-            File imageFile = null;
-
-            // setting the filepath
-            String mytimestamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS", Locale.US).format(new Date());
-            if (isRaw)
-                imageFile = new File(myfullpath_measurements, mytimestamp + ".DNG");
-            else imageFile = new File(myfullpath_measurements, mytimestamp + ".JPG");
-
-            // Look up the ImageSaverBuilder for this request and update it with the file name
-            // based on the capture start time.
-            ImageSaver.ImageSaverBuilder rawBuilder;
-            int requestId = (int) request.getTag();
-            synchronized (mCameraStateLock) {
-                rawBuilder = mRawResultQueue.get(requestId);
-            }
-
-            if (rawBuilder != null) rawBuilder.setFile(imageFile);
-        }
-
-        @Override
-        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
-                                       TotalCaptureResult result) {
-            int requestId = (int) request.getTag();
-            ImageSaver.ImageSaverBuilder rawBuilder;
-            StringBuilder sb = new StringBuilder();
-
-            // Look up the ImageSaverBuilder for this request and update it with the CaptureResult
-            synchronized (mCameraStateLock) {
-                rawBuilder = mRawResultQueue.get(requestId);
-
-
-                if (rawBuilder != null) {
-                    rawBuilder.setResult(result);
-                    sb.append("Saving RAW as: ");
-                    sb.append(rawBuilder.getSaveLocation());
-                }
-
-                // If we have all the results necessary, save the image to a file in the background.
-                handleCompletionLocked(requestId, rawBuilder, mRawResultQueue);
-
-                finishedCaptureLocked();
-            }
-
-            showToast(sb.toString());
-        }
-
-        @Override
-        public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request,
-                                    CaptureFailure failure) {
-            int requestId = (int) request.getTag();
-            synchronized (mCameraStateLock) {
-                mRawResultQueue.remove(requestId);
-                finishedCaptureLocked();
-            }
-            showToast("Capture failed!");
-        }
-
-    };
 
     public AcquireActivity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
@@ -854,31 +692,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         } else {
             Log.e("Camera2Raw", "Couldn't find any suitable preview size");
             return choices[0];
-        }
-    }
-
-    /**
-     * Generate a string containing a formatted timestamp with the current date and time.
-     *
-     * @return a {@link String} representing a time.
-     */
-    private static String generateTimestamp() {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS", Locale.US);
-        return sdf.format(new Date());
-    }
-
-    /**
-     * Cleanup the given {@link OutputStream}.
-     *
-     * @param outputStream the stream to close.
-     */
-    private static void closeOutput(OutputStream outputStream) {
-        if (null != outputStream) {
-            try {
-                outputStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
     }
 
@@ -1532,16 +1345,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     else
                         mImageFormat = ImageFormat.JPEG;
 
-                    if (mImageReader == null || mImageReader.getAndRetain() == null) {
-                        mImageReader = new RefCountedAutoCloseable<>(
-                                ImageReader.newInstance(largestSize.getWidth(),
-                                        largestSize.getHeight(), mImageFormat, /*maxImages*/ 5));
-                    }
-
-                    mImageReader.get().setOnImageAvailableListener(
-                            mOnRawImageAvailableListener, mBackgroundHandler);
-
-
                     mCharacteristics = characteristics;
                     mCameraId = cameraId;
                 }
@@ -1655,10 +1458,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     mCameraDevice.close();
                     mCameraDevice = null;
                 }
-                if (null != mImageReader) {
-                    mImageReader.close();
-                    mImageReader = null;
-                }
             }
         } catch (InterruptedException e) {
             throw new RuntimeException("Interrupted while trying to lock camera closing.", e);
@@ -1714,8 +1513,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             mPreviewRequestBuilder.addTarget(surface);
 
             // Here, we create a CameraCaptureSession for camera preview.
-            mCameraDevice.createCaptureSession(Arrays.asList(surface,
-                    mImageReader.get().getSurface()), new CameraCaptureSession.StateCallback() {
+            mCameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(CameraCaptureSession cameraCaptureSession) {
                             synchronized (mCameraStateLock) {
@@ -1763,15 +1561,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     private void setExposureTime(String val) {
         int msexpo = (int) getMilliSecondStringFromShutterString(val);
-
-        Rational exporat;
-        if (msexpo > 1000000) {
-            exporat = new Rational(msexpo / 1000000, 1);
-        } else
-            exporat = new Rational(1, (int) (0.5D + 1.0E9F / msexpo));
-
         mPreviewRequestBuilder.set(CaptureRequestEx.HUAWEI_SENSOR_EXPOSURE_TIME, msexpo);
-        //mPreviewRequestBuilder.set(CaptureRequestEx.HUAWEI_PROF_EXPOSURE_TIME, exporat);
     }
 
     private void setIso(String iso) {
@@ -1928,168 +1718,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     // Utility classes and methods:
     // *********************************************************************************************
 
-    /**
-     * Initiate a still image capture.
-     * <p/>
-     * This function sends a capture request that initiates a pre-capture sequence in our state
-     * machine that waits for auto-focus to finish, ending in a "locked" state where the lens is no
-     * longer moving, waits for auto-exposure to choose a good exposure value, and waits for
-     * auto-white-balance to converge.
-     */
-    private void takePicture() {
-        synchronized (mCameraStateLock) {
-            mPendingUserCaptures++;
-
-            // If we already triggered a pre-capture sequence, or are in a state where we cannot
-            // do this, return immediately.
-            if (mState != STATE_PREVIEW) {
-                return;
-            }
-
-            try {
-                // Trigger an auto-focus run if camera is capable. If the camera is already focused,
-                // this should do nothing.
-                if (!mNoAFRun) {
-                    mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-                            CameraMetadata.CONTROL_AF_TRIGGER_START);
-                }
-
-                // If this is not a legacy device, we can also trigger an auto-exposure metering
-                // run.
-                if (!isLegacyLocked()) {
-                    // Tell the camera to lock focus.
-                    mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
-                            CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
-                }
-
-                // Update state machine to wait for auto-focus, auto-exposure, and
-                // auto-white-balance (aka. "3A") to converge.
-                mState = STATE_WAITING_FOR_3A_CONVERGENCE;
-
-                // Start a timer for the pre-capture sequence.
-                startTimerLocked();
-
-                // Replace the existing repeating request with one with updated 3A triggers.
-                mCaptureSession.capture(mPreviewRequestBuilder.build(), mPreCaptureCallback,
-                        mBackgroundHandler);
-            } catch (CameraAccessException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    /**
-     * Send a capture request to the camera device that initiates a capture targeting the JPEG and
-     * RAW outputs.
-     * <p/>
-     * Call this only with {@link #mCameraStateLock} held.
-     */
-    private void captureStillPictureLocked() {
-        try {
-            final Activity activity = AcquireActivity.this;
-            if (null == activity || null == mCameraDevice) {
-                return;
-            }
-            // This is the CaptureRequest.Builder that we use to take a picture.
-            final CaptureRequest.Builder captureBuilder =
-                    mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-
-            captureBuilder.addTarget(mImageReader.get().getSurface());
-
-            // Use the same AE and AF modes as the preview.
-            setup3AControlsLocked(captureBuilder);
-
-            // Set orientation.
-            int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
-
-            // Set request tag to easily track results in callbacks.
-            captureBuilder.setTag(mRequestCounter.getAndIncrement());
-
-            CaptureRequest request = captureBuilder.build();
-            //captureBuilder.set(CaptureRequest.SCALER_CROP_REGION, CURRENT_ZOOM);
-
-
-            // Create an ImageSaverBuilder in which to collect results, and add it to the queue
-            // of active requests.
-            ImageSaver.ImageSaverBuilder rawBuilder = new ImageSaver.ImageSaverBuilder(activity)
-                    .setCharacteristics(mCharacteristics);
-
-            mRawResultQueue.put((int) request.getTag(), rawBuilder);
-
-            mCaptureSession.capture(request, mCaptureCallback, mBackgroundHandler);
-
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Called after a RAW/JPEG capture has completed; resets the AF trigger state for the
-     * pre-capture sequence.
-     * <p/>
-     * Call this only with {@link #mCameraStateLock} held.
-     */
-    private void finishedCaptureLocked() {
-        try {
-            // Reset the auto-focus trigger in case AF didn't run quickly enough.
-            if (!mNoAFRun) {
-                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-                        CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
-
-                mCaptureSession.capture(mPreviewRequestBuilder.build(), mPreCaptureCallback,
-                        mBackgroundHandler);
-
-                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-                        CameraMetadata.CONTROL_AF_TRIGGER_IDLE);
-            }
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Retrieve the next {@link Image} from a reference counted {@link ImageReader}, retaining
-     * that {@link ImageReader} until that {@link Image} is no longer in use, and set this
-     * {@link Image} as the result for the next request in the queue of pending requests.  If
-     * all necessary information is available, begin saving the image to a file in a background
-     * thread.
-     *
-     * @param pendingQueue the currently active requests.
-     * @param reader       a reference counted wrapper containing an {@link ImageReader} from which
-     *                     to acquire an image.
-     */
-    private void dequeueAndSaveImage(TreeMap<Integer, ImageSaver.ImageSaverBuilder> pendingQueue,
-                                     RefCountedAutoCloseable<ImageReader> reader) {
-        synchronized (mCameraStateLock) {
-            Map.Entry<Integer, ImageSaver.ImageSaverBuilder> entry =
-                    pendingQueue.firstEntry();
-            ImageSaver.ImageSaverBuilder builder = entry.getValue();
-
-            // Increment reference count to prevent ImageReader from being closed while we
-            // are saving its Images in a background thread (otherwise their resources may
-            // be freed while we are writing to a file).
-            if (reader == null || reader.getAndRetain() == null) {
-                Log.e(TAG, "Paused the activity before we could save the image," +
-                        " ImageReader already closed.");
-                pendingQueue.remove(entry.getKey());
-                return;
-            }
-
-            Image image;
-            try {
-                image = reader.get().acquireNextImage();
-            } catch (IllegalStateException e) {
-                Log.e(TAG, "Too many images queued for saving, dropping image for request: " +
-                        entry.getKey());
-                pendingQueue.remove(entry.getKey());
-                return;
-            }
-
-            builder.setRefCountedReader(reader).setImage(image);
-
-            handleCompletionLocked(entry.getKey(), builder, pendingQueue);
-        }
-    }
 
     public void openSettingsDialog() {
         settingsDialogFragment.show(getFragmentManager(), "acquireSettings");
@@ -2118,27 +1746,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     }
 
     /**
-     * If the given request has been completed, remove it from the queue of active requests and
-     * send an {@link ImageSaver} with the results from this request to a background thread to
-     * save a file.
-     * <p/>
-     * Call this only with {@link #mCameraStateLock} held.
-     *
-     * @param requestId the ID of the {@link CaptureRequest} to handle.
-     * @param builder   the {@link ImageSaver.ImageSaverBuilder} for this request.
-     * @param queue     the queue to remove this request from, if completed.
-     */
-    private void handleCompletionLocked(int requestId, ImageSaver.ImageSaverBuilder builder,
-                                        TreeMap<Integer, ImageSaver.ImageSaverBuilder> queue) {
-        if (builder == null) return;
-        ImageSaver saver = builder.buildIfComplete();
-        if (saver != null) {
-            queue.remove(requestId);
-            AsyncTask.THREAD_POOL_EXECUTOR.execute(saver);
-        }
-    }
-
-    /**
      * Check if we are using a device that only supports the LEGACY hardware level.
      * <p/>
      * Call this only with {@link #mCameraStateLock} held.
@@ -2148,26 +1755,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     private boolean isLegacyLocked() {
         return mCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) ==
                 CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY;
-    }
-
-    /**
-     * Start the timer for the pre-capture sequence.
-     * <p/>
-     * Call this only with {@link #mCameraStateLock} held.
-     */
-    private void startTimerLocked() {
-        mCaptureTimer = SystemClock.elapsedRealtime();
-    }
-
-    /**
-     * Check if the timer for the pre-capture sequence has been hit.
-     * <p/>
-     * Call this only with {@link #mCameraStateLock} held.
-     *
-     * @return true if the timeout occurred.
-     */
-    private boolean hitTimeoutLocked() {
-        return (SystemClock.elapsedRealtime() - mCaptureTimer) > PRECAPTURE_TIMEOUT_MS;
     }
 
     private void setUpMediaRecorder() throws IOException {
@@ -2348,47 +1935,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         mMediaRecorder.reset();
 
         startPreview();
-    }
-
-    private void saveFile(byte[] Data, int w, int h, int type) {
-        String filename = "";
-        String filetype = "";
-        try {
-            switch (type) {
-                case 0:
-                    filetype = "JPG";
-                    break;
-                case 1:
-                    filetype = "yuv";
-                    break;
-                case 2:
-                    filetype = "raw";
-                    break;
-                default:
-                    Log.w(TAG, "unknow file type");
-            }
-
-            filename = String.format("/sdcard/DCIM/Camera/SNAP_%dx%d_%d.%s", w, h, System.currentTimeMillis(), filetype);
-            File file;
-            while (true) {
-                file = new File(filename);
-                if (file.createNewFile()) {
-                    break;
-                }
-            }
-
-            long t0 = SystemClock.uptimeMillis();
-            OutputStream os = new FileOutputStream(file);
-            os.write(Data);
-            os.flush();
-            os.close();
-            long t1 = SystemClock.uptimeMillis();
-
-            Log.d(TAG, String.format("Wrote data(%d) %d bytes as %s in %.3f seconds;%s", type,
-                    Data.length, file, (t1 - t0) * 0.001, filename));
-        } catch (IOException e) {
-            Log.e(TAG, "Error creating new file: ", e);
-        }
     }
 
     private void initialConfig() {
@@ -2667,194 +2213,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     }
 
     /**
-     * Runnable that saves an {@link Image} into the specified {@link File}, and updates
-     * {@link android.provider.MediaStore} to include the resulting file.
-     * <p/>
-     * This can be constructed through an {@link ImageSaverBuilder} as the necessary image and
-     * result information becomes available.
-     */
-    private static class ImageSaver implements Runnable {
-
-        /**
-         * The image to save.
-         */
-        private final Image mImage;
-        /**
-         * The file we save the image into.
-         */
-        private final File mFile;
-
-        /**
-         * The CaptureResult for this image capture.
-         */
-        private final CaptureResult mCaptureResult;
-
-        /**
-         * The CameraCharacteristics for this camera device.
-         */
-        private final CameraCharacteristics mCharacteristics;
-
-        /**
-         * The Context to use when updating MediaStore with the saved images.
-         */
-        private final Context mContext;
-
-        /**
-         * A reference counted wrapper for the ImageReader that owns the given image.
-         */
-        private final RefCountedAutoCloseable<ImageReader> mReader;
-
-        private ImageSaver(Image image, File file, CaptureResult result,
-                           CameraCharacteristics characteristics, Context context,
-                           RefCountedAutoCloseable<ImageReader> reader) {
-            mImage = image;
-            mFile = file;
-            mCaptureResult = result;
-            mCharacteristics = characteristics;
-            mContext = context;
-            mReader = reader;
-        }
-
-        @Override
-        public void run() {
-            boolean success = false;
-            int format = mImage.getFormat();
-            switch (format) {
-                case ImageFormat.JPEG: {
-                    ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
-                    byte[] bytes = new byte[buffer.remaining()];
-                    buffer.get(bytes);
-                    FileOutputStream output = null;
-                    try {
-                        output = new FileOutputStream(mFile + ".jpg");
-                        output.write(bytes);
-                        success = true;
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } finally {
-                        mImage.close();
-                        closeOutput(output);
-                    }
-                    break;
-                }
-                case ImageFormat.RAW_SENSOR: {
-                    DngCreator dngCreator = new DngCreator(mCharacteristics, mCaptureResult);
-                    FileOutputStream output = null;
-                    try {
-                        output = new FileOutputStream(mFile + ".jpg");
-                        dngCreator.writeImage(output, mImage);
-                        success = true;
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } finally {
-                        mImage.close();
-                        closeOutput(output);
-                    }
-                    break;
-                }
-                default: {
-                    Log.e("Camera2Raw", "Cannot save image, unexpected image format:" + format);
-                    break;
-                }
-            }
-
-            // Decrement reference count to allow ImageReader to be closed to free up resources.
-            mReader.close();
-
-            // If saving the file succeeded, update MediaStore.
-            if (success) {
-                MediaScannerConnection.scanFile(mContext, new String[]{mFile.getPath()},
-                        /*mimeTypes*/null, new MediaScannerConnection.MediaScannerConnectionClient() {
-                            @Override
-                            public void onMediaScannerConnected() {
-                                // Do nothing
-                            }
-
-                            @Override
-                            public void onScanCompleted(String path, Uri uri) {
-                                Log.i("Camera2Raw", "Scanned " + path + ":");
-                                Log.i("Camera2Raw", "-> uri=" + uri);
-                            }
-                        });
-            }
-        }
-
-        /**
-         * Builder class for constructing {@link ImageSaver}s.
-         * <p/>
-         * This class is thread safe.
-         */
-        public static class ImageSaverBuilder {
-            private Image mImage;
-            private File mFile;
-            private CaptureResult mCaptureResult;
-            private CameraCharacteristics mCharacteristics;
-            private Context mContext;
-            private RefCountedAutoCloseable<ImageReader> mReader;
-
-            /**
-             * Construct a new ImageSaverBuilder using the given {@link Context}.
-             *
-             * @param context a {@link Context} to for accessing the
-             *                {@link android.provider.MediaStore}.
-             */
-            public ImageSaverBuilder(final Context context) {
-                mContext = context;
-            }
-
-            public synchronized ImageSaverBuilder setRefCountedReader(
-                    RefCountedAutoCloseable<ImageReader> reader) {
-                if (reader == null) throw new NullPointerException();
-
-                mReader = reader;
-                return this;
-            }
-
-            public synchronized ImageSaverBuilder setImage(final Image image) {
-                if (image == null) throw new NullPointerException();
-                mImage = image;
-                return this;
-            }
-
-            public synchronized ImageSaverBuilder setFile(final File file) {
-                if (file == null) throw new NullPointerException();
-                mFile = file;
-                return this;
-            }
-
-            public synchronized ImageSaverBuilder setResult(final CaptureResult result) {
-                if (result == null) throw new NullPointerException();
-                mCaptureResult = result;
-                return this;
-            }
-
-            public synchronized ImageSaverBuilder setCharacteristics(
-                    final CameraCharacteristics characteristics) {
-                if (characteristics == null) throw new NullPointerException();
-                mCharacteristics = characteristics;
-                return this;
-            }
-
-            public synchronized ImageSaver buildIfComplete() {
-                if (!isComplete()) {
-                    return null;
-                }
-                return new ImageSaver(mImage, mFile, mCaptureResult, mCharacteristics, mContext,
-                        mReader);
-            }
-
-            public synchronized String getSaveLocation() {
-                return (mFile == null) ? "Unknown" : mFile.toString();
-            }
-
-            private boolean isComplete() {
-                return mImage != null && mFile != null && mCaptureResult != null
-                        && mCharacteristics != null;
-            }
-        }
-    }
-
-    /**
      * Comparator based on area of the given {@link Size} objects.
      */
     static class CompareSizesByArea implements Comparator<Size> {
@@ -2900,101 +2258,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     })
                     .create();
         }
-    }
-
-    /**
-     * A wrapper for an {@link AutoCloseable} object that implements reference counting to allow
-     * for resource management.
-     */
-    public static class RefCountedAutoCloseable<T extends AutoCloseable> implements AutoCloseable {
-        private T mObject;
-        private long mRefCount = 0;
-
-        /**
-         * Wrap the given object.
-         *
-         * @param object an object to wrap.
-         */
-        public RefCountedAutoCloseable(T object) {
-            if (object == null) throw new NullPointerException();
-            mObject = object;
-        }
-
-        /**
-         * Increment the reference count and return the wrapped object.
-         *
-         * @return the wrapped object, or null if the object has been released.
-         */
-        public synchronized T getAndRetain() {
-            if (mRefCount < 0) {
-                return null;
-            }
-            mRefCount++;
-            return mObject;
-        }
-
-        /**
-         * Return the wrapped object.
-         *
-         * @return the wrapped object, or null if the object has been released.
-         */
-        public synchronized T get() {
-            return mObject;
-        }
-
-        /**
-         * Decrement the reference count and release the wrapped object if there are no other
-         * users retaining this object.
-         */
-        @Override
-        public synchronized void close() {
-            if (mRefCount >= 0) {
-                mRefCount--;
-                if (mRefCount < 0) {
-                    try {
-                        mObject.close();
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    } finally {
-                        mObject = null;
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * A dialog that explains about the necessary permissions.
-     */
-    public static class PermissionConfirmationDialog extends DialogFragment {
-
-        public static PermissionConfirmationDialog newInstance() {
-            return new PermissionConfirmationDialog();
-        }
-
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            final Fragment parent = getParentFragment();
-            return new AlertDialog.Builder(getActivity())
-                    .setMessage(R.string.request_permission)
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            FragmentCompat.requestPermissions(parent, CAMERA_PERMISSIONS,
-                                    REQUEST_CAMERA_PERMISSIONS);
-                        }
-                    })
-                    .setNegativeButton(android.R.string.cancel,
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    getActivity().finish();
-                                }
-                            })
-                    .create();
-        }
-
-
     }
 
     private class run_sofimeasurement extends AsyncTask<Void, Void, Void> {
