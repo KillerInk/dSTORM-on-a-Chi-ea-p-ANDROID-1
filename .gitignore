@@ -2,7 +2,7 @@
 */.deps
 *.dng
 .gradle
-/local.properties
+local.properties
 /.idea/workspace.xml
 /.idea/libraries
 .DS_Store
@@ -22,7 +22,6 @@ imageconverter/libs/armeabi/*
 imageconverter/libs/armeabi-v7a/*
 */libs/armeabi*
 app/manifest-merger-release-report.txt
-.gitignore
 #*/build/*
 app/libs/arm64-v8a/libfreedcam.so
 app/.externalNativeBuild/*
@@ -70,3 +69,6 @@ local.properties
 .Trashes
 ehthumbs.db
 Thumbs.db
+.idea/*
+.gradle/*
+/build/*
