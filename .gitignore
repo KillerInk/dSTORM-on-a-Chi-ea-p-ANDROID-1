@@ -72,3 +72,4 @@ Thumbs.db
 .idea/*
 .gradle/*
 /build/*
+/STORMIMAGER/src/main/obj/*
