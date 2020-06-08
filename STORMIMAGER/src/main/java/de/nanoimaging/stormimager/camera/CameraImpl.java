@@ -25,9 +25,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.nanoimaging.stormimager.StormApplication;
-import de.nanoimaging.stormimager.acquisition.CaptureRequestEx;
+import de.nanoimaging.stormimager.camera.vendor.CaptureRequestEx;
 
-import static de.nanoimaging.stormimager.acquisition.CaptureRequestEx.HUAWEI_DUAL_SENSOR_MODE;
+import static de.nanoimaging.stormimager.camera.vendor.CaptureRequestEx.HUAWEI_DUAL_SENSOR_MODE;
 
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class CameraImpl implements CameraInterface {

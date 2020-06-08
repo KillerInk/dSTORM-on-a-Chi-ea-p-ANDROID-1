@@ -1,4 +1,4 @@
-package de.nanoimaging.stormimager.acquisition;
+package de.nanoimaging.stormimager.camera.vendor;
 
 import java.io.FileOutputStream;
 import java.io.IOException;

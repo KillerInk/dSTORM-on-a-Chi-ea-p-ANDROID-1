@@ -1,4 +1,4 @@
-package de.nanoimaging.stormimager.acquisition;
+package de.nanoimaging.stormimager.camera.vendor;
 
 import android.annotation.TargetApi;
 import android.hardware.camera2.CaptureResult;
