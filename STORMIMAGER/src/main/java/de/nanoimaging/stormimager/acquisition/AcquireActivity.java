@@ -119,6 +119,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import de.nanoimaging.stormimager.R;
+import de.nanoimaging.stormimager.camera.CameraImpl;
+import de.nanoimaging.stormimager.camera.CameraInterface;
+import de.nanoimaging.stormimager.camera.CameraStates;
 import de.nanoimaging.stormimager.process.VideoProcessor;
 import de.nanoimaging.stormimager.tflite.TFLitePredict;
 import de.nanoimaging.stormimager.utils.ImageUtils;
@@ -294,6 +297,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     boolean is_process_sofi = false;
 
+    private CameraInterface cameraInterface;
+
 
     /**
      * CAMERA-Related stuff
@@ -324,14 +329,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      */
     private static final double ASPECT_RATIO_TOLERANCE = 0.005;
     //private CaptureRequest.Builder mPreviewRequestBuilder;
-    /**
-     * Max preview width that is guaranteed by Camera2 API
-     */
-    private static final int MAX_PREVIEW_WIDTH = 1920;
-    /**
-     * Max preview height that is guaranteed by Camera2 API
-     */
-    private static final int MAX_PREVIEW_HEIGHT = 1080;
+
     /**
      * Camera state: Device is closed.
      */
@@ -392,137 +390,22 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      * An {@link AutoFitTextureView} for camera preview.
      */
     private AutoFitTextureView mTextureView;
-    /**
-     * An additional thread for running tasks that shouldn't block the UI.  This is used for all
-     * callbacks from the {@link CameraDevice} and {@link CameraCaptureSession}s.
-     */
-    private HandlerThread mBackgroundThread;
+
     /**
      * ID of the current {@link CameraDevice}.
      */
     private String mCameraId;
-    /**
-     * A {@link CameraCaptureSession } for camera preview.
-     */
-    private CameraCaptureSession mCaptureSession;
-    /**
-     * A reference to the open {@link CameraDevice}.
-     */
-    private CameraDevice mCameraDevice;
+
     /**
      * The {@link Size} of camera preview.
      */
     private Size mPreviewSize;
-    /**
-     * The {@link CameraCharacteristics} for the currently configured camera device.
-     */
-    private CameraCharacteristics mCharacteristics;
 
-    // *********************************************************************************************
-    // State protected by mCameraStateLock.
-    //
-    // The following state is used across both the UI and background threads.  Methods with "Locked"
-    // in the name expect mCameraStateLock to be held while calling.
-    /**
-     * A {@link Handler} for running tasks in the background.
-     */
-    private Handler mBackgroundHandler;
     /**
      * Whether or not the currently configured camera device is fixed-focus.
      */
     private boolean mNoAFRun = true;
-    /**
-     * Number of pending user requests to capture a photo.
-     */
-    private int mPendingUserCaptures = 0;
-    /**
-     * {@link CaptureRequest.Builder} for the camera preview
-     */
-    private CaptureRequest.Builder mPreviewRequestBuilder;
-    /**
-     * The state of the camera device.
-     *
-     * @see #mPreCaptureCallback
-     */
-    private int mState = STATE_CLOSED;
-    /**
-     * A {@link CameraCaptureSession.CaptureCallback} that handles events for the preview and
-     * pre-capture sequence.
-     */
-    private CameraCaptureSession.CaptureCallback mPreCaptureCallback
-            = new CameraCaptureSession.CaptureCallback() {
 
-        @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-        private void process(CaptureResult result) {
-            synchronized (mCameraStateLock) {
-                switch (mState) {
-                    case STATE_PREVIEW: {
-                        // We have nothing to do when the camera preview is running normally.
-                        break;
-                    }
-                    case STATE_WAITING_FOR_3A_CONVERGENCE: {
-                        boolean readyToCapture = true;
-                        if (!mNoAFRun) {
-                            Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
-                            if (afState == null) {
-                                break;
-                            }
-
-                            // If auto-focus has reached locked state, we are ready to capture
-                            if (true) {
-                                readyToCapture = true;
-                            } else {
-                                readyToCapture =
-                                        (afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED ||
-                                                afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED);
-                            }
-                        }
-
-                        // If we are running on an non-legacy device, we should also wait until
-                        // auto-exposure and auto-white-balance have converged as well before
-                        // taking a picture.
-                        if (!isLegacyLocked()) {
-                            Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
-                            Integer awbState = result.get(CaptureResult.CONTROL_AWB_STATE);
-                            if (aeState == null || awbState == null) {
-                                break;
-                            }
-
-                            readyToCapture = readyToCapture &&
-                                    aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED &&
-                                    awbState == CaptureResult.CONTROL_AWB_STATE_CONVERGED;
-                        }
-
-                        // If we haven't finished the pre-capture sequence but have hit our maximum
-                        // wait timeout, too bad! Begin capture anyway.
-                        if (!readyToCapture) {
-                            Log.w(TAG, "Timed out waiting for pre-capture sequence to complete.");
-                            readyToCapture = true;
-                        }
-
-                        if (readyToCapture && mPendingUserCaptures > 0) {
-                            // Capture once for each user tap of the "Picture" button.
-                            // After this, the camera will go back to the normal state of preview.
-                            mState = STATE_PREVIEW;
-                        }
-                    }
-                }
-            }
-        }
-
-        @Override
-        public void onCaptureProgressed(CameraCaptureSession session, CaptureRequest request,
-                                        CaptureResult partialResult) {
-            process(partialResult);
-        }
-
-        @Override
-        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
-                                       TotalCaptureResult result) {
-            process(result);
-        }
-
-    };
     /**
      * {@link TextureView.SurfaceTextureListener} handles several lifecycle events of a
      * {@link TextureView}.
@@ -595,51 +478,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         }
     };
-    /**
-     * {@link CameraDevice.StateCallback} is called when the currently active {@link CameraDevice}
-     * changes its state.
-     */
-    private final CameraDevice.StateCallback mStateCallback = new CameraDevice.StateCallback() {
 
-        @Override
-        public void onOpened(CameraDevice cameraDevice) {
-            // This method is called when the camera is opened.  We start camera preview here if
-            // the TextureView displaying this has been set up.
-            synchronized (mCameraStateLock) {
-                mState = STATE_OPENED;
-                mCameraOpenCloseLock.release();
-                mCameraDevice = cameraDevice;
-
-                // Start the preview session if the TextureView has been set up already.
-                if (mPreviewSize != null && mTextureView.isAvailable()) {
-                    createCameraPreviewSessionLocked();
-                }
-            }
-        }
-
-        @Override
-        public void onDisconnected(CameraDevice cameraDevice) {
-            synchronized (mCameraStateLock) {
-                mState = STATE_CLOSED;
-                mCameraOpenCloseLock.release();
-                cameraDevice.close();
-                mCameraDevice = null;
-            }
-        }
-
-        @Override
-        public void onError(CameraDevice cameraDevice, int error) {
-            Log.e(TAG, "Received camera device error: " + error);
-            synchronized (mCameraStateLock) {
-                mState = STATE_CLOSED;
-                mCameraOpenCloseLock.release();
-                cameraDevice.close();
-                mCameraDevice = null;
-            }
-
-        }
-
-    };
 
     public AcquireActivity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
@@ -738,14 +577,14 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      * @return the total rotation from the sensor orientation to the current device orientation.
      */
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private static int sensorToDeviceRotation(CameraCharacteristics c, int deviceOrientation) {
-        int sensorOrientation = c.get(CameraCharacteristics.SENSOR_ORIENTATION);
+    private static int sensorToDeviceRotation(CameraInterface c, int deviceOrientation) {
+        int sensorOrientation = c.getSensorOrientation();
 
         // Get device orientation in degrees
         deviceOrientation = ORIENTATIONS.get(deviceOrientation);
 
         // Reverse device orientation for front-facing cameras
-        if (c.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
+        if (c.isFrontCamera()) {
             deviceOrientation = -deviceOrientation;
         }
 
@@ -782,6 +621,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         OpenCVLoader.initDebug();
         //OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
 
+        cameraInterface = new CameraImpl();
         // load tensorflow stuff
         mypredictor = new TFLitePredict(AcquireActivity.this, mymodelfile, Nx_in, Ny_in, N_time, N_upscale);
         mypredictor_mean = new TFLitePredict(AcquireActivity.this, mymodelfile_mean, Nx_in, Ny_in, N_time);
@@ -877,18 +717,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         seekbar_iso.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (mPreviewRequestBuilder != null && fromUser) {
+                if (fromUser) {
                     editor.putString("val_iso_index", String.valueOf(progress));
                     editor.commit();
 
                     textView_iso.setText("Iso:" + isovalues[progress]);
                     global_isoval = isovalues[progress];
-                    setIso(global_isoval);
-                    try {
-                        mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mPreCaptureCallback, mBackgroundHandler);
-                    } catch (CameraAccessException e) {
-                        e.printStackTrace();
-                    }
+                    cameraInterface.setIso(Integer.parseInt(isovalues[progress]));
                 }
             }
 
@@ -914,18 +749,14 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         seekbar_shutter.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (mPreviewRequestBuilder != null && fromUser) {
+                if (fromUser) {
                     editor.putString("val_texp_index", String.valueOf(progress));
                     editor.commit();
 
                     global_expval = texpvalues[progress];
                     textView_shutter.setText("Shutter:" + texpvalues[progress]);
-                    setExposureTime(texpvalues[progress]);
-                    try {
-                        mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mPreCaptureCallback, mBackgroundHandler);
-                    } catch (CameraAccessException e) {
-                        e.printStackTrace();
-                    }
+                    int msexpo = (int) getMilliSecondStringFromShutterString(texpvalues[progress]);
+                    cameraInterface.setExposureTime(msexpo);
                 }
             }
 
@@ -1215,16 +1046,25 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         if (mOrientationListener != null) {
             mOrientationListener.disable();
         }
-        closeCamera();
+        cameraInterface.closeCamera();
         super.onPause();
-        stopBackgroundThread();
+        cameraInterface.stopBackgroundThread();
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        startBackgroundThread();
-        openCamera();
+        cameraInterface.startBackgroundThread();
+        if (!hasAllPermissionsGranted()) {
+            requestCameraPermissions();
+            return;
+        }
+        try {
+
+            cameraInterface.openCamera("0");
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
         if (mTextureView.isAvailable()) {
             configureTransform(mTextureView.getWidth(), mTextureView.getHeight());
         } else {
@@ -1233,26 +1073,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         if (mOrientationListener != null && mOrientationListener.canDetectOrientation()) {
             mOrientationListener.enable();
         }
+        mMediaRecorder = new MediaRecorder();
 
 
         // SET CAMERA PARAMETERS FROM GUI
-        try {
-            global_isoval = isovalues[val_iso_index];
-            setIso(global_isoval);
-            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mPreCaptureCallback, mBackgroundHandler);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        try {
-            global_expval = texpvalues[val_texp_index];
-            setExposureTime(global_expval);
-            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mPreCaptureCallback, mBackgroundHandler);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-
+        cameraInterface.setIso(Integer.parseInt(isovalues[val_iso_index]));
+        int msexpo = (int) getMilliSecondStringFromShutterString(texpvalues[val_texp_index]);
+        cameraInterface.setExposureTime(msexpo);
     }
 
     public void onDestroy() {
@@ -1281,122 +1108,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
-    }
-
-    /**
-     * Sets up state related to camera that is needed before opening a {@link CameraDevice}.
-     */
-    private boolean setUpCameraOutputs() {
-        Activity activity = AcquireActivity.this;
-        CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
-        if (manager == null) {
-            ErrorDialog.buildErrorDialog("This device doesn't support Camera2 API.").
-                    show(getFragmentManager(), "dialog");
-            return false;
-        }
-        try {
-            // Find a CameraDevice that supports RAW captures, and configure state.
-            for (String cameraId : manager.getCameraIdList()) {
-                CameraCharacteristics characteristics
-                        = manager.getCameraCharacteristics(cameraId);
-
-                // We only use a camera that supports RAW in this sample.
-                if (!contains(characteristics.get(
-                        CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES),
-                        CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW)) {
-                    continue;
-                }
-
-                StreamConfigurationMap map = characteristics.get(
-                        CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-
-                // For still image captures, we use the largest available size.
-
-                Size largestSize = new Size(MAX_PREVIEW_WIDTH, MAX_PREVIEW_HEIGHT);
-                if (isRaw) {
-                    largestSize = Collections.max(
-                            Arrays.asList(map.getOutputSizes(ImageFormat.RAW_SENSOR)),//RAW_SENSOR)),
-                            new CompareSizesByArea());
-
-                    largestSize = new Size(MAX_PREVIEW_WIDTH, MAX_PREVIEW_HEIGHT);
-                } else {
-                    largestSize = new Size(MAX_PREVIEW_WIDTH, MAX_PREVIEW_HEIGHT);
-                    Size[] sizeList = map.getOutputSizes(ImageFormat.YUV_420_888);
-                    for (Size size : sizeList) {
-                        if (size.getWidth() * size.getHeight() > 1000000)
-                            continue;
-                        else {
-                            largestSize = size;
-                            break;
-                        }
-                    }
-                }
-
-
-                synchronized (mCameraStateLock) {
-                    // Set up ImageReaders for JPEG and RAW outputs.  Place these in a reference
-                    // counted wrapper to ensure they are only closed when all background tasks
-                    // using them are finished.
-
-
-                    // RAW or JPEG
-                    if (isRaw)
-                        mImageFormat = ImageFormat.RAW_SENSOR;
-                    else
-                        mImageFormat = ImageFormat.JPEG;
-
-                    mCharacteristics = characteristics;
-                    mCameraId = cameraId;
-                }
-                return true;
-            }
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-
-        // If we found no suitable cameras for capturing RAW, warn the user.
-        ErrorDialog.buildErrorDialog("This device doesn't support capturing RAW photos").
-                show(getFragmentManager(), "dialog");
-        return false;
-    }
-
-    /**
-     * Opens the camera specified by {@link #mCameraId}.
-     */
-    @SuppressWarnings("MissingPermission")
-    private void openCamera() {
-        if (!setUpCameraOutputs()) {
-            return;
-        }
-        if (!hasAllPermissionsGranted()) {
-            requestCameraPermissions();
-            return;
-        }
-
-        Activity activity = AcquireActivity.this;
-        CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
-        try {
-            // Wait for any previously running session to finish.
-            if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
-                throw new RuntimeException("Time out waiting to lock camera opening.");
-            }
-
-            String cameraId;
-            Handler backgroundHandler;
-            synchronized (mCameraStateLock) {
-                cameraId = mCameraId;
-                backgroundHandler = mBackgroundHandler;
-            }
-
-            // Attempt to open the camera. mStateCallback will be called on the background handler's
-            // thread when this succeeds or fails.
-            manager.openCamera(cameraId, mStateCallback, backgroundHandler);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            throw new RuntimeException("Interrupted while trying to lock camera opening.", e);
-        }
-        mMediaRecorder = new MediaRecorder();
     }
 
     /**
@@ -1435,63 +1146,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
     }
 
-    /**
-     * Closes the current {@link CameraDevice}.
-     */
-    private void closeCamera() {
-        try {
-            mCameraOpenCloseLock.acquire();
-            synchronized (mCameraStateLock) {
-
-                seekbar_iso.setVisibility(View.GONE);
-                seekbar_shutter.setVisibility(View.GONE);
-                // Reset state and clean up resources used by the camera.
-                // Note: After calling this, the ImageReaders will be closed after any background
-                // tasks saving Images from these readers have been completed.
-                mPendingUserCaptures = 0;
-                mState = STATE_CLOSED;
-                if (null != mCaptureSession) {
-                    mCaptureSession.close();
-                    mCaptureSession = null;
-                }
-                if (null != mCameraDevice) {
-                    mCameraDevice.close();
-                    mCameraDevice = null;
-                }
-            }
-        } catch (InterruptedException e) {
-            throw new RuntimeException("Interrupted while trying to lock camera closing.", e);
-        } finally {
-            mCameraOpenCloseLock.release();
-        }
-    }
-
-    /**
-     * Starts a background thread and its {@link Handler}.
-     */
-    private void startBackgroundThread() {
-        mBackgroundThread = new HandlerThread("CameraBackground");
-        mBackgroundThread.start();
-        synchronized (mCameraStateLock) {
-            mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
-        }
-    }
-
-    /**
-     * Stops the background thread and its {@link Handler}.
-     */
-    private void stopBackgroundThread() {
-        mBackgroundThread.quitSafely();
-        try {
-            mBackgroundThread.join();
-            mBackgroundThread = null;
-            synchronized (mCameraStateLock) {
-                mBackgroundHandler = null;
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
 
     /**
      * Creates a new {@link CameraCaptureSession} for camera preview.
@@ -1502,49 +1156,14 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         try {
             SurfaceTexture texture = mTextureView.getSurfaceTexture();
             // We configure the size of default buffer to be the size of camera preview we want.
-            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            Size prevsize = cameraInterface.getPreviewSize();
+            texture.setDefaultBufferSize(prevsize.getWidth(), prevsize.getHeight());
 
             // This is the output Surface we need to start preview.
             Surface surface = new Surface(texture);
+            cameraInterface.setSurface(surface);
+            cameraInterface.startPreview();
 
-            // We set up a CaptureRequest.Builder with the output Surface.
-            mPreviewRequestBuilder
-                    = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            mPreviewRequestBuilder.addTarget(surface);
-
-            // Here, we create a CameraCaptureSession for camera preview.
-            mCameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
-                        @Override
-                        public void onConfigured(CameraCaptureSession cameraCaptureSession) {
-                            synchronized (mCameraStateLock) {
-                                // The camera is already closed
-                                if (null == mCameraDevice) {
-                                    return;
-                                }
-
-                                try {
-                                    setup3AControlsLocked(mPreviewRequestBuilder);
-                                    // Finally, we start displaying the camera preview.
-                                    cameraCaptureSession.setRepeatingRequest(
-                                            mPreviewRequestBuilder.build(),
-                                            mPreCaptureCallback, mBackgroundHandler);
-                                    mState = STATE_PREVIEW;
-                                } catch (CameraAccessException | IllegalStateException e) {
-                                    e.printStackTrace();
-                                    return;
-                                }
-                                // When the session is ready, we start displaying the preview.
-                                mCaptureSession = cameraCaptureSession;
-                                Log.i(TAG, "mCaptureSession was created");
-                            }
-                        }
-
-                        @Override
-                        public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
-                            showToast("Failed to configure camera.");
-                        }
-                    }, mBackgroundHandler
-            );
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -1559,49 +1178,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     }
 
-    private void setExposureTime(String val) {
-        int msexpo = (int) getMilliSecondStringFromShutterString(val);
-        mPreviewRequestBuilder.set(CaptureRequestEx.HUAWEI_SENSOR_EXPOSURE_TIME, msexpo);
-    }
 
-    private void setIso(String iso) {
-        mPreviewRequestBuilder.set(CaptureRequestEx.HUAWEI_SENSOR_ISO_VALUE, Integer.parseInt(iso));
-    }
-
-    private void setup3AControlsLocked(CaptureRequest.Builder builder) {
-        // Enable auto-magical 3A run by camera device
-        builder.set(CaptureRequest.CONTROL_MODE,
-                CaptureRequest.CONTROL_MODE_AUTO);
-
-        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
-        builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, 0.0f);
-
-        // If there is an auto-magical flash control mode available, use it, otherwise default to
-        // the "on" mode, which is guaranteed to always be available.
-        if (contains(mCharacteristics.get(
-                CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES),
-                CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)) {
-            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
-        } else {
-            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON);
-        }
-
-        // If there is an auto-magical white balance control mode available, use it.
-        if (contains(mCharacteristics.get(
-                CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES),
-                CaptureRequest.CONTROL_AWB_MODE_AUTO)) {
-            // Allow AWB to run auto-magically if this device supports this
-            builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO);
-        }
-
-        builder.set(CaptureRequestEx.HUAWEI_PROFESSIONAL_MODE, CaptureRequestEx.HUAWEI_PROFESSIONAL_MODE_ENABLED);
-        Log.i(TAG, "set DUAL");
-        builder.set(HUAWEI_DUAL_SENSOR_MODE, (byte) 2);
-        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
-
-        setExposureTime(global_expval);
-        setIso(global_isoval);
-    }
 
     private void configureTransform(int viewWidth, int viewHeight) {
         Activity activity = AcquireActivity.this;
@@ -1610,20 +1187,16 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 return;
             }
 
-            StreamConfigurationMap map = mCharacteristics.get(
-                    CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-
             // For still image captures, we always use the largest available size.
-            Size largest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.RAW_SENSOR)),
+            Size largest = Collections.max(Arrays.asList(cameraInterface.getSizesForSurfaceTexture()),
                     new CompareSizesByArea());
-
             // Find the rotation of the device relative to the native device orientation.
             int deviceRotation = activity.getWindowManager().getDefaultDisplay().getRotation();
             Point displaySize = new Point();
             activity.getWindowManager().getDefaultDisplay().getSize(displaySize);
 
             // Find the rotation of the device relative to the camera sensor's orientation.
-            int totalRotation = sensorToDeviceRotation(mCharacteristics, deviceRotation);
+            int totalRotation = sensorToDeviceRotation(cameraInterface, deviceRotation);
 
             // Swap the view dimensions for calculation as needed if they are rotated relative to
             // the sensor.
@@ -1640,17 +1213,18 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 maxPreviewHeight = displaySize.x;
             }
 
+            Size maxpreviewsize = cameraInterface.getMaxPreviewSize();
             // Preview should not be larger than display size and 1080p.
-            if (maxPreviewWidth > MAX_PREVIEW_WIDTH) {
-                maxPreviewWidth = MAX_PREVIEW_WIDTH;
+            if (maxPreviewWidth > maxpreviewsize.getWidth()) {
+                maxPreviewWidth =  maxpreviewsize.getWidth();
             }
 
-            if (maxPreviewHeight > MAX_PREVIEW_HEIGHT) {
-                maxPreviewHeight = MAX_PREVIEW_HEIGHT;
+            if (maxPreviewHeight >  maxpreviewsize.getHeight()) {
+                maxPreviewHeight =  maxpreviewsize.getHeight();
             }
 
             // Find the best preview size for these view dimensions and configured JPEG size.
-            Size previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
+            Size previewSize = chooseOptimalSize(cameraInterface.getSizesForSurfaceTexture(),
                     rotatedViewWidth, rotatedViewHeight, maxPreviewWidth, maxPreviewHeight,
                     largest);
 
@@ -1664,8 +1238,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
             // Find rotation of device in degrees (reverse device orientation for front-facing
             // cameras).
-            int rotation = (mCharacteristics.get(CameraCharacteristics.LENS_FACING) ==
-                    CameraCharacteristics.LENS_FACING_FRONT) ?
+            int rotation = (cameraInterface.isFrontCamera()) ?
                     (360 + ORIENTATIONS.get(deviceRotation)) % 360 :
                     (360 - ORIENTATIONS.get(deviceRotation)) % 360;
 
@@ -1708,7 +1281,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             // if its aspect ratio changed significantly.
             if (mPreviewSize == null || !checkAspectsEqual(previewSize, mPreviewSize)) {
                 mPreviewSize = previewSize;
-                if (mState != STATE_CLOSED) {
+                if (cameraInterface.getCameraState() != CameraStates.Closed) {
                     createCameraPreviewSessionLocked();
                 }
             }
@@ -1745,18 +1318,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         mMessageHandler.sendMessage(message);
     }
 
-    /**
-     * Check if we are using a device that only supports the LEGACY hardware level.
-     * <p/>
-     * Call this only with {@link #mCameraStateLock} held.
-     *
-     * @return true if this is a legacy device.
-     */
-    private boolean isLegacyLocked() {
-        return mCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) ==
-                CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY;
-    }
-
     private void setUpMediaRecorder() throws IOException {
         final Activity activity = this; //getActivity();
         if (null == activity) {
@@ -1789,147 +1350,65 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         mMediaRecorder.prepare();
     }
 
-
-    private void closePreviewSession() {
-        if (mCaptureSession != null) {
-            mCaptureSession.close();
-            mCaptureSession = null;
-        }
-    }
-
     /**
      * Start the camera preview.
      */
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void startPreview() {
-        if (null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
+        if (!mTextureView.isAvailable() || null == mPreviewSize) {
             return;
         }
         try {
-            closePreviewSession();
+            cameraInterface.stopPreview();
             SurfaceTexture texture = mTextureView.getSurfaceTexture();
             assert texture != null;
             texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-            mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-
-            // Use the same AE and AF  modes as the preview.
-            setup3AControlsLocked(mPreviewRequestBuilder);
-
             Surface previewSurface = new Surface(texture);
-            mPreviewRequestBuilder.addTarget(previewSurface);
+            cameraInterface.setSurface(previewSurface);
+            cameraInterface.startPreview();
 
-            mCameraDevice.createCaptureSession(Collections.singletonList(previewSurface),
-                    new CameraCaptureSession.StateCallback() {
-
-                        @Override
-                        public void onConfigured(@NonNull CameraCaptureSession session) {
-                            mCaptureSession = session;
-                            updatePreview();
-                        }
-
-                        @Override
-                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-                            Activity activity = AcquireActivity.this;
-                            if (null != activity) {
-                                Toast.makeText(activity, "Failed", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    }, mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }
 
     public void startRecordingVideo() {
-        if (null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
+        if (!mTextureView.isAvailable() || null == cameraInterface.getPreviewSize()) {
             return;
         }
         try {
-            closePreviewSession();
+            cameraInterface.stopPreview();
 
             setUpMediaRecorder();
             SurfaceTexture texture = mTextureView.getSurfaceTexture();
             assert texture != null;
             texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-            mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-
-            // Use the same AE and AF  modes as the preview.
-            setup3AControlsLocked(mPreviewRequestBuilder);
-
-
-            List<Surface> surfaces = new ArrayList<>();
-            /**
-             * Surface for the camera preview set up
-             */
             Surface previewSurface = new Surface(texture);
-            surfaces.add(previewSurface);
-            mPreviewRequestBuilder.addTarget(previewSurface);
+            cameraInterface.setSurface(previewSurface);
             //MediaRecorder setup for surface
             Surface recorderSurface = mMediaRecorder.getSurface();
-            surfaces.add(recorderSurface);
-            mPreviewRequestBuilder.addTarget(recorderSurface);
+            cameraInterface.setSurface(recorderSurface);
             // Start a capture session
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                mCameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
-                    @Override
-                    public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
-                        mCaptureSession = cameraCaptureSession;
-                        updatePreview();
-                        runOnUiThread(() -> {
-                            mIsRecordingVideo = true;
-                            // Start recording
-                            try {
-                                //mMediaRecorder.prepare();
-                                mMediaRecorder.start();
-                            } catch (IllegalStateException e) {
-                                Log.e(TAG, String.valueOf(e));
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
-                        Log.e(TAG, "onConfigureFailed: Failed");
-                    }
-                }, mBackgroundHandler);
-            }
-
-        } catch (CameraAccessException | IOException e) {
+            cameraInterface.setCaptureEventListner(() -> {
+                mIsRecordingVideo = true;
+                cameraInterface.setCaptureEventListner(null);
+                // Start recording
+                try {
+                    mMediaRecorder.start();
+                } catch (IllegalStateException e) {
+                    e.printStackTrace();
+                }
+            });
+            cameraInterface.startPreview();
+        } catch (IOException | CameraAccessException e) {
             e.printStackTrace();
         }
-    }
-
-    /**
-     * Update the camera preview. {@link startPreview()} needs to be called in advance.
-     */
-    private void updatePreview() {
-        if (null == mCameraDevice) {
-            return;
-        }
-        try {
-            setUpCaptureRequestBuilder(mPreviewRequestBuilder);
-            HandlerThread thread = new HandlerThread("CameraPreview");
-            thread.start();
-            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), null, mBackgroundHandler);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void setUpCaptureRequestBuilder(CaptureRequest.Builder builder) {
-        builder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
     }
 
     public void stopRecordingVideo() throws Exception {
         // UI
         mIsRecordingVideo = false;
-        try {
-            mCaptureSession.stopRepeating();
-            mCaptureSession.abortCaptures();
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
+        cameraInterface.stopPreview();
         // Stop recording
         mMediaRecorder.stop();
         mMediaRecorder.reset();
@@ -2211,6 +1690,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         }
     }
+
+
 
     /**
      * Comparator based on area of the given {@link Size} objects.

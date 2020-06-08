@@ -34,6 +34,7 @@
     <uses-feature android:glEsVersion="0x00020000" android:required="true" />
 
     <application
+        android:name="de.nanoimaging.stormimager.StormApplication"
         android:allowBackup="true"
         android:icon="@drawable/microscope_icon"
         android:label="@string/app_name"
