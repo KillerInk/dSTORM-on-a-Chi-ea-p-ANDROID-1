@@ -1,20 +1,12 @@
 package de.nanoimaging.stormimager.camera.capture;
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
 import android.hardware.camera2.CaptureResult;
 import android.media.Image;
 import android.util.Log;
 import android.util.Size;
 
 import org.opencv.core.Mat;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import de.nanoimaging.stormimager.utils.OpenCVUtil;
 
@@ -42,7 +34,7 @@ public class YuvImageCapture extends AbstractImageCapture {
         Log.d(TAG, "onCaptureCompleted");
         try {
             if (yuvToBitmapEventListner != null)
-                yuvToBitmapEventListner.onYuvMatCompleted(OpenCVUtil.imageToMat(image));
+                yuvToBitmapEventListner.onYuvMatCompleted(OpenCVUtil.yuvToMat(image));
             else
                 Log.d(TAG, "YuvToBitmapListner is null");
         }

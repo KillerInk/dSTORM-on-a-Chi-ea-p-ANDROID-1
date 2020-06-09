@@ -132,6 +132,10 @@ public class FindFocusTask implements YuvImageCapture.YuvToBitmapEvent {
     public void stop()
     {
         searchForFocus = false;
+        synchronized (bitmapLock)
+        {
+            bitmapLock.notify();
+        }
     }
 
     private void getNewBitmap() throws Exception {
