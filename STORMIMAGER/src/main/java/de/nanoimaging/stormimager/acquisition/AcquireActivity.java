@@ -100,6 +100,7 @@ import de.nanoimaging.stormimager.R;
 import de.nanoimaging.stormimager.camera.CameraImpl;
 import de.nanoimaging.stormimager.camera.CameraInterface;
 import de.nanoimaging.stormimager.camera.CameraStates;
+import de.nanoimaging.stormimager.databinding.ActivityAcquireBinding;
 import de.nanoimaging.stormimager.process.VideoProcessor;
 import de.nanoimaging.stormimager.tflite.TFLitePredict;
 import de.nanoimaging.stormimager.utils.ImageUtils;
@@ -189,8 +190,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     // File IO parameters
     File myVideoFileName = new File("");
-    boolean isRaw = false;
-    int mImageFormat = ImageFormat.JPEG;
     ByteBuffer buffer = null; // for the processing
     Bitmap global_bitmap = null;
     // (default) global file paths
@@ -215,37 +214,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     boolean is_SOFI_x = false;
     boolean is_SOFI_z = false;
-
-    /*
-     GUI-Settings
-     */
-    ToggleButton acquireSettingsSOFIToggle;
-    ToggleButton btnLiveProcessToggle;
-    private Button btn_x_lens_plus;
-    private Button btn_x_lens_minus;
-    private Button btn_z_focus_plus;
-    private Button btn_z_focus_minus;
-    private Button btnStartMeasurement;
-    private Button btnStopMeasurement;
-    private Button btnSetup;
-    private Button btnCalib;
-    private Button btnAutofocus;
-
-    private SeekBar seekbar_iso;
-    private SeekBar seekbar_shutter;
-    private SeekBar seekBarLensX;
-    private SeekBar seekBarLensZ;
-    private SeekBar seekBarLaser;
-    private TextView textView_iso;
-    private TextView textView_shutter;
-    private TextView textViewLensX;
-    private TextView textViewLensZ;
-    private TextView textViewLaser;
-    private TextView textViewGuiText;
-
-    private ImageView imageViewPreview;
-
-    private ProgressBar acquireProgressBar;
 
     // Tensorflow stuff
     int Nx_in = 128;
@@ -300,7 +268,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      * Tolerance when comparing aspect ratios.
      */
     private static final double ASPECT_RATIO_TOLERANCE = 0.005;
-    //private CaptureRequest.Builder mPreviewRequestBuilder;
 
     static {
         if (!OpenCVLoader.initDebug()) {
@@ -315,10 +282,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         ORIENTATIONS.append(Surface.ROTATION_270, 270);
     }
 
-    /**
-     * A {@link Semaphore} to prevent the app from exiting before closing the camera.
-     */
-    private final Semaphore mCameraOpenCloseLock = new Semaphore(1);
     /**
      * A lock protecting camera state.
      */
@@ -341,25 +304,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      * but the orientation of the has changed, and thus the preview rotation must be updated.
      */
     private OrientationEventListener mOrientationListener;
-    /**
-     * An {@link AutoFitTextureView} for camera preview.
-     */
-    private AutoFitTextureView mTextureView;
-
-    /**
-     * ID of the current {@link CameraDevice}.
-     */
-    private String mCameraId;
 
     /**
      * The {@link Size} of camera preview.
      */
     private Size mPreviewSize;
 
-    /**
-     * Whether or not the currently configured camera device is fixed-focus.
-     */
-    private boolean mNoAFRun = true;
 
     /**
      * {@link TextureView.SurfaceTextureListener} handles several lifecycle events of a
@@ -391,8 +341,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
             if (is_findcoupling & !isCameraBusy) {
                 // Do lens aligning here
-                global_bitmap = mTextureView.getBitmap();
-                global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), mTextureView.getTransform(null), true);
+                global_bitmap = binding.texture.getBitmap();
+                global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), binding.texture.getTransform(null), true);
 
                 // START THREAD AND ALIGN THE LENS
                 if (is_findcoupling_coarse) {
@@ -403,8 +353,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             }
             else if(is_findfocus & !isCameraBusy) {
                 // Do autofocussing
-                global_bitmap = mTextureView.getBitmap();
-                global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), mTextureView.getTransform(null), true);
+                global_bitmap = binding.texture.getBitmap();
+                global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), binding.texture.getTransform(null), true);
 
                 // START THREAD AND ALIGN THE LENS
                 new run_autofocus_thread("AutofocusThread");
@@ -412,16 +362,16 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             }
             else if(is_process_sofi & !isCameraBusy){
                 // Collect images for SOFI-prediction
-                global_bitmap = mTextureView.getBitmap();
-                global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), mTextureView.getTransform(null), true);
+                global_bitmap = binding.texture.getBitmap();
+                global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), binding.texture.getTransform(null), true);
 
                 new run_sofiprocessing_thread("ProcessingThread");
             }
             else if(is_display_result){
                 Log.i(TAG, "Displaying result of SOFI prediction");
-                imageViewPreview.setVisibility(View.VISIBLE);
+                binding.imageViewPreview.setVisibility(View.VISIBLE);
                 try{
-                    imageViewPreview.setImageBitmap(myresult_bmp);
+                    binding.imageViewPreview.setImageBitmap(myresult_bmp);
                     is_display_result = false;
                 }
                 catch(Exception e){
@@ -541,6 +491,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         return (long) a;
     }
 
+    /**
+     * view binding from activity_acquire.xml
+     */
+    private ActivityAcquireBinding binding;
 
     //**********************************************************************************************
     //  Method onCreate
@@ -549,7 +503,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_acquire);
+        binding = ActivityAcquireBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
@@ -586,13 +541,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         // Setup a new OrientationEventListener.  This is used to handle rotation events like a
         // 180 degree rotation that do not normally trigger a call to onCreate to do view re-layout
         // or otherwise cause the preview TextureView's size to change.
-        mTextureView = (AutoFitTextureView) this.findViewById(R.id.texture);
+
         mOrientationListener = new OrientationEventListener(this,
                 SensorManager.SENSOR_DELAY_NORMAL) {
             @Override
             public void onOrientationChanged(int orientation) {
-                if (mTextureView != null && mTextureView.isAvailable()) {
-                    configureTransform(mTextureView.getWidth(), mTextureView.getHeight());
+                if (binding.texture != null && binding.texture.isAvailable()) {
+                    configureTransform(binding.texture.getWidth(), binding.texture.getHeight());
                 }
             }
         };
@@ -617,47 +572,28 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         /**
         GUI-STUFF
          */
-        imageViewPreview = (ImageView) findViewById(R.id.imageViewPreview);
-        btn_x_lens_plus = findViewById(R.id.button_x_lens_plus);
-        btn_x_lens_minus = findViewById(R.id.button_x_lens_minus);
-        btn_z_focus_plus = findViewById(R.id.button_z_focus_plus);
-        btn_z_focus_minus = findViewById(R.id.button_z_focus_minus);
-
-        btnAutofocus = findViewById(R.id.btnAutofocus);
-        btnCalib = findViewById(R.id.btnCalib);
-        btnSetup = findViewById(R.id.btnSetup);
-        btnStartMeasurement = findViewById(R.id.btnStart);
-        btnStopMeasurement = findViewById(R.id.btnStop);
-
-        textViewGuiText = findViewById(R.id.textViewGuiText);
-        textView_shutter = findViewById(R.id.textView_shutter);
-        textView_iso = findViewById(R.id.textView_iso);
-
-        acquireProgressBar = (ProgressBar) findViewById(R.id.acquireProgressBar);
-        acquireProgressBar.setVisibility(View.INVISIBLE); // Make invisible at first, then have it pop up
+        binding.acquireProgressBar.setVisibility(View.INVISIBLE); // Make invisible at first, then have it pop up
 
 
 
         /*
         Seekbar for the ISO-Setting
          */
-        seekbar_iso = findViewById(R.id.seekBar_iso);
-        seekbar_iso.setVisibility(View.GONE);
-        seekbar_shutter = findViewById(R.id.seekBar_shutter);
-        seekbar_shutter.setVisibility(View.GONE);
+        binding.seekBarIso.setVisibility(View.GONE);
+        binding.seekBarShutter.setVisibility(View.GONE);
 
-        seekbar_iso.setMax(isovalues.length - 1);
-        seekbar_iso.setProgress(val_iso_index); // 50x16=800
-        textView_iso.setText("Iso:" + isovalues[val_iso_index]);
+        binding.seekBarIso.setMax(isovalues.length - 1);
+        binding.seekBarIso.setProgress(val_iso_index); // 50x16=800
+        binding.textViewIso.setText("Iso:" + isovalues[val_iso_index]);
 
-        seekbar_iso.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        binding.seekBarIso.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
-                    editor.putString("val_iso_index", String.valueOf(progress));
+                    editor.putInt("val_iso_index", progress);
                     editor.commit();
 
-                    textView_iso.setText("Iso:" + isovalues[progress]);
+                    binding.textViewIso.setText("Iso:" + isovalues[progress]);
                     global_isoval = isovalues[progress];
                     cameraInterface.setIso(Integer.parseInt(isovalues[progress]));
                 }
@@ -678,19 +614,19 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         /*
         Seekbar for the ISO-Setting
          */
-        seekbar_shutter.setMax(texpvalues.length - 1);
-        seekbar_shutter.setProgress(val_texp_index); // == 1/30
-        textView_shutter.setText("Shutter:" + texpvalues[val_texp_index]);
+        binding.seekBarShutter.setMax(texpvalues.length - 1);
+        binding.seekBarShutter.setProgress(val_texp_index); // == 1/30
+        binding.textViewShutter.setText("Shutter:" + texpvalues[val_texp_index]);
 
-        seekbar_shutter.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        binding.seekBarShutter.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
-                    editor.putString("val_texp_index", String.valueOf(progress));
+                    editor.putInt("val_texp_index", progress);
                     editor.commit();
 
                     global_expval = texpvalues[progress];
-                    textView_shutter.setText("Shutter:" + texpvalues[progress]);
+                    binding.textViewShutter.setText("Shutter:" + texpvalues[progress]);
                     int msexpo = (int) getMilliSecondStringFromShutterString(texpvalues[progress]);
                     cameraInterface.setExposureTime(msexpo);
                 }
@@ -711,32 +647,30 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         /*
         Seekbar for Lens in X-direction
          */
-        seekBarLensX = (SeekBar) findViewById(R.id.seekBarLensX);
-        seekBarLensX.setMax(PWM_RES);
-        seekBarLensX.setProgress(0);
+        binding.seekBarLensX.setMax(PWM_RES);
+        binding.seekBarLensX.setProgress(0);
 
-        textViewLensX = (TextView) findViewById(R.id.textViewLensX);
         String text_lens_x_pre = "Lens (X): ";
-        textViewLensX.setText(text_lens_x_pre + seekBarLensX.getProgress());
+        binding.textViewLensX.setText(text_lens_x_pre + binding.seekBarLensX.getProgress());
 
-        seekBarLensX.setOnSeekBarChangeListener(
+        binding.seekBarLensX.setOnSeekBarChangeListener(
                 new SeekBar.OnSeekBarChangeListener() {
 
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                         val_lens_x_global = progress;
                         setLensX(val_lens_x_global);
-                        textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                        binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
                     }
 
                     @Override
                     public void onStartTrackingTouch(SeekBar seekBar) {
-                        textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                        binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
                     }
 
                     @Override
                     public void onStopTrackingTouch(SeekBar seekBar) {
-                        textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                        binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
                     }
                 }
         );
@@ -745,32 +679,30 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         /*
         Seekbar for Lens in X-direction
          */
-        seekBarLensZ = (SeekBar) findViewById(R.id.seekBarLensZ);
-        seekBarLensZ.setMax(PWM_RES);
-        seekBarLensZ.setProgress(val_lens_z_global);
+        binding.seekBarLensZ.setMax(PWM_RES);
+        binding.seekBarLensZ.setProgress(val_lens_z_global);
 
-        textViewLensZ = (TextView) findViewById(R.id.textViewLensZ);
         String text_lens_z_pre = "Lens (Z): ";
-        textViewLensZ.setText(text_lens_z_pre + seekBarLensZ.getProgress());
+        binding.textViewLensZ.setText(text_lens_z_pre + binding.seekBarLensZ.getProgress());
 
-        seekBarLensZ.setOnSeekBarChangeListener(
+        binding.seekBarLensZ.setOnSeekBarChangeListener(
                 new SeekBar.OnSeekBarChangeListener() {
 
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                         val_lens_z_global = progress;
                         setLensZ(val_lens_z_global);
-                        textViewLensZ.setText(text_lens_z_pre + val_lens_z_global * 1.);
+                        binding.textViewLensZ.setText(text_lens_z_pre + val_lens_z_global * 1.);
                     }
 
                     @Override
                     public void onStartTrackingTouch(SeekBar seekBar) {
-                        textViewLensZ.setText(text_lens_z_pre + val_lens_z_global * 1.);
+                        binding.textViewLensZ.setText(text_lens_z_pre + val_lens_z_global * 1.);
                     }
 
                     @Override
                     public void onStopTrackingTouch(SeekBar seekBar) {
-                        textViewLensZ.setText(text_lens_z_pre + val_lens_z_global * 1.);
+                        binding.textViewLensZ.setText(text_lens_z_pre + val_lens_z_global * 1.);
                     }
                 }
 
@@ -779,32 +711,31 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         /*
         Seekbar for Lens in X-direction
          */
-        seekBarLaser = (SeekBar) findViewById(R.id.seekBarLaser);
-        seekBarLaser.setMax(PWM_RES-10); // just make sure there is no overlow!
-        seekBarLaser.setProgress(0);
 
-        textViewLaser = (TextView) findViewById(R.id.textViewLaser);
+        binding.seekBarLaser.setMax(PWM_RES-10); // just make sure there is no overlow!
+        binding.seekBarLaser.setProgress(0);
+
         String text_laser_pre = "Laser (I): ";
-        textViewLaser.setText(text_laser_pre + seekBarLaser.getProgress());
+        binding.textViewLaser.setText(text_laser_pre + binding.seekBarLaser.getProgress());
 
-        seekBarLaser.setOnSeekBarChangeListener(
+        binding.seekBarLaser.setOnSeekBarChangeListener(
                 new SeekBar.OnSeekBarChangeListener() {
 
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                         val_laser_red_global = progress;
                         setLaser(val_laser_red_global);
-                        textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
+                        binding.textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
                     }
 
                     @Override
                     public void onStartTrackingTouch(SeekBar seekBar) {
-                        textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
+                        binding.textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
                     }
 
                     @Override
                     public void onStopTrackingTouch(SeekBar seekBar) {
-                        textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
+                        binding.textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
                     }
                 }
         );
@@ -823,28 +754,25 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         /*
         Assign GUI-Elements to actions
          */
-        acquireSettingsSOFIToggle = this.findViewById(R.id.btnSofi);
-        acquireSettingsSOFIToggle.setText("SOFI (x): 0");
-        acquireSettingsSOFIToggle.setTextOn("SOFI (x): 1");
-        acquireSettingsSOFIToggle.setTextOff("SOFI (x): 0");
+        binding.btnSofi.setText("SOFI (x): 0");
+        binding.btnSofi.setTextOn("SOFI (x): 1");
+        binding.btnSofi.setTextOff("SOFI (x): 0");
 
-        btnSetup.setOnClickListener(new View.OnClickListener() {
+        binding.btnSetup.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 openSettingsDialog();
             }
         });
 
-
-        btnLiveProcessToggle = this.findViewById(R.id.btnLiveView);
-        btnLiveProcessToggle.setText("LIVE: 0");
-        btnLiveProcessToggle.setTextOn("LIVE: 1");
-        btnLiveProcessToggle.setTextOff("LIVE: 0");
+        binding.btnLiveView.setText("LIVE: 0");
+        binding.btnLiveView.setTextOn("LIVE: 1");
+        binding.btnLiveView.setTextOff("LIVE: 0");
 
 
 
         //******************* SOFI-Mode  ********************************************//
         // This is to let the lens vibrate by a certain amount
-        acquireSettingsSOFIToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        binding.btnSofi.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     Log.i(TAG, "Checked");
@@ -859,7 +787,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         //******************* Live PRocessing-Mode  ********************************************//
         // This is to let the lens vibrate by a certain amount
-        btnLiveProcessToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        binding.btnLiveView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     Log.i(TAG, "Live PRocessing Checked");
@@ -867,37 +795,37 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     is_process_sofi = true;
                 } else {
                     is_process_sofi = false;
-                    imageViewPreview.setVisibility(View.GONE);
+                    binding.imageViewPreview.setVisibility(View.GONE);
                 }
             }
 
         });
 
         //******************* Move X ++ ********************************************//
-        btn_x_lens_plus.setOnClickListener(new View.OnClickListener() {
+        binding.buttonXLensPlus.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 val_lens_x_global = val_lens_x_global+10;
                 setLensX(val_lens_x_global);
-                textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
-                seekBarLensX.setProgress(val_lens_x_global);
+                binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                binding.seekBarLensX.setProgress(val_lens_x_global);
             }
 
         });
 
         //******************* Move X -- ********************************************//
-        btn_x_lens_minus.setOnClickListener(new View.OnClickListener() {
+        binding.buttonXLensMinus.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 val_lens_x_global = val_lens_x_global-10;
                 setLensX(val_lens_x_global);
-                textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
-                seekBarLensX.setProgress(val_lens_x_global);
+                binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                binding.seekBarLensX.setProgress(val_lens_x_global);
             }
 
         });
 
 
         //******************* Move X ++ ********************************************//
-        btn_z_focus_plus.setOnClickListener(new View.OnClickListener() {
+        binding.buttonZFocusPlus.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 setZFocus(val_stepsize_focus_z);
             }
@@ -905,7 +833,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         });
 
         //******************* Move X -- ********************************************//
-        btn_z_focus_minus.setOnClickListener(new View.OnClickListener() {
+        binding.buttonZFocusMinus.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 setZFocus(-val_stepsize_focus_z);
             }
@@ -913,7 +841,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         });
 
         //******************* Optimize Coupling ********************************************//
-        btnCalib.setOnClickListener(new View.OnClickListener() {
+        binding.btnCalib.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
 
                 showToast("Optimize  Coupling");
@@ -924,14 +852,14 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 is_findcoupling = true;
                 is_measurement = false;
 
-                textViewGuiText.setText(my_gui_text);
+                binding.textViewGuiText.setText(my_gui_text);
                 setState(STATE_CALIBRATION);
 
             }
         });
 
         //******************* Autofocus ********************************************//
-        btnAutofocus.setOnClickListener(new View.OnClickListener() {
+        binding.btnAutofocus.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
 
                 showToast("Start Autofocussing ");
@@ -939,7 +867,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 Log.i(TAG, "Autofocussing in progress");
                 String my_gui_text = "Lens Calibration in progress";
 
-                textViewGuiText.setText(my_gui_text);
+                binding.textViewGuiText.setText(my_gui_text);
                 is_findfocus = true;
 
             }
@@ -947,7 +875,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
 
         //******************* Start MEasurement ********************************************//
-        btnStartMeasurement.setOnClickListener(new View.OnClickListener() {
+        binding.btnStart.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if(!is_measurement&!is_findcoupling){
                     is_measurement = true;
@@ -957,7 +885,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         });
 
         //******************* Stop Measurement ********************************************//
-        btnStopMeasurement.setOnClickListener(new View.OnClickListener() {
+        binding.btnStop.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 is_measurement = false;
                 is_findcoupling = false;
@@ -1001,10 +929,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-        if (mTextureView.isAvailable()) {
-            configureTransform(mTextureView.getWidth(), mTextureView.getHeight());
+        if (binding.texture.isAvailable()) {
+            configureTransform(binding.texture.getWidth(), binding.texture.getHeight());
         } else {
-            mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
+            binding.texture.setSurfaceTextureListener(mSurfaceTextureListener);
         }
         if (mOrientationListener != null && mOrientationListener.canDetectOrientation()) {
             mOrientationListener.enable();
@@ -1090,7 +1018,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      */
     private void createCameraPreviewSessionLocked() {
         try {
-            SurfaceTexture texture = mTextureView.getSurfaceTexture();
+            SurfaceTexture texture = binding.texture.getSurfaceTexture();
             // We configure the size of default buffer to be the size of camera preview we want.
             Size prevsize = cameraInterface.getPreviewSize();
             texture.setDefaultBufferSize(prevsize.getWidth(), prevsize.getHeight());
@@ -1104,11 +1032,11 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             e.printStackTrace();
         }
 
-        seekbar_iso.post(new Runnable() {
+        binding.seekBarIso.post(new Runnable() {
             @Override
             public void run() {
-                seekbar_shutter.setVisibility(View.VISIBLE);
-                seekbar_iso.setVisibility(View.VISIBLE);
+                binding.seekBarIso.setVisibility(View.VISIBLE);
+                binding.seekBarShutter.setVisibility(View.VISIBLE);
             }
         });
 
@@ -1119,7 +1047,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     private void configureTransform(int viewWidth, int viewHeight) {
         Activity activity = AcquireActivity.this;
         synchronized (mCameraStateLock) {
-            if (null == mTextureView || null == activity) {
+            if (null == binding.texture || null == activity) {
                 return;
             }
 
@@ -1165,10 +1093,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     largest);
 
             if (swappedDimensions) {
-                mTextureView.setAspectRatio(
+                binding.texture.setAspectRatio(
                         previewSize.getHeight(), previewSize.getWidth());
             } else {
-                mTextureView.setAspectRatio(
+                binding.texture.setAspectRatio(
                         previewSize.getWidth(), previewSize.getHeight());
             }
 
@@ -1211,7 +1139,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             }
             matrix.postRotate(rotation, centerX, centerY);
 
-            mTextureView.setTransform(matrix);
+            binding.texture.setTransform(matrix);
 
             // Start or restart the active capture session if the preview was initialized or
             // if its aspect ratio changed significantly.
@@ -1291,12 +1219,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      */
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private void startPreview() {
-        if (!mTextureView.isAvailable() || null == mPreviewSize) {
+        if (!binding.texture.isAvailable() || null == mPreviewSize) {
             return;
         }
         try {
             cameraInterface.stopPreview();
-            SurfaceTexture texture = mTextureView.getSurfaceTexture();
+            SurfaceTexture texture = binding.texture.getSurfaceTexture();
             assert texture != null;
             texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
             Surface previewSurface = new Surface(texture);
@@ -1309,14 +1237,14 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     }
 
     public void startRecordingVideo() {
-        if (!mTextureView.isAvailable() || null == cameraInterface.getPreviewSize()) {
+        if (!binding.texture.isAvailable() || null == cameraInterface.getPreviewSize()) {
             return;
         }
         try {
             cameraInterface.stopPreview();
 
             setUpMediaRecorder();
-            SurfaceTexture texture = mTextureView.getSurfaceTexture();
+            SurfaceTexture texture = binding.texture.getSurfaceTexture();
             assert texture != null;
             texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
             Surface previewSurface = new Surface(texture);
@@ -1464,7 +1392,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     public void setIPAddress(String mIPaddress) {
         myIPAddress = mIPaddress;
-        editor.putString("myIPAddress", String.valueOf(myIPAddress));
+        editor.putString("myIPAddress", myIPAddress);
         editor.commit();
     }
 
@@ -1472,7 +1400,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         val_sofi_amplitude_x = mvalSOFIX;
         is_SOFI_x = misSOFI_X;
         publishMessage(topic_lens_sofi_x, String.valueOf(val_sofi_amplitude_x));
-        editor.putString("val_sofi_amplitude_x", String.valueOf(val_sofi_amplitude_x));
+        editor.putInt("val_sofi_amplitude_x", val_sofi_amplitude_x);
         editor.commit();
     }
 
@@ -1480,42 +1408,42 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         val_sofi_amplitude_z = mvalSOFIZ;
         is_SOFI_z = misSOFI_Z;
         publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
-        editor.putString("val_sofi_amplitude_z", String.valueOf(val_sofi_amplitude_z));
+        editor.putInt("val_sofi_amplitude_z", val_sofi_amplitude_z);
         editor.commit();
     }
 
     public void setValSOFIX(int mval_sofi_amplitude_x) {
         val_sofi_amplitude_x = mval_sofi_amplitude_x;
         // Save the IP address for next start
-        editor.putString("mval_sofi_amplitude_x", String.valueOf(mval_sofi_amplitude_x));
+        editor.putInt("mval_sofi_amplitude_x", mval_sofi_amplitude_x);
         editor.commit();
     }
 
     public void setValSOFIZ(int mval_sofi_amplitude_z) {
         val_sofi_amplitude_z = mval_sofi_amplitude_z;
         // Save the IP address for next start
-        editor.putString("mval_sofi_amplitude_z", String.valueOf(mval_sofi_amplitude_z));
+        editor.putInt("mval_sofi_amplitude_z", mval_sofi_amplitude_z);
         editor.commit();
     }
 
     public void setValDurationMeas(int mval_duration_measurement) {
         val_duration_measurement = mval_duration_measurement;
         // Save the IP address for next start
-        editor.putString("val_duration_measurement", String.valueOf(mval_duration_measurement));
+        editor.putInt("val_duration_measurement", mval_duration_measurement);
         editor.commit();
     }
 
     public void setValPeriodMeas(int mval_period_measurement) {
         val_period_measurement = mval_period_measurement;
         // Save the IP address for next start
-        editor.putString("val_period_measurement", String.valueOf(mval_period_measurement));
+        editor.putInt("val_period_measurement", mval_period_measurement);
         editor.commit();
     }
 
     public void setNValPeriodCalibration(int mval_period_calibration) {
         val_nperiods_calibration = mval_period_calibration;
         // Save the IP address for next start
-        editor.putString("val_nperiods_calibration", String.valueOf(mval_period_calibration));
+        editor.putInt("val_nperiods_calibration", mval_period_calibration);
         editor.commit();
     }
 
@@ -1602,7 +1530,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 Log.e(TAG, String.valueOf(e));
             }
             }
-            editor.putString("val_lens_x_global", String.valueOf(lensposition));
+            editor.putInt("val_lens_x_global", lensposition);
             editor.commit();
 
 
@@ -1621,7 +1549,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     Log.e(TAG, String.valueOf(e));
                 }
             }
-            editor.putString("val_lens_z_global", String.valueOf(lensposition));
+            editor.putInt("val_lens_z_global", lensposition);
             editor.commit();
 
         }
@@ -1703,8 +1631,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             }
 
             // Set some GUI components
-            acquireProgressBar.setVisibility(View.VISIBLE); // Make invisible at first, then have it pop up
-            acquireProgressBar.setMax(val_nperiods_calibration);
+            binding.acquireProgressBar.setVisibility(View.VISIBLE); // Make invisible at first, then have it pop up
+            binding.acquireProgressBar.setMax(val_nperiods_calibration);
 
             Toast.makeText(AcquireActivity.this, "Start Measurements", Toast.LENGTH_SHORT).show();
 
@@ -1712,20 +1640,20 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         @Override
         protected void onProgressUpdate(Void... params) {
-            acquireProgressBar.setProgress(i_meas);
+            binding.acquireProgressBar.setProgress(i_meas);
 
             // some GUI interaction
-            textViewGuiText.setText(my_gui_text);
-            btnStartMeasurement.setEnabled(false);
+            binding.textViewGuiText.setText(my_gui_text);
+            binding.btnStart.setEnabled(false);
 
             // Update GUI
             String text_lens_x_pre = "Lens (X): ";
-            textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
-            seekBarLensX.setProgress(val_lens_x_global);
+            binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+            binding.seekBarLensX.setProgress(val_lens_x_global);
 
             String text_laser_pre = "Laser: ";
-            textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
-            seekBarLaser.setProgress(val_laser_red_global);
+            binding.textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
+            binding.seekBarLaser.setProgress(val_laser_red_global);
         }
 
         void mSleep(int sleepVal) {
@@ -1838,9 +1766,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             super.onPostExecute(result);
 
             // Set some GUI components
-            acquireProgressBar.setVisibility(View.GONE); // Make invisible at first, then have it pop up
-            textViewGuiText.setText("Done Measurements.");
-            btnStartMeasurement.setEnabled(true);
+            binding.acquireProgressBar.setVisibility(View.GONE); // Make invisible at first, then have it pop up
+            binding.textViewGuiText.setText("Done Measurements.");
+            binding.btnStart.setEnabled(true);
 
             // Switch off laser
             setLaser(0);
@@ -2013,9 +1941,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 else {
                         int i_mean = (int)measureCoupling(dst, ROI_SIZE, 9);
                         String mycouplingtext = "Coupling (coarse) @ "+String.valueOf(i_search_maxintensity)+" is "+String.valueOf(i_mean)+"with max: "+String.valueOf(val_mean_max);
-                        textViewGuiText.post(new Runnable() {
+                        binding.textViewGuiText.post(new Runnable() {
                             public void run() {
-                                textViewGuiText.setText(mycouplingtext);
+                                binding.textViewGuiText.setText(mycouplingtext);
                             }
                         });
                         Log.i(TAG, mycouplingtext);
@@ -2107,9 +2035,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                     int i_mean = (int)measureCoupling(dst, ROI_SIZE, 9);
                     String mycouplingtext = "Coupling (fine) @ "+String.valueOf(i_search_maxintensity)+" is "+String.valueOf(i_mean)+"with max: "+String.valueOf(val_mean_max);
-                    textViewGuiText.post(new Runnable() {
+                    binding.textViewGuiText.post(new Runnable() {
                         public void run() {
-                            textViewGuiText.setText(mycouplingtext);
+                            binding.textViewGuiText.setText(mycouplingtext);
                         }
                     });
                     Log.i(TAG, mycouplingtext);
@@ -2212,9 +2140,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                 double i_stdv = measureCoupling(dst, ROI_SIZE, 9);
                 String myfocusingtext = "Focus @ "+String.valueOf(i_search_bestfocus)+" is "+String.valueOf(i_stdv);
-                textViewGuiText.post(new Runnable() {
+                binding.textViewGuiText.post(new Runnable() {
                     public void run() {
-                        textViewGuiText.setText(myfocusingtext);
+                        binding.textViewGuiText.setText(myfocusingtext);
                     }
                 });
                 Log.i(TAG, myfocusingtext);
@@ -2312,16 +2240,16 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     void setGUIelements(SharedPreferences sharedPref){
         myIPAddress = sharedPref.getString("myIPAddress", myIPAddress);
-        val_nperiods_calibration = Integer.parseInt(sharedPref.getString("val_nperiods_calibration", String.valueOf(val_nperiods_calibration)));
-        val_period_measurement = Integer.parseInt(sharedPref.getString("val_period_measurement", String.valueOf(val_period_measurement)));
-        val_duration_measurement = Integer.parseInt(sharedPref.getString("val_duration_measurement", String.valueOf(val_duration_measurement)));
-        val_sofi_amplitude_x = Integer.parseInt(sharedPref.getString("val_sofi_amplitude_x", String.valueOf(val_sofi_amplitude_x)));
-        val_sofi_amplitude_z = Integer.parseInt(sharedPref.getString("val_sofi_amplitude_z", String.valueOf(val_sofi_amplitude_z)));
-        val_iso_index = Integer.parseInt(sharedPref.getString("val_iso_index", String.valueOf(val_iso_index)));
-        val_texp_index = Integer.parseInt(sharedPref.getString("val_texp_index", String.valueOf(val_texp_index)));
-        val_lens_x_global = Integer.parseInt(sharedPref.getString("val_lens_x_global", String.valueOf(val_lens_x_global)));
-        val_lens_z_global = Integer.parseInt(sharedPref.getString("val_lens_z_global", String.valueOf(val_lens_z_global)));
-        val_laser_red_global = Integer.parseInt(sharedPref.getString("val_laser_red_global", String.valueOf(val_laser_red_global)));
+        val_nperiods_calibration = sharedPref.getInt("val_nperiods_calibration", val_nperiods_calibration);
+        val_period_measurement = sharedPref.getInt("val_period_measurement", val_period_measurement);
+        val_duration_measurement = sharedPref.getInt("val_duration_measurement", val_duration_measurement);
+        val_sofi_amplitude_x = sharedPref.getInt("val_sofi_amplitude_x", val_sofi_amplitude_x);
+        val_sofi_amplitude_z = sharedPref.getInt("val_sofi_amplitude_z", val_sofi_amplitude_z);
+        val_iso_index = sharedPref.getInt("val_iso_index", val_iso_index);
+        val_texp_index = sharedPref.getInt("val_texp_index", val_texp_index);
+        val_lens_x_global = sharedPref.getInt("val_lens_x_global",val_lens_x_global);
+        val_lens_z_global = sharedPref.getInt("val_lens_z_global", val_lens_z_global);
+        val_laser_red_global = sharedPref.getInt("val_laser_red_global", val_laser_red_global);
     }
 
 
