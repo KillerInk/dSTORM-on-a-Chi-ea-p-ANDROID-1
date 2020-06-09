@@ -100,18 +100,21 @@ import de.nanoimaging.stormimager.R;
 import de.nanoimaging.stormimager.camera.CameraImpl;
 import de.nanoimaging.stormimager.camera.CameraInterface;
 import de.nanoimaging.stormimager.camera.CameraStates;
+import de.nanoimaging.stormimager.camera.capture.YuvImageCapture;
 import de.nanoimaging.stormimager.databinding.ActivityAcquireBinding;
 import de.nanoimaging.stormimager.network.MqttClient;
 import de.nanoimaging.stormimager.network.MqttClientInterface;
 import de.nanoimaging.stormimager.process.VideoProcessor;
+import de.nanoimaging.stormimager.tasks.FindFocusTask;
 import de.nanoimaging.stormimager.tflite.TFLitePredict;
 import de.nanoimaging.stormimager.utils.ImageUtils;
+import de.nanoimaging.stormimager.utils.OpenCVUtil;
 
 /**
  * Created by Bene on 26.09.2015.
  */
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-public class AcquireActivity extends Activity implements FragmentCompat.OnRequestPermissionsResultCallback, AcquireSettings.NoticeDialogListener {
+public class AcquireActivity extends Activity implements FragmentCompat.OnRequestPermissionsResultCallback, AcquireSettings.NoticeDialogListener ,ZFocusInterface {
 
     public static final String topic_lens_z = "lens/right/z";
     public static final String topic_lens_x = "lens/right/x";
@@ -178,7 +181,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     int val_focus_pos_best_global = 0;
     int val_focus_searchradius = 40;
     int val_focus_search_stepsize = 1;
-    boolean is_findfocus = false;
 
     // File IO parameters
     File myVideoFileName = new File("");
@@ -235,6 +237,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     private CameraInterface cameraInterface;
     private MqttClientInterface mqttClientInterface;
+    private YuvImageCapture yuvImageCapture;
+    private FindFocusTask findFocusTask;
 
 
     /**
@@ -344,15 +348,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     new run_calibration_thread_fine("FineThread");
                 }
             }
-            else if(is_findfocus & !isCameraBusy) {
-                // Do autofocussing
-                global_bitmap = binding.texture.getBitmap();
-                global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), binding.texture.getTransform(null), true);
 
-                // START THREAD AND ALIGN THE LENS
-                new run_autofocus_thread("AutofocusThread");
-
-            }
             else if(is_process_sofi & !isCameraBusy){
                 // Collect images for SOFI-prediction
                 global_bitmap = binding.texture.getBitmap();
@@ -506,6 +502,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         //OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
 
         cameraInterface = new CameraImpl();
+        findFocusTask = new FindFocusTask(cameraInterface,this);
         // load tensorflow stuff
         mypredictor = new TFLitePredict(AcquireActivity.this, mymodelfile, Nx_in, Ny_in, N_time, N_upscale);
         mypredictor_mean = new TFLitePredict(AcquireActivity.this, mymodelfile_mean, Nx_in, Ny_in, N_time);
@@ -515,7 +512,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         SharedPreferences sharedPref = this.getSharedPreferences(
                 PREFERENCE_FILE_KEY, Context.MODE_PRIVATE);
         editor = sharedPref.edit();
-        setGUIelements(sharedPref);
+
 
         // build the pop-up settings activity
         settingsDialogFragment = new AcquireSettings();
@@ -532,6 +529,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             mqttClientInterface.connect();
         } else
             showToast("We don't have network");
+
+        setGUIelements(sharedPref);
         // *****************************************************************************************
         //  Camera STUFF
         //******************************************************************************************
@@ -609,7 +608,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
 
         /*
-        Seekbar for the ISO-Setting
+        Seekbar for the shutter-Setting
          */
         binding.seekBarShutter.setMax(texpvalues.length - 1);
         binding.seekBarShutter.setProgress(val_texp_index); // == 1/30
@@ -865,7 +864,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 String my_gui_text = "Lens Calibration in progress";
 
                 binding.textViewGuiText.setText(my_gui_text);
-                is_findfocus = true;
+                yuvImageCapture.setYuvToBitmapEventListner(findFocusTask);
+                findFocusTask.process();
 
             }
         });
@@ -888,7 +888,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 is_findcoupling = false;
                 is_findcoupling_coarse = false;
                 is_findcoupling_coarse = true;
-                is_findfocus = false;
+                findFocusTask.stop();
+                yuvImageCapture.setYuvToBitmapEventListner(null);
 
             }
         });
@@ -1005,39 +1006,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     }
 
 
-    /**
-     * Creates a new {@link CameraCaptureSession} for camera preview.
-     * <p/>
-     * Call this only with {@link #mCameraStateLock} held.
-     */
-    private void createCameraPreviewSessionLocked() {
-        try {
-            SurfaceTexture texture = binding.texture.getSurfaceTexture();
-            // We configure the size of default buffer to be the size of camera preview we want.
-            Size prevsize = cameraInterface.getPreviewSize();
-            texture.setDefaultBufferSize(prevsize.getWidth(), prevsize.getHeight());
-
-            // This is the output Surface we need to start preview.
-            Surface surface = new Surface(texture);
-            cameraInterface.setSurface(surface);
-            cameraInterface.startPreview();
-
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-
-        binding.seekBarIso.post(new Runnable() {
-            @Override
-            public void run() {
-                binding.seekBarIso.setVisibility(View.VISIBLE);
-                binding.seekBarShutter.setVisibility(View.VISIBLE);
-            }
-        });
-
-    }
-
-
-
     private void configureTransform(int viewWidth, int viewHeight) {
         Activity activity = AcquireActivity.this;
         synchronized (mCameraStateLock) {
@@ -1140,7 +1108,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             if (mPreviewSize == null || !checkAspectsEqual(previewSize, mPreviewSize)) {
                 mPreviewSize = previewSize;
                 if (cameraInterface.getCameraState() != CameraStates.Closed) {
-                    createCameraPreviewSessionLocked();
+                    startPreview();
                 }
             }
         }
@@ -1218,16 +1186,27 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
         try {
             cameraInterface.stopPreview();
+            if (yuvImageCapture != null)
+                yuvImageCapture.release();
             SurfaceTexture texture = binding.texture.getSurfaceTexture();
             assert texture != null;
             texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
             Surface previewSurface = new Surface(texture);
             cameraInterface.setSurface(previewSurface);
+            yuvImageCapture = new YuvImageCapture(mPreviewSize);
+            cameraInterface.addImageCaptureInterface(yuvImageCapture);
             cameraInterface.startPreview();
 
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+        binding.seekBarIso.post(new Runnable() {
+            @Override
+            public void run() {
+                binding.seekBarIso.setVisibility(View.VISIBLE);
+                binding.seekBarShutter.setVisibility(View.VISIBLE);
+            }
+        });
     }
 
     public void startRecordingVideo() {
@@ -1236,7 +1215,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
         try {
             cameraInterface.stopPreview();
-
+            yuvImageCapture.release();
             setUpMediaRecorder();
             SurfaceTexture texture = binding.texture.getSurfaceTexture();
             assert texture != null;
@@ -1246,6 +1225,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             //MediaRecorder setup for surface
             Surface recorderSurface = mMediaRecorder.getSurface();
             cameraInterface.setSurface(recorderSurface);
+            yuvImageCapture = new YuvImageCapture(mPreviewSize);
+            cameraInterface.addImageCaptureInterface(yuvImageCapture);
             // Start a capture session
             cameraInterface.setCaptureEventListner(() -> {
                 mIsRecordingVideo = true;
@@ -1409,12 +1390,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         mqttClientInterface.publishMessage(topic_state, mystate);
     }
 
-    void setZFocus(int stepsize) {
+    @Override
+    public void setZFocus(int stepsize) {
         if(stepsize>0) mqttClientInterface.publishMessage(topic_focus_z_fwd, String.valueOf(Math.abs(stepsize)));
         if(stepsize<0) mqttClientInterface.publishMessage(topic_focus_z_bwd, String.valueOf(Math.abs(stepsize)));
-        if(is_findfocus){
+
         try {Thread.sleep(stepsize*80); }
-        catch (Exception e) { Log.e(TAG, String.valueOf(e));}}
+        catch (Exception e) { Log.e(TAG, String.valueOf(e));}
     }
 
 
@@ -1456,6 +1438,14 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
     }
 
+    @Override
+    public void onGuiMessage(String msg) {
+        binding.textViewGuiText.post(new Runnable() {
+            public void run() {
+                binding.textViewGuiText.setText(msg);
+            }
+        });
+    }
 
 
     /**
@@ -1839,7 +1829,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     setLensX(val_lens_x_global);
                 }
                 else {
-                        int i_mean = (int)measureCoupling(dst, ROI_SIZE, 9);
+                        int i_mean = (int)OpenCVUtil.measureCoupling(dst, OpenCVUtil.ROI_SIZE, 9);
                         String mycouplingtext = "Coupling (coarse) @ "+String.valueOf(i_search_maxintensity)+" is "+String.valueOf(i_mean)+"with max: "+String.valueOf(val_mean_max);
                         binding.textViewGuiText.post(new Runnable() {
                             public void run() {
@@ -1899,7 +1889,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             }
         }
 
-        class run_calibration_thread_fine implements Runnable {
+    class run_calibration_thread_fine implements Runnable {
 
             Thread mythread;
             // to stop the thread
@@ -1933,7 +1923,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     i_search_maxintensity++;
 
 
-                    int i_mean = (int)measureCoupling(dst, ROI_SIZE, 9);
+                    int i_mean = (int) OpenCVUtil.measureCoupling(dst, OpenCVUtil.ROI_SIZE, 9);
                     String mycouplingtext = "Coupling (fine) @ "+String.valueOf(i_search_maxintensity)+" is "+String.valueOf(i_mean)+"with max: "+String.valueOf(val_mean_max);
                     binding.textViewGuiText.post(new Runnable() {
                         public void run() {
@@ -1990,153 +1980,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 exit = true;
             }
         }
-
-
-    class run_autofocus_thread implements Runnable {
-
-        Thread mythread;
-        // to stop the thread
-        private boolean exit;
-        private String name;
-
-        run_autofocus_thread(String threadname) {
-            name = threadname;
-            mythread = new Thread(this, name);
-            exit = false;
-            mythread.start(); // Starting the thread
-        }
-
-        // execution of thread starts from run() method
-        public void run() {
-
-            try {
-                isCameraBusy = true;
-
-                // convert the Bitmap coming from the camera frame to MAT
-                Mat src = new Mat();
-                Mat dst = new Mat();
-                Utils.bitmapToMat(global_bitmap, src);
-                Imgproc.cvtColor(src, dst, Imgproc.COLOR_BGRA2BGR);
-
-
-                // reset the lens's position in the first iteration by some value
-                if (i_search_bestfocus == 0) {
-                    val_stdv_max=0;
-                    val_focus_pos_global_old = 0; // Save the value for later
-                    val_focus_pos_global = - val_focus_searchradius;
-                    // reset lens position
-                    setZFocus(-val_focus_searchradius);
-                    try {Thread.sleep(3000);}
-                    catch (Exception e) {Log.e(TAG, String.valueOf(e));}
-                }
-                val_focus_pos_global = i_search_bestfocus;
-
-                // first increase the lens position
-                val_lens_x_global = val_lens_x_global + val_focus_search_stepsize;
-                setZFocus(val_focus_search_stepsize);
-
-                // then measure the focus quality
-                i_search_bestfocus = i_search_bestfocus + val_focus_search_stepsize;
-
-                double i_stdv = measureCoupling(dst, ROI_SIZE, 9);
-                String myfocusingtext = "Focus @ "+String.valueOf(i_search_bestfocus)+" is "+String.valueOf(i_stdv);
-                binding.textViewGuiText.post(new Runnable() {
-                    public void run() {
-                        binding.textViewGuiText.setText(myfocusingtext);
-                    }
-                });
-                Log.i(TAG, myfocusingtext);
-                if (i_stdv > val_stdv_max) {
-                    // Save the position with maximum intensity
-                    val_stdv_max = i_stdv;
-                    val_focus_pos_best_global = val_focus_pos_global;
-                }
-
-                // break if algorithm reaches the maximum of lens positions
-                if (i_search_bestfocus >= (2*val_focus_searchradius)) {
-                    // if maximum number of search iteration is reached, break
-                    if (val_focus_pos_best_global == 0) {
-                        val_focus_pos_best_global = val_focus_pos_global_old;
-                    }
-
-                    // Go to position with highest stdv
-                    setZFocus(-(2*val_focus_searchradius)+val_focus_pos_best_global);
-
-                    is_findfocus = false;
-                    i_search_bestfocus = 0;
-                    Log.i(TAG, "My final focus is at z=" + String.valueOf(val_focus_pos_best_global)+'@'+ String.valueOf(val_stdv_max));
-                }
-
-
-
-
-                // free memory
-                System.gc();
-                src.release();
-                dst.release();
-                global_bitmap.recycle();
-
-                isCameraBusy = false;
-
-
-            } catch (Exception v) {
-                System.out.println(v);
-            }
-
-            System.out.println(name + " Stopped.");
-        }
-
-        // for stopping the thread
-        public void c() {
-            exit = true;
-            is_findfocus = false;
-            i_search_bestfocus = 0;
-
-        }
-    }
-
-
-    double measureCoupling(Mat inputmat, int mysize, int ksize){
-        // reserve some memory
-        MatOfDouble tmp_mean = new MatOfDouble();
-        MatOfDouble tmp_std = new MatOfDouble();
-
-        // crop the matrix
-        // We want only the center part assuming the illuminated wave guide is in the center
-        Rect roi = new Rect((int)inputmat.width()/2-mysize/2, (int)inputmat.height()/2-mysize/2, mysize, mysize);
-        Mat dst_cropped = new Mat(inputmat, roi);
-        // Median filter the image
-        Imgproc.medianBlur(dst_cropped, dst_cropped, ksize);
-
-        Core.meanStdDev(dst_cropped, tmp_mean, tmp_std);
-        double mystd = Core.mean(tmp_std).val[0];
-
-        /*
-        // Estimate Entropy in Image
-        double i_mean = Core.mean(dst_cropped).val[0];
-
-        Mat dst_tmp = new Mat();
-        dst_cropped.convertTo(dst_cropped, CV_32F);
-
-        Core.pow(dst_cropped, 2., dst_tmp);
-
-        double myL2norm = Core.norm(dst_cropped,Core.NORM_L2);
-        double myL1norm = Core.norm(dst_cropped,Core.NORM_L1);
-        //double myMinMaxnorm = Core.norm(dst_cropped,Core.NORM_MINMAX);
-        //Core.MinMaxLocResult myMinMax = Core.minMaxLoc(dst_cropped);
-        int mymin = 0;//(int) myMinMax.minVal;
-        int mymax = 0;//(int) myMinMax.maxVal;
-        */
-
-        //imwrite(Environment.getExternalStorageDirectory() + "/STORMimager/mytest"+String.valueOf(i_search_maxintensity)+"_mean_" + String.valueOf(i_mean) + "_stdv_" + String.valueOf(Core.mean(tmp_std).val[0]) + "_L2_" + String.valueOf(myL2norm) +"_L1_" + String.valueOf(myL1norm) +"_Min_" + String.valueOf(mymin)+"_Max_" + String.valueOf(mymax) +"_L2_" + String.valueOf(myL2norm) +"@" + String.valueOf(val_lens_x_global)+".png", dst_cropped);
-
-        tmp_mean.release();
-        tmp_std.release();
-
-        return mystd;
-
-    }
-
 
     void setGUIelements(SharedPreferences sharedPref){
         mqttClientInterface.setIPAddress(sharedPref.getString("myIPAddress", "192.168.43.88"));

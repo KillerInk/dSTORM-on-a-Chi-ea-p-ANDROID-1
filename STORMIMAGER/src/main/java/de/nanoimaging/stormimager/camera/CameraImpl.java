@@ -16,6 +16,7 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.util.Size;
@@ -25,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.nanoimaging.stormimager.StormApplication;
+import de.nanoimaging.stormimager.camera.capture.AbstractImageCapture;
+import de.nanoimaging.stormimager.camera.capture.ImageCaptureInterface;
 import de.nanoimaging.stormimager.camera.vendor.CaptureRequestEx;
 
 import static de.nanoimaging.stormimager.camera.vendor.CaptureRequestEx.HUAWEI_DUAL_SENSOR_MODE;
@@ -72,6 +75,7 @@ public class CameraImpl implements CameraInterface {
      * {@link CaptureRequest.Builder} for the camera preview
      */
     private CaptureRequest.Builder mPreviewRequestBuilder;
+    private CaptureRequest.Builder mCaptureRequestBuilder;
 
     private CameraStates cameraState = CameraStates.Closed;
 
@@ -83,9 +87,12 @@ public class CameraImpl implements CameraInterface {
      */
     private CaptureSessionEvent captureSessionEventListner;
 
+    private List<ImageCaptureInterface> imageCapturesList = new ArrayList<>();
+
     @SuppressLint("MissingPermission")
     @Override
     public void openCamera(String id) throws CameraAccessException {
+        Log.d(TAG, "openCamera " +id);
         CameraManager manager = (CameraManager) StormApplication.getContext().getSystemService(Context.CAMERA_SERVICE);
         characteristics = manager.getCameraCharacteristics(id);
         manager.openCamera(id, cameraStateCallback, null);
@@ -94,6 +101,7 @@ public class CameraImpl implements CameraInterface {
 
     @Override
     public void closeCamera() {
+        Log.d(TAG, "closeCamera");
         if (cameraDevice != null)
             cameraDevice.close();
     }
@@ -106,13 +114,24 @@ public class CameraImpl implements CameraInterface {
 
     @Override
     public void startPreview() throws CameraAccessException {
-
+        Log.d(TAG,"startPreview");
         if (previewSize != null && surfaces.size() >0) {
             // We set up a CaptureRequest.Builder with the output Surface.
             mPreviewRequestBuilder
                     = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            Log.d(TAG,"Surfaces to add:" + surfaces.size());
             for (Surface surface : surfaces)
                 mPreviewRequestBuilder.addTarget(surface);
+
+            Log.d(TAG,"ImageCaptures To add:" + imageCapturesList.size());
+            if (imageCapturesList.size() > 0)
+            {
+                mCaptureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+                for (ImageCaptureInterface ici : imageCapturesList) {
+                    mCaptureRequestBuilder.addTarget(ici.getSurface());
+                    surfaces.add(ici.getSurface());
+                }
+            }
 
             // Here, we create a CameraCaptureSession for camera preview.
             cameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
@@ -125,6 +144,8 @@ public class CameraImpl implements CameraInterface {
 
                             try {
                                 setup3AControlsLocked(mPreviewRequestBuilder);
+                                if (mCaptureRequestBuilder != null)
+                                    setup3AControlsLocked(mCaptureRequestBuilder);
                                 // Finally, we start displaying the camera preview.
                                 cameraCaptureSession.setRepeatingRequest(
                                         mPreviewRequestBuilder.build(),
@@ -153,11 +174,15 @@ public class CameraImpl implements CameraInterface {
 
     @Override
     public void stopPreview() {
+        Log.d(TAG, "stopPreview");
         if (null != captureSession) {
             captureSession.close();
             captureSession = null;
         }
         surfaces.clear();
+        for (ImageCaptureInterface ici : imageCapturesList)
+           ici.release();
+        imageCapturesList.clear();
     }
 
     @Override
@@ -165,6 +190,8 @@ public class CameraImpl implements CameraInterface {
         this.global_isoval = iso;
         if (mPreviewRequestBuilder != null)
             mPreviewRequestBuilder.set(CaptureRequestEx.HUAWEI_SENSOR_ISO_VALUE, iso);
+        if (mCaptureRequestBuilder != null)
+            mCaptureRequestBuilder.set(CaptureRequestEx.HUAWEI_SENSOR_ISO_VALUE, iso);
         if (captureSession != null) {
             try {
                 captureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), previewCaptureCallback, mBackgroundHandler);
@@ -179,6 +206,8 @@ public class CameraImpl implements CameraInterface {
         this.global_expval = exposureTime;
         if (mPreviewRequestBuilder != null)
             mPreviewRequestBuilder.set(CaptureRequestEx.HUAWEI_SENSOR_EXPOSURE_TIME, exposureTime);
+        if (mCaptureRequestBuilder != null)
+            mCaptureRequestBuilder.set(CaptureRequestEx.HUAWEI_SENSOR_EXPOSURE_TIME, exposureTime);
         if (captureSession != null)
             try {
                 captureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), previewCaptureCallback, mBackgroundHandler);
@@ -360,6 +389,23 @@ public class CameraImpl implements CameraInterface {
         this.captureSessionEventListner = eventListner;
     }
 
+    @Override
+    public void addImageCaptureInterface(ImageCaptureInterface imageCaptureInterface) {
+        imageCapturesList.add(imageCaptureInterface);
+    }
+
+    @Override
+    public void captureImage() throws Exception {
+        Log.d(TAG, "captureImage");
+        if (imageCapturesList.size() == 0)
+            throw  new Exception("No image capture Listners attached");
+        try {
+            captureSession.capture(mCaptureRequestBuilder.build(),imageCaptureCallback,mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
     private Size findPreviewSize()
     {
         StreamConfigurationMap map = characteristics.get(
@@ -377,4 +423,13 @@ public class CameraImpl implements CameraInterface {
         }
         return largestSize;
     }
+
+    CameraCaptureSession.CaptureCallback imageCaptureCallback = new CameraCaptureSession.CaptureCallback() {
+        @Override
+        public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+            Log.d(TAG,"onCaptureCompleted");
+            for (ImageCaptureInterface ici : imageCapturesList)
+                ici.setCaptureResult(result);
+        }
+    };
 }
