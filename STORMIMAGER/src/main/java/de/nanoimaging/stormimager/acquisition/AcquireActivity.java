@@ -101,6 +101,8 @@ import de.nanoimaging.stormimager.camera.CameraImpl;
 import de.nanoimaging.stormimager.camera.CameraInterface;
 import de.nanoimaging.stormimager.camera.CameraStates;
 import de.nanoimaging.stormimager.databinding.ActivityAcquireBinding;
+import de.nanoimaging.stormimager.network.MqttClient;
+import de.nanoimaging.stormimager.network.MqttClientInterface;
 import de.nanoimaging.stormimager.process.VideoProcessor;
 import de.nanoimaging.stormimager.tflite.TFLitePredict;
 import de.nanoimaging.stormimager.utils.ImageUtils;
@@ -111,12 +113,6 @@ import de.nanoimaging.stormimager.utils.ImageUtils;
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class AcquireActivity extends Activity implements FragmentCompat.OnRequestPermissionsResultCallback, AcquireSettings.NoticeDialogListener {
 
-    /**
-     * MQTT related stuff
-     */
-    MqttAndroidClient mqttAndroidClient;
-
-    String myIPAddress = "192.168.43.88";             // IP for the MQTT Broker, format tcp://ipaddress
     public static final String topic_lens_z = "lens/right/z";
     public static final String topic_lens_x = "lens/right/x";
     public static final String topic_laser = "laser/red";
@@ -129,10 +125,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     String STATE_CALIBRATION = "state_calib";       // STate signal sent to ESP for light signal
     String STATE_WAIT = "state_wait";               // STate signal sent to ESP for light signal
     String STATE_RECORD = "state_record";           // STate signal sent to ESP for light signal
-
-    final String MQTT_USER = "username";
-    final String MQTT_PASS = "pi";
-    final String MQTT_CLIENTID = "STORMimager";
 
     SharedPreferences.Editor editor = null;
 
@@ -242,6 +234,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     boolean is_process_sofi = false;
 
     private CameraInterface cameraInterface;
+    private MqttClientInterface mqttClientInterface;
 
 
     /**
@@ -528,13 +521,17 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         settingsDialogFragment = new AcquireSettings();
 
         // start MQTT
-        initialConfig();
+        mqttClientInterface = new MqttClient(new MqttClientInterface.MessageEvent() {
+            @Override
+            public void onMessage(String msg) {
+                showToast(msg);
+            }
+        });
         if (isNetworkAvailable()) {
-            Toast.makeText(this, "Connecting MQTT", Toast.LENGTH_SHORT).show();
-            initialConfig();
+            showToast("Connecting MQTT");
+            mqttClientInterface.connect();
         } else
-            Toast.makeText(this, "We don't have network", Toast.LENGTH_SHORT).show();
-
+            showToast("We don't have network");
         // *****************************************************************************************
         //  Camera STUFF
         //******************************************************************************************
@@ -777,9 +774,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 if (isChecked) {
                     Log.i(TAG, "Checked");
                     // turn on fluctuation
-                    publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
+                    mqttClientInterface.publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
                 } else {
-                    publishMessage(topic_lens_sofi_z, String.valueOf(0));
+                    mqttClientInterface.publishMessage(topic_lens_sofi_z, String.valueOf(0));
                 }
             }
 
@@ -978,10 +975,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      * Requests permissions necessary to use camera and save pictures.
      */
     private void requestCameraPermissions() {
-
         ActivityCompat.requestPermissions(AcquireActivity.this, CAMERA_PERMISSIONS, REQUEST_CAMERA_PERMISSIONS);
-
-
     }
 
     /**
@@ -1280,75 +1274,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         startPreview();
     }
 
-    private void initialConfig() {
-        mqttAndroidClient = new MqttAndroidClient(getApplicationContext(), "tcp://" + myIPAddress, MQTT_CLIENTID);
-        mqttAndroidClient.setCallback(new MqttCallbackExtended() {
-            @Override
-            public void connectComplete(boolean reconnect, String myIPAddress) {
-
-                if (reconnect) {
-                    //addToHistory("Reconnected to : " + myIPAddress);
-                    // Because Clean Session is true, we need to re-subscribe
-                    // subscribeToTopic();
-                } else {
-                    //addToHistory("Connected to: " + myIPAddress);
-                }
-            }
-
-            @Override
-            public void connectionLost(Throwable cause) {
-                //addToHistory("The Connection was lost.");
-            }
-
-            @Override
-            public void messageArrived(String topic, MqttMessage message) throws Exception {
-                //addToHistory("Incoming message: " + new String(message.getPayload()));
-            }
-
-            @Override
-            public void deliveryComplete(IMqttDeliveryToken token) {
-
-            }
-        });
-
-        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
-        mqttConnectOptions.setAutomaticReconnect(true);
-        mqttConnectOptions.setCleanSession(false);
-        mqttConnectOptions.setUserName(MQTT_USER);
-        mqttConnectOptions.setPassword(MQTT_PASS.toCharArray());
-        mqttConnectOptions.setAutomaticReconnect(true);
-        mqttConnectOptions.setCleanSession(false);
-
-        try {
-            //addToHistory("Connecting to " + myIPAddress);
-            mqttAndroidClient.connect(mqttConnectOptions, null, new IMqttActionListener() {
-                @Override
-                public void onSuccess(IMqttToken asyncActionToken) {
-                    DisconnectedBufferOptions disconnectedBufferOptions = new DisconnectedBufferOptions();
-                    disconnectedBufferOptions.setBufferEnabled(true);
-                    disconnectedBufferOptions.setBufferSize(100);
-                    disconnectedBufferOptions.setPersistBuffer(false);
-                    disconnectedBufferOptions.setDeleteOldestMessages(false);
-                    mqttAndroidClient.setBufferOpts(disconnectedBufferOptions);
-
-                    publishMessage("A phone has connected.", "");
-                    // subscribeToTopic();
-
-                    Toast.makeText(AcquireActivity.this, "Connected", Toast.LENGTH_SHORT).show();
-                }
-
-                @Override
-                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
-                    //addToHistory("Failed to connect to: " + myIPAddress);
-                    Toast.makeText(AcquireActivity.this, "Connection attemp failed", Toast.LENGTH_SHORT).show();
-                }
-            });
-
-
-        } catch (MqttException ex) {
-            ex.printStackTrace();
-        }
-    }
 
     private boolean isNetworkAvailable() {
         ConnectivityManager connectivityManager
@@ -1357,49 +1282,26 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
 
-    public void publishMessage(String pub_topic, String publishMessage) {
-
-        Log.i(TAG, pub_topic + " " + publishMessage);
-        try {
-            MqttMessage message = new MqttMessage();
-            message.setPayload(publishMessage.getBytes());
-            mqttAndroidClient.publish(pub_topic, message);
-            //addToHistory("Message Published");
-            if (!mqttAndroidClient.isConnected()) {
-                //addToHistory(mqttAndroidClient.getBufferedMessageCount() + " messages in buffer.");
-            }
-            Log.i(TAG, "Message sent: " + pub_topic + message);
-        } catch (MqttException e) {
-            Toast.makeText(this, "Error while sending data", Toast.LENGTH_SHORT).show();
-            //System.err.println("Error Publishing: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    private void stopConnection() {
-        try {
-            mqttAndroidClient.close();
-            Toast.makeText(AcquireActivity.this, "Connection closed - on purpose?", Toast.LENGTH_SHORT).show();
-        } catch (Throwable e) {
-            Toast.makeText(AcquireActivity.this, "Something went wrong - propbably no connection established?", Toast.LENGTH_SHORT).show();
-            Log.e(TAG, String.valueOf(e));
-        }
-    }
 
     // -------------------------------
     // ------ MQTT STUFFF -----------
     //- ------------------------------
 
     public void setIPAddress(String mIPaddress) {
-        myIPAddress = mIPaddress;
-        editor.putString("myIPAddress", myIPAddress);
+        mqttClientInterface.setIPAddress(mIPaddress);
+        editor.putString("myIPAddress", mIPaddress);
         editor.commit();
+    }
+
+    public String getIpAdress()
+    {
+        return mqttClientInterface.getIPAdress();
     }
 
     public void setSOFIX(boolean misSOFI_X, int mvalSOFIX) {
         val_sofi_amplitude_x = mvalSOFIX;
         is_SOFI_x = misSOFI_X;
-        publishMessage(topic_lens_sofi_x, String.valueOf(val_sofi_amplitude_x));
+        mqttClientInterface.publishMessage(topic_lens_sofi_x, String.valueOf(val_sofi_amplitude_x));
         editor.putInt("val_sofi_amplitude_x", val_sofi_amplitude_x);
         editor.commit();
     }
@@ -1407,7 +1309,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     public void setSOFIZ(boolean misSOFI_Z, int mvalSOFIZ) {
         val_sofi_amplitude_z = mvalSOFIZ;
         is_SOFI_z = misSOFI_Z;
-        publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
+        mqttClientInterface.publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
         editor.putInt("val_sofi_amplitude_z", val_sofi_amplitude_z);
         editor.commit();
     }
@@ -1448,14 +1350,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     }
 
     void MQTT_Reconnect(String mIP) {
-
-        myIPAddress = mIP;
-        Toast.makeText(AcquireActivity.this, "IP-Address set to: " + myIPAddress, Toast.LENGTH_SHORT).show();
-        stopConnection();
-        initialConfig();
+        mqttClientInterface.stopConnection();
+        mqttClientInterface.setIPAddress(mIP);
+        mqttClientInterface.connect();
+        showToast("IP-Address set to: " + mIP);
 
         // Save the IP address for next start
-        editor.putString("myIPAddress", myIPAddress);
+        editor.putString("myIPAddress", mIP);
         editor.commit();
     }
 
@@ -1492,7 +1393,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     public void setLaser(int laserintensity) {
         if (laserintensity < PWM_RES && laserintensity>=0 ) {
             if (laserintensity ==  0)laserintensity=1;
-            publishMessage(topic_laser, String.valueOf(lin2qudratic(laserintensity, PWM_RES)));
+            mqttClientInterface.publishMessage(topic_laser, String.valueOf(lin2qudratic(laserintensity, PWM_RES)));
             // Wait until the command was actually sent
             if(is_findcoupling){
                 try {
@@ -1505,12 +1406,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     }
 
     public void setState(String mystate) {
-        publishMessage(topic_state, mystate);
+        mqttClientInterface.publishMessage(topic_state, mystate);
     }
 
     void setZFocus(int stepsize) {
-        if(stepsize>0) publishMessage(topic_focus_z_fwd, String.valueOf(Math.abs(stepsize)));
-        if(stepsize<0) publishMessage(topic_focus_z_bwd, String.valueOf(Math.abs(stepsize)));
+        if(stepsize>0) mqttClientInterface.publishMessage(topic_focus_z_fwd, String.valueOf(Math.abs(stepsize)));
+        if(stepsize<0) mqttClientInterface.publishMessage(topic_focus_z_bwd, String.valueOf(Math.abs(stepsize)));
         if(is_findfocus){
         try {Thread.sleep(stepsize*80); }
         catch (Exception e) { Log.e(TAG, String.valueOf(e));}}
@@ -1521,7 +1422,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     void setLensX(int lensposition) {
         if ((lensposition < PWM_RES) && (lensposition >=0)) {
             if (lensposition ==  0)lensposition=1;
-            publishMessage(topic_lens_x, String.valueOf(lin2qudratic(lensposition, PWM_RES)));
+            mqttClientInterface.publishMessage(topic_lens_x, String.valueOf(lin2qudratic(lensposition, PWM_RES)));
             // Wait until the command was actually sent
             if(is_findcoupling){
             try {
@@ -1540,7 +1441,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     void setLensZ(int lensposition) {
         if (lensposition < PWM_RES && lensposition >= 0) {
             if (lensposition ==  0)lensposition=1;
-            publishMessage(topic_lens_z, String.valueOf(lin2qudratic(lensposition, PWM_RES)));
+            mqttClientInterface.publishMessage(topic_lens_z, String.valueOf(lin2qudratic(lensposition, PWM_RES)));
             // Wait until the command was actually sent
             if(is_findcoupling){
                 try {
@@ -1633,8 +1534,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             // Set some GUI components
             binding.acquireProgressBar.setVisibility(View.VISIBLE); // Make invisible at first, then have it pop up
             binding.acquireProgressBar.setMax(val_nperiods_calibration);
-
-            Toast.makeText(AcquireActivity.this, "Start Measurements", Toast.LENGTH_SHORT).show();
+            showToast("Start Measurements");
 
         }
 
@@ -1708,11 +1608,11 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     }
 
                     // turn on fluctuation
-                    publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
+                    mqttClientInterface.publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
                     mSleep(val_duration_measurement * 1000); //Let AEC stabalize if it's on
 
                     // turn off fluctuation
-                    publishMessage(topic_lens_sofi_z, String.valueOf(0));
+                    mqttClientInterface.publishMessage(topic_lens_sofi_z, String.valueOf(0));
                     mSleep(500); //Let AEC stabalize if it's on
 
                     // stop video-capture
@@ -1775,7 +1675,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
             // free memory
             is_findcoupling = false;
-            Toast.makeText(AcquireActivity.this, "Stop Measurements", Toast.LENGTH_SHORT).show();
+            showToast("Stop Measurements");
             System.gc();
         }
     }
@@ -2239,7 +2139,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
 
     void setGUIelements(SharedPreferences sharedPref){
-        myIPAddress = sharedPref.getString("myIPAddress", myIPAddress);
+        mqttClientInterface.setIPAddress(sharedPref.getString("myIPAddress", "192.168.43.88"));
         val_nperiods_calibration = sharedPref.getInt("val_nperiods_calibration", val_nperiods_calibration);
         val_period_measurement = sharedPref.getInt("val_period_measurement", val_period_measurement);
         val_duration_measurement = sharedPref.getInt("val_duration_measurement", val_duration_measurement);
