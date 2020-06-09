@@ -3,11 +3,16 @@ apply plugin: 'com.android.application'
 apply plugin: 'com.android.application'
 
 android {
+
+    buildFeatures {
+        viewBinding = true
+    }
+
     compileSdkVersion 26
     defaultConfig {
         //applicationId "com.example.dell.opencvandroid"
-        minSdkVersion 19
-        targetSdkVersion 26
+        minSdkVersion 21
+        targetSdkVersion 29
         versionCode 3
         versionName "3.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -26,6 +31,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    buildToolsVersion '29.0.2'
 }
 
 dependencies {
