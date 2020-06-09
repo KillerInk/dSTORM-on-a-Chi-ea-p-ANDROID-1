@@ -36,6 +36,11 @@ public class FindFocusTask implements YuvImageCapture.YuvToBitmapEvent {
         this.zFocusInterface = zFocusInterface;
     }
 
+    public boolean isSearchForFocus()
+    {
+        return searchForFocus;
+    }
+
     public void process()
     {
         if (searchForFocus) {

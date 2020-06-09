@@ -174,14 +174,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     boolean is_findcoupling_coarse = true;              // State if coupling is in fine mode
     boolean is_findcoupling_fine = false;               // State if coupling is in coarse mode
 
-    // settings for autofocus
-    int val_focus_pos_global_old = 0;
-    int val_focus_pos_global = 0;
-    int i_search_bestfocus = 0;
-    int val_focus_pos_best_global = 0;
-    int val_focus_searchradius = 40;
-    int val_focus_search_stepsize = 1;
-
     // File IO parameters
     File myVideoFileName = new File("");
     ByteBuffer buffer = null; // for the processing
@@ -864,8 +856,15 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 String my_gui_text = "Lens Calibration in progress";
 
                 binding.textViewGuiText.setText(my_gui_text);
-                yuvImageCapture.setYuvToBitmapEventListner(findFocusTask);
-                findFocusTask.process();
+                if (!findFocusTask.isSearchForFocus()) {
+                    yuvImageCapture.setYuvToBitmapEventListner(findFocusTask);
+                    findFocusTask.process();
+                }
+                else
+                {
+                    yuvImageCapture.setYuvToBitmapEventListner(null);
+                    findFocusTask.stop();
+                }
 
             }
         });
