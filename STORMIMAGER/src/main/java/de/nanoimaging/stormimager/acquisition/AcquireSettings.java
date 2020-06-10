@@ -121,7 +121,7 @@ public class AcquireSettings extends DialogFragment {
 
         // ASsign the GUI components 
         acquireSettingsIPaddress = (TextView) content.findViewById(R.id.editText_ip_address);
-        acquireSettingsIPaddress.setText(callingActivity.myIPAddress);
+        acquireSettingsIPaddress.setText(callingActivity.getIpAdress());
 
         acquireSettingsValSOFIX = (TextView) content.findViewById(R.id.editText_SOFI_x);
         acquireSettingsValSOFIX.setInputType(InputType.TYPE_CLASS_NUMBER);
