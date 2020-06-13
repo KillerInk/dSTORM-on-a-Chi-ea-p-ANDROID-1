@@ -107,8 +107,10 @@ import de.nanoimaging.stormimager.network.MqttClientInterface;
 import de.nanoimaging.stormimager.process.VideoProcessor;
 import de.nanoimaging.stormimager.tasks.FindFocusTask;
 import de.nanoimaging.stormimager.tflite.TFLitePredict;
+import de.nanoimaging.stormimager.utils.HideNavBarHelper;
 import de.nanoimaging.stormimager.utils.ImageUtils;
 import de.nanoimaging.stormimager.utils.OpenCVUtil;
+import de.nanoimaging.stormimager.utils.PermissionUtil;
 
 /**
  * Created by Bene on 26.09.2015.
@@ -240,19 +242,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      * Conversion from screen rotation to JPEG orientation.
      */
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
-    /**
-     * Request code for camera permissions.
-     */
-    private static final int REQUEST_CAMERA_PERMISSIONS = 1;
-    /**
-     * Permissions required to take a picture.
-     */
-    private static final String[] CAMERA_PERMISSIONS = {
-            Manifest.permission.CAMERA,
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.RECORD_AUDIO,
-    };
+
     /**
      * Tolerance when comparing aspect ratios.
      */
@@ -476,6 +466,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      * view binding from activity_acquire.xml
      */
     private ActivityAcquireBinding binding;
+    private PermissionUtil permissionUtil;
+    private HideNavBarHelper hideNavBarHelper;
 
     //**********************************************************************************************
     //  Method onCreate
@@ -487,13 +479,16 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         binding = ActivityAcquireBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        permissionUtil = new PermissionUtil();
+        hideNavBarHelper = new HideNavBarHelper();
 
         // Initialize OpenCV using external library for now //TODO use internal!
         OpenCVLoader.initDebug();
         //OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
 
         cameraInterface = new CameraImpl();
+        binding.texture.setSurfaceTextureListener(mSurfaceTextureListener);
         findFocusTask = new FindFocusTask(cameraInterface,this);
         // load tensorflow stuff
         mypredictor = new TFLitePredict(AcquireActivity.this, mymodelfile, Nx_in, Ny_in, N_time, N_upscale);
@@ -916,8 +911,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     public void onResume() {
         super.onResume();
         cameraInterface.startBackgroundThread();
-        if (!hasAllPermissionsGranted()) {
-            requestCameraPermissions();
+        if (!permissionUtil.hasAllPermissionsGranted()) {
+            permissionUtil.requestCameraPermissions(this);
             return;
         }
         try {
@@ -926,11 +921,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-        if (binding.texture.isAvailable()) {
-            configureTransform(binding.texture.getWidth(), binding.texture.getHeight());
-        } else {
-            binding.texture.setSurfaceTextureListener(mSurfaceTextureListener);
-        }
+
         if (mOrientationListener != null && mOrientationListener.canDetectOrientation()) {
             mOrientationListener.enable();
         }
@@ -959,38 +950,18 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == REQUEST_CAMERA_PERMISSIONS) {
-            for (int result : grantResults) {
-                if (result != PackageManager.PERMISSION_GRANTED) {
-                    showMissingPermissionError();
-                    return;
-                }
-            }
+        if (!permissionUtil.onRequestPermissionsResult(requestCode,permissions,grantResults)) {
+            showMissingPermissionError();
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
 
-    /**
-     * Requests permissions necessary to use camera and save pictures.
-     */
-    private void requestCameraPermissions() {
-        ActivityCompat.requestPermissions(AcquireActivity.this, CAMERA_PERMISSIONS, REQUEST_CAMERA_PERMISSIONS);
-    }
-
-    /**
-     * Tells whether all the necessary permissions are granted to this app.
-     *
-     * @return True if all the required permissions are granted.
-     */
-    private boolean hasAllPermissionsGranted() {
-        for (String permission : CAMERA_PERMISSIONS) {
-            if (ActivityCompat.checkSelfPermission(AcquireActivity.this, permission)
-                    != PackageManager.PERMISSION_GRANTED) {
-                return false;
-            }
-        }
-        return true;
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus)
+            hideNavBarHelper.HIDENAVBAR(getWindow());
     }
 
     /**
@@ -1008,7 +979,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     private void configureTransform(int viewWidth, int viewHeight) {
         Activity activity = AcquireActivity.this;
         synchronized (mCameraStateLock) {
-            if (null == binding.texture || null == activity) {
+            if (null == binding.texture || null == activity || !permissionUtil.hasAllPermissionsGranted()) {
                 return;
             }
 
