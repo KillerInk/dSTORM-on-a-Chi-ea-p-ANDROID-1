@@ -59,9 +59,8 @@ public abstract class AbstractImageCapture implements ImageCaptureInterface {
     public void onCaptureCompleted(Image image, CaptureResult result)
     {
         Log.d(TAG, "onCaptureCompleted");
-        this.image.close();
-        image = null;
-        result = null;
+        if (this.image != null)
+            this.image.close();
     }
 
     @Override

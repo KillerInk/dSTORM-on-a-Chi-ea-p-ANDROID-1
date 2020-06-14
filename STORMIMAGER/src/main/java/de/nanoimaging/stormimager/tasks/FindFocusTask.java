@@ -59,6 +59,7 @@ public class FindFocusTask extends AbstractTask<ZFocusInterface> implements YuvI
         while (isworking) {
             try {
                 input = mats_to_process.take();
+                Log.d(TAG,"run: take mate");
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 input = null;
@@ -129,20 +130,23 @@ public class FindFocusTask extends AbstractTask<ZFocusInterface> implements YuvI
 
     @Override
     public void onYuvMatCompleted(Mat bitmap) {
-        if (mats_to_process.remainingCapacity() == 0)
-        {
-            try {
-                Mat mat = mats_to_process.take();
-                mat.release();
+        Log.d(TAG, "onYuvMapCompleted: " + (bitmap != null));
+        if (bitmap != null) {
+            /*if (mats_to_process.remainingCapacity() == 0) {
+                try {
+                    Mat mat = mats_to_process.take();
+                    mat.release();
 
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }*/
+            try {
+                Log.d(TAG, "onYuvMapCompleted remaining size" + mats_to_process.remainingCapacity());
+                mats_to_process.put(bitmap);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        }
-        try {
-            mats_to_process.put(bitmap);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         }
         if (isWorking()) {
             try {
@@ -151,7 +155,5 @@ public class FindFocusTask extends AbstractTask<ZFocusInterface> implements YuvI
                 e.printStackTrace();
             }
         }
-
     }
-
 }

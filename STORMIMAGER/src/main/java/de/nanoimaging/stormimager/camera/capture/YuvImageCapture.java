@@ -30,7 +30,7 @@ public class YuvImageCapture extends AbstractImageCapture {
     }
 
     @Override
-    public void onCaptureCompleted(Image image, CaptureResult result) {
+    public synchronized void onCaptureCompleted(Image image, CaptureResult result) {
         Log.d(TAG, "onCaptureCompleted");
         try {
             if (yuvToBitmapEventListner != null)
@@ -40,6 +40,8 @@ public class YuvImageCapture extends AbstractImageCapture {
         }
         catch (IllegalStateException ex)
         {
+            if (yuvToBitmapEventListner != null)
+                yuvToBitmapEventListner.onYuvMatCompleted(null);
             Log.d(TAG, "Image Already Closed");
         }
 
