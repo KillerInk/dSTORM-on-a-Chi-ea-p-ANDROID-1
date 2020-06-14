@@ -6,7 +6,6 @@ import android.content.pm.PackageManager;
 import android.support.v4.app.ActivityCompat;
 
 import de.nanoimaging.stormimager.StormApplication;
-import de.nanoimaging.stormimager.acquisition.AcquireActivity;
 
 public class PermissionUtil {
     /**
@@ -27,7 +26,6 @@ public class PermissionUtil {
         if (requestCode == REQUEST_CAMERA_PERMISSIONS) {
             for (int result : grantResults) {
                 if (result != PackageManager.PERMISSION_GRANTED) {
-                    //showMissingPermissionError();
                     return false;
                 }
             }

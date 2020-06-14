@@ -118,14 +118,6 @@ import de.nanoimaging.stormimager.utils.PermissionUtil;
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class AcquireActivity extends Activity implements FragmentCompat.OnRequestPermissionsResultCallback, AcquireSettings.NoticeDialogListener ,ZFocusInterface {
 
-    public static final String topic_lens_z = "lens/right/z";
-    public static final String topic_lens_x = "lens/right/x";
-    public static final String topic_laser = "laser/red";
-    public static final String topic_lens_sofi_z = "lens/right/sofi/z";
-    public static final String topic_lens_sofi_x = "lens/right/sofi/x";
-    public static final String topic_state = "state";
-    public static final String topic_focus_z_fwd = "stepper/z/fwd";
-    public static final String topic_focus_z_bwd = "stepper/z/bwd";
 
     String STATE_CALIBRATION = "state_calib";       // STate signal sent to ESP for light signal
     String STATE_WAIT = "state_wait";               // STate signal sent to ESP for light signal
@@ -760,9 +752,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 if (isChecked) {
                     Log.i(TAG, "Checked");
                     // turn on fluctuation
-                    mqttClientInterface.publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
+                    mqttClientInterface.set_lens_sofi_z(String.valueOf(val_sofi_amplitude_z));
                 } else {
-                    mqttClientInterface.publishMessage(topic_lens_sofi_z, String.valueOf(0));
+                    mqttClientInterface.set_lens_sofi_z(String.valueOf(0));
                 }
             }
 
@@ -836,8 +828,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 is_measurement = false;
 
                 binding.textViewGuiText.setText(my_gui_text);
-                setState(STATE_CALIBRATION);
-
+                mqttClientInterface.setState(STATE_CALIBRATION);
             }
         });
 
@@ -1252,7 +1243,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     public void setSOFIX(boolean misSOFI_X, int mvalSOFIX) {
         val_sofi_amplitude_x = mvalSOFIX;
         is_SOFI_x = misSOFI_X;
-        mqttClientInterface.publishMessage(topic_lens_sofi_x, String.valueOf(val_sofi_amplitude_x));
+        mqttClientInterface.set_lens_sofi_x(String.valueOf(val_sofi_amplitude_x));
         editor.putInt("val_sofi_amplitude_x", val_sofi_amplitude_x);
         editor.commit();
     }
@@ -1260,7 +1251,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     public void setSOFIZ(boolean misSOFI_Z, int mvalSOFIZ) {
         val_sofi_amplitude_z = mvalSOFIZ;
         is_SOFI_z = misSOFI_Z;
-        mqttClientInterface.publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
+        mqttClientInterface.set_lens_sofi_z(String.valueOf(val_sofi_amplitude_z));
         editor.putInt("val_sofi_amplitude_z", val_sofi_amplitude_z);
         editor.commit();
     }
@@ -1344,7 +1335,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     public void setLaser(int laserintensity) {
         if (laserintensity < PWM_RES && laserintensity>=0 ) {
             if (laserintensity ==  0)laserintensity=1;
-            mqttClientInterface.publishMessage(topic_laser, String.valueOf(lin2qudratic(laserintensity, PWM_RES)));
+            mqttClientInterface.set_laser(String.valueOf(lin2qudratic(laserintensity, PWM_RES)));
             // Wait until the command was actually sent
             if(is_findcoupling){
                 try {
@@ -1356,14 +1347,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
     }
 
-    public void setState(String mystate) {
-        mqttClientInterface.publishMessage(topic_state, mystate);
-    }
-
     @Override
     public void setZFocus(int stepsize) {
-        if(stepsize>0) mqttClientInterface.publishMessage(topic_focus_z_fwd, String.valueOf(Math.abs(stepsize)));
-        if(stepsize<0) mqttClientInterface.publishMessage(topic_focus_z_bwd, String.valueOf(Math.abs(stepsize)));
+        if(stepsize>0) mqttClientInterface.set_focus_z_fwd(String.valueOf(Math.abs(stepsize)));
+        if(stepsize<0) mqttClientInterface.set_focus_z_bwd(String.valueOf(Math.abs(stepsize)));
 
         try {Thread.sleep(stepsize*80); }
         catch (Exception e) { Log.e(TAG, String.valueOf(e));}
@@ -1374,7 +1361,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     void setLensX(int lensposition) {
         if ((lensposition < PWM_RES) && (lensposition >=0)) {
             if (lensposition ==  0)lensposition=1;
-            mqttClientInterface.publishMessage(topic_lens_x, String.valueOf(lin2qudratic(lensposition, PWM_RES)));
+            mqttClientInterface.set_lens_sofi_x(String.valueOf(lin2qudratic(lensposition, PWM_RES)));
             // Wait until the command was actually sent
             if(is_findcoupling){
             try {
@@ -1393,7 +1380,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     void setLensZ(int lensposition) {
         if (lensposition < PWM_RES && lensposition >= 0) {
             if (lensposition ==  0)lensposition=1;
-            mqttClientInterface.publishMessage(topic_lens_z, String.valueOf(lin2qudratic(lensposition, PWM_RES)));
+            mqttClientInterface.set_lens_sofi_z(String.valueOf(lin2qudratic(lensposition, PWM_RES)));
             // Wait until the command was actually sent
             if(is_findcoupling){
                 try {
@@ -1544,10 +1531,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     is_measurement = false;
                     i_meas++;
                     publishProgress();
-                    setState(STATE_CALIBRATION);
+                    mqttClientInterface.setState(STATE_CALIBRATION);
                 }
                 else if(!is_findcoupling&is_measurement) {// if no coupling has to be done -> measure!
-                    setState(STATE_RECORD);
+                    mqttClientInterface.setState(STATE_RECORD);
                     // Once in a while update the GUI
                     my_gui_text = "Measurement: " + String.valueOf(i_meas ) + '/' + String.valueOf(n_meas);
                     publishProgress();
@@ -1568,11 +1555,11 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     }
 
                     // turn on fluctuation
-                    mqttClientInterface.publishMessage(topic_lens_sofi_z, String.valueOf(val_sofi_amplitude_z));
+                    mqttClientInterface.set_lens_sofi_z(String.valueOf(val_sofi_amplitude_z));
                     mSleep(val_duration_measurement * 1000); //Let AEC stabalize if it's on
 
                     // turn off fluctuation
-                    mqttClientInterface.publishMessage(topic_lens_sofi_z, String.valueOf(0));
+                    mqttClientInterface.set_lens_sofi_z(String.valueOf(0));
                     mSleep(500); //Let AEC stabalize if it's on
 
                     // stop video-capture
@@ -1595,7 +1582,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     // Once in a while update the GUI
                     my_gui_text = "Waiting for next measurements. "+String.valueOf(val_nperiods_calibration-i_meas)+"/"+String.valueOf(val_nperiods_calibration)+"left until recalibration";
                     publishProgress();
-                    setState(STATE_WAIT);
+                    mqttClientInterface.setState(STATE_WAIT);
 
                     // only perform the measurements if the camera is not looking for best coupling
 

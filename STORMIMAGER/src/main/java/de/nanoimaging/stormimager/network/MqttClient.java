@@ -14,7 +14,6 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import de.nanoimaging.stormimager.StormApplication;
-import de.nanoimaging.stormimager.acquisition.AcquireActivity;
 
 public class MqttClient implements MqttClientInterface {
 
@@ -145,6 +144,35 @@ public class MqttClient implements MqttClientInterface {
         } catch (MqttException ex) {
             ex.printStackTrace();
         }
+    }
+
+    public void setState(String state) {
+            publishMessage(topic_state, state);
+    }
+
+    @Override
+    public void set_lens_sofi_z(String z) {
+        publishMessage(topic_lens_sofi_z, z);
+    }
+
+    @Override
+    public void set_lens_sofi_x(String x) {
+        publishMessage(topic_lens_sofi_x,x);
+    }
+
+    @Override
+    public void set_laser(String laser) {
+        publishMessage(topic_laser,laser);
+    }
+
+    @Override
+    public void set_focus_z_fwd(String focus) {
+        publishMessage(topic_focus_z_fwd,focus);
+    }
+
+    @Override
+    public void set_focus_z_bwd(String focus) {
+        publishMessage(topic_focus_z_bwd,focus);
     }
 
     private void sendMsg(String msg)
