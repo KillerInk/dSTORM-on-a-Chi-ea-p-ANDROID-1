@@ -399,11 +399,16 @@ public class CameraImpl implements CameraInterface {
         Log.d(TAG, "captureImage");
         if (imageCapturesList.size() == 0)
             throw  new Exception("No image capture Listners attached");
-        try {
-            captureSession.capture(mCaptureRequestBuilder.build(),imageCaptureCallback,mBackgroundHandler);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
+        mBackgroundHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    captureSession.capture(mCaptureRequestBuilder.build(),imageCaptureCallback,mBackgroundHandler);
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     private Size findPreviewSize()

@@ -7,6 +7,9 @@ import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+
 import de.nanoimaging.stormimager.acquisition.ZFocusInterface;
 import de.nanoimaging.stormimager.camera.CameraInterface;
 import de.nanoimaging.stormimager.camera.capture.YuvImageCapture;
@@ -17,8 +20,6 @@ public class FindFocusTask implements YuvImageCapture.YuvToBitmapEvent {
     private final String TAG = FindFocusTask.class.getSimpleName();
     private CameraInterface cameraInterface;
     private ZFocusInterface zFocusInterface;
-    private Mat bitmap;
-    private Object bitmapLock = new Object();
     private boolean searchForFocus = false;
     int val_focus_pos_global_old = 0;
     int val_focus_pos_global = 0;
@@ -29,11 +30,13 @@ public class FindFocusTask implements YuvImageCapture.YuvToBitmapEvent {
     int val_lens_x_global = 0;                          // global position for the x-lens
     double val_stdv_max = 0;                            // for focus stdv
 
+    private final BlockingQueue<Mat> mats_to_process;
 
     public FindFocusTask(CameraInterface cameraInterface, ZFocusInterface zFocusInterface)
     {
         this.cameraInterface = cameraInterface;
         this.zFocusInterface = zFocusInterface;
+        mats_to_process = new ArrayBlockingQueue<>(4);
     }
 
     public boolean isSearchForFocus()
@@ -47,29 +50,28 @@ public class FindFocusTask implements YuvImageCapture.YuvToBitmapEvent {
             searchForFocus = false;
             return;
         }
+        try {
+            cameraInterface.captureImage();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         searchForFocus = true;
         new Thread(new Runnable() {
             @Override
             public void run() {
                 Mat src = new Mat();
                 Mat dst = new Mat();
+                Mat input = null;
                 while (searchForFocus) {
                     try {
-                        getNewBitmap();
-                    } catch (Exception e) {
+                        input = mats_to_process.take();
+                    } catch (InterruptedException e) {
                         e.printStackTrace();
+                        input = null;
                     }
-                    if (bitmap == null)
-                    {
-                        Log.d(TAG, "Bitmap is null");
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
+                    if(input == null)
                         return;
-                    }
-                    dst = OpenCVUtil.getBGRMatFromYuvMat(bitmap);
+                    dst = OpenCVUtil.getBGRMatFromYuvMat(input);
 
                     // reset the lens's position in the first iteration by some value
                     if (i_search_bestfocus == 0) {
@@ -122,7 +124,11 @@ public class FindFocusTask implements YuvImageCapture.YuvToBitmapEvent {
 
                 src.release();
                 dst.release();
-                bitmap.release();
+                input.release();
+                for (Mat mat :mats_to_process) {
+                    mat.release();
+                }
+                mats_to_process.clear();
                 System.gc();
             }
 
@@ -132,27 +138,32 @@ public class FindFocusTask implements YuvImageCapture.YuvToBitmapEvent {
     public void stop()
     {
         searchForFocus = false;
-        synchronized (bitmapLock)
-        {
-            bitmapLock.notify();
-        }
-    }
-
-    private void getNewBitmap() throws Exception {
-        synchronized (bitmapLock)
-        {
-            cameraInterface.captureImage();
-            bitmapLock.wait();
-        }
     }
 
     @Override
     public void onYuvMatCompleted(Mat bitmap) {
-        synchronized (bitmapLock)
+        if (mats_to_process.remainingCapacity() == 0)
         {
-            this.bitmap = bitmap;
-            bitmapLock.notify();
+            try {
+                Mat mat = mats_to_process.take();
+                mat.release();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
+        try {
+            mats_to_process.put(bitmap);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        if (searchForFocus) {
+            try {
+                cameraInterface.captureImage();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
     }
 
 }
