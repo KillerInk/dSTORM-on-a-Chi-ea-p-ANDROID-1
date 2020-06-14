@@ -83,6 +83,8 @@ public abstract class AbstractImageCapture implements ImageCaptureInterface {
     }
 
     private void stopBackgroundThread() {
+        if (mBackgroundThread == null)
+            return;
         mBackgroundThread.quitSafely();
         try {
             mBackgroundThread.join();
