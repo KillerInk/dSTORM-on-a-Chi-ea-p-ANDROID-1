@@ -14,6 +14,7 @@ import de.nanoimaging.stormimager.acquisition.ZFocusInterface;
 import de.nanoimaging.stormimager.camera.CameraInterface;
 import de.nanoimaging.stormimager.camera.capture.YuvImageCapture;
 import de.nanoimaging.stormimager.utils.OpenCVUtil;
+import de.nanoimaging.stormimager.utils.SharedValues;
 
 public class FindFocusTask implements YuvImageCapture.YuvToBitmapEvent {
 
@@ -27,16 +28,18 @@ public class FindFocusTask implements YuvImageCapture.YuvToBitmapEvent {
     int val_focus_pos_best_global = 0;
     int val_focus_searchradius = 40;
     int val_focus_search_stepsize = 1;
-    int val_lens_x_global = 0;                          // global position for the x-lens
+    //int val_lens_x_global = 0;                          // global position for the x-lens
     double val_stdv_max = 0;                            // for focus stdv
 
     private final BlockingQueue<Mat> mats_to_process;
+    private SharedValues sharedValues;
 
-    public FindFocusTask(CameraInterface cameraInterface, ZFocusInterface zFocusInterface)
+    public FindFocusTask(CameraInterface cameraInterface, ZFocusInterface zFocusInterface, SharedValues sharedValues)
     {
         this.cameraInterface = cameraInterface;
         this.zFocusInterface = zFocusInterface;
         mats_to_process = new ArrayBlockingQueue<>(4);
+        this.sharedValues = sharedValues;
     }
 
     public boolean isSearchForFocus()
@@ -89,7 +92,8 @@ public class FindFocusTask implements YuvImageCapture.YuvToBitmapEvent {
                     val_focus_pos_global = i_search_bestfocus;
 
                     // first increase the lens position
-                    val_lens_x_global = val_lens_x_global + val_focus_search_stepsize;
+                    int val_lens_x_global = sharedValues.getVal_lens_x_global();
+                    sharedValues.setVal_lens_x_global((val_lens_x_global + val_focus_search_stepsize));
                     zFocusInterface.setZFocus(val_focus_search_stepsize);
 
                     // then measure the focus quality

@@ -107,10 +107,12 @@ import de.nanoimaging.stormimager.network.MqttClientInterface;
 import de.nanoimaging.stormimager.process.VideoProcessor;
 import de.nanoimaging.stormimager.tasks.FindFocusTask;
 import de.nanoimaging.stormimager.tflite.TFLitePredict;
+import de.nanoimaging.stormimager.utils.CameraUtil;
 import de.nanoimaging.stormimager.utils.HideNavBarHelper;
 import de.nanoimaging.stormimager.utils.ImageUtils;
 import de.nanoimaging.stormimager.utils.OpenCVUtil;
 import de.nanoimaging.stormimager.utils.PermissionUtil;
+import de.nanoimaging.stormimager.utils.SharedValues;
 
 /**
  * Created by Bene on 26.09.2015.
@@ -185,7 +187,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
      */
     int PWM_RES = (int) (Math.pow(2, 15)) - 1;          // bitrate of the PWM signal 15 bit
     int val_stepsize_focus_z = 1;                      // Stepsize to move the objective lens
-    int val_lens_x_global = 0;                          // global position for the x-lens
+    //int val_lens_x_global = 0;                          // global position for the x-lens
     int val_lens_z_global = 0;                          // global position for the z-lens
     int val_laser_red_global = 0;                       // global value for the laser
 
@@ -225,32 +227,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     private MqttClientInterface mqttClientInterface;
     private YuvImageCapture yuvImageCapture;
     private FindFocusTask findFocusTask;
-
-
-    /**
-     * CAMERA-Related stuff
-     */
-    /**
-     * Conversion from screen rotation to JPEG orientation.
-     */
-    private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
-
-    /**
-     * Tolerance when comparing aspect ratios.
-     */
-    private static final double ASPECT_RATIO_TOLERANCE = 0.005;
+    private SharedValues sharedValues;
 
     static {
         if (!OpenCVLoader.initDebug()) {
             // Handle initialization error
         }
-    }
-
-    static {
-        ORIENTATIONS.append(Surface.ROTATION_0, 0);
-        ORIENTATIONS.append(Surface.ROTATION_90, 90);
-        ORIENTATIONS.append(Surface.ROTATION_180, 180);
-        ORIENTATIONS.append(Surface.ROTATION_270, 270);
     }
 
     /**
@@ -354,105 +336,11 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     //**********************************************************************************************
 
-    /**
-     * Given {@code choices} of {@code Size}s supported by a camera, choose the smallest one that
-     * is at least as large as the respective texture view size, and that is at most as large as the
-     * respective max size, and whose aspect ratio matches with the specified value. If such size
-     * doesn't exist, choose the largest one that is at most as large as the respective max size,
-     * and whose aspect ratio matches with the specified value.
-     *
-     * @param choices           The list of sizes that the camera supports for the intended output
-     *                          class
-     * @param textureViewWidth  The width of the texture view relative to sensor coordinate
-     * @param textureViewHeight The height of the texture view relative to sensor coordinate
-     * @param maxWidth          The maximum width that can be chosen
-     * @param maxHeight         The maximum height that can be chosen
-     * @param aspectRatio       The aspect ratio
-     * @return The optimal {@code Size}, or an arbitrary one if none were big enough
-     */
-    private static Size chooseOptimalSize(Size[] choices, int textureViewWidth,
-                                          int textureViewHeight, int maxWidth, int maxHeight, Size aspectRatio) {
-        // Collect the supported resolutions that are at least as big as the preview Surface
-        List<Size> bigEnough = new ArrayList<>();
-        // Collect the supported resolutions that are smaller than the preview Surface
-        List<Size> notBigEnough = new ArrayList<>();
-        int w = aspectRatio.getWidth();
-        int h = aspectRatio.getHeight();
-        for (Size option : choices) {
-            if (option.getWidth() <= maxWidth && option.getHeight() <= maxHeight &&
-                    option.getHeight() == option.getWidth() * h / w) {
-                if (option.getWidth() >= textureViewWidth &&
-                        option.getHeight() >= textureViewHeight) {
-                    bigEnough.add(option);
-                } else {
-                    notBigEnough.add(option);
-                }
-            }
-        }
 
-        // Pick the smallest of those big enough. If there is no one big enough, pick the
-        // largest of those not big enough.
-        if (bigEnough.size() > 0) {
-            return Collections.min(bigEnough, new CompareSizesByArea());
-        } else if (notBigEnough.size() > 0) {
-            return Collections.max(notBigEnough, new CompareSizesByArea());
-        } else {
-            Log.e("Camera2Raw", "Couldn't find any suitable preview size");
-            return choices[0];
-        }
-    }
 
-    /**
-     * Return true if the two given {@link Size}s have the same aspect ratio.
-     *
-     * @param a first {@link Size} to compare.
-     * @param b second {@link Size} to compare.
-     * @return true if the sizes have the same aspect ratio, otherwise false.
-     */
-    private static boolean checkAspectsEqual(Size a, Size b) {
-        double aAspect = a.getWidth() / (double) a.getHeight();
-        double bAspect = b.getWidth() / (double) b.getHeight();
-        return Math.abs(aAspect - bAspect) <= ASPECT_RATIO_TOLERANCE;
-    }
 
-    /**
-     * Rotation need to transform from the camera sensor orientation to the device's current
-     * orientation.
-     *
-     * @param c                 the {@link CameraCharacteristics} to query for the camera sensor
-     *                          orientation.
-     * @param deviceOrientation the current device orientation relative to the native device
-     *                          orientation.
-     * @return the total rotation from the sensor orientation to the current device orientation.
-     */
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    private static int sensorToDeviceRotation(CameraInterface c, int deviceOrientation) {
-        int sensorOrientation = c.getSensorOrientation();
 
-        // Get device orientation in degrees
-        deviceOrientation = ORIENTATIONS.get(deviceOrientation);
 
-        // Reverse device orientation for front-facing cameras
-        if (c.isFrontCamera()) {
-            deviceOrientation = -deviceOrientation;
-        }
-
-        // Calculate desired JPEG orientation relative to camera orientation to make
-        // the image upright relative to the device orientation
-        return (sensorOrientation + deviceOrientation + 360) % 360;
-    }
-
-    // taken from killerink/freedcam
-    public static long getMilliSecondStringFromShutterString(String shuttervalue) {
-        float a;
-        if (shuttervalue.contains("/")) {
-            String[] split = shuttervalue.split("/");
-            a = Float.parseFloat(split[0]) / Float.parseFloat(split[1]) * 1000000f;
-        } else
-            a = Float.parseFloat(shuttervalue) * 1000000f;
-        a = Math.round(a);
-        return (long) a;
-    }
 
     /**
      * view binding from activity_acquire.xml
@@ -474,6 +362,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         permissionUtil = new PermissionUtil();
         hideNavBarHelper = new HideNavBarHelper();
+        sharedValues = new SharedValues();
 
         // Initialize OpenCV using external library for now //TODO use internal!
         OpenCVLoader.initDebug();
@@ -481,7 +370,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         cameraInterface = new CameraImpl();
         binding.texture.setSurfaceTextureListener(mSurfaceTextureListener);
-        findFocusTask = new FindFocusTask(cameraInterface,this);
+        findFocusTask = new FindFocusTask(cameraInterface,this,sharedValues);
         // load tensorflow stuff
         mypredictor = new TFLitePredict(AcquireActivity.this, mymodelfile, Nx_in, Ny_in, N_time, N_upscale);
         mypredictor_mean = new TFLitePredict(AcquireActivity.this, mymodelfile_mean, Nx_in, Ny_in, N_time);
@@ -602,7 +491,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                     global_expval = texpvalues[progress];
                     binding.textViewShutter.setText("Shutter:" + texpvalues[progress]);
-                    int msexpo = (int) getMilliSecondStringFromShutterString(texpvalues[progress]);
+                    int msexpo = (int) CameraUtil.getMilliSecondStringFromShutterString(texpvalues[progress]);
                     cameraInterface.setExposureTime(msexpo);
                 }
             }
@@ -633,19 +522,19 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        val_lens_x_global = progress;
-                        setLensX(val_lens_x_global);
-                        binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                        sharedValues.setVal_lens_x_global(progress);
+                        setLensX(sharedValues.getVal_lens_x_global());
+                        binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", sharedValues.getVal_lens_x_global() * 1.));
                     }
 
                     @Override
                     public void onStartTrackingTouch(SeekBar seekBar) {
-                        binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                        binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", sharedValues.getVal_lens_x_global() * 1.));
                     }
 
                     @Override
                     public void onStopTrackingTouch(SeekBar seekBar) {
-                        binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
+                        binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", sharedValues.getVal_lens_x_global() * 1.));
                     }
                 }
         );
@@ -779,10 +668,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         //******************* Move X ++ ********************************************//
         binding.buttonXLensPlus.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                val_lens_x_global = val_lens_x_global+10;
-                setLensX(val_lens_x_global);
-                binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
-                binding.seekBarLensX.setProgress(val_lens_x_global);
+                sharedValues.setVal_lens_x_global(sharedValues.getVal_lens_x_global()+10);
+                setLensX(sharedValues.getVal_lens_x_global());
+                binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", sharedValues.getVal_lens_x_global() * 1.));
+                binding.seekBarLensX.setProgress(sharedValues.getVal_lens_x_global());
             }
 
         });
@@ -790,10 +679,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         //******************* Move X -- ********************************************//
         binding.buttonXLensMinus.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                val_lens_x_global = val_lens_x_global-10;
-                setLensX(val_lens_x_global);
-                binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
-                binding.seekBarLensX.setProgress(val_lens_x_global);
+                sharedValues.setVal_lens_x_global(sharedValues.getVal_lens_x_global()-10);
+                setLensX(sharedValues.getVal_lens_x_global());
+                binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", sharedValues.getVal_lens_x_global() * 1.));
+                binding.seekBarLensX.setProgress(sharedValues.getVal_lens_x_global());
             }
 
         });
@@ -920,7 +809,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         // SET CAMERA PARAMETERS FROM GUI
         cameraInterface.setIso(Integer.parseInt(isovalues[val_iso_index]));
-        int msexpo = (int) getMilliSecondStringFromShutterString(texpvalues[val_texp_index]);
+        int msexpo = (int) CameraUtil.getMilliSecondStringFromShutterString(texpvalues[val_texp_index]);
         cameraInterface.setExposureTime(msexpo);
     }
 
@@ -975,14 +864,14 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
             // For still image captures, we always use the largest available size.
             Size largest = Collections.max(Arrays.asList(cameraInterface.getSizesForSurfaceTexture()),
-                    new CompareSizesByArea());
+                    new CameraUtil.CompareSizesByArea());
             // Find the rotation of the device relative to the native device orientation.
             int deviceRotation = activity.getWindowManager().getDefaultDisplay().getRotation();
             Point displaySize = new Point();
             activity.getWindowManager().getDefaultDisplay().getSize(displaySize);
 
             // Find the rotation of the device relative to the camera sensor's orientation.
-            int totalRotation = sensorToDeviceRotation(cameraInterface, deviceRotation);
+            int totalRotation = CameraUtil.sensorToDeviceRotation(cameraInterface, deviceRotation);
 
             // Swap the view dimensions for calculation as needed if they are rotated relative to
             // the sensor.
@@ -1010,7 +899,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             }
 
             // Find the best preview size for these view dimensions and configured JPEG size.
-            Size previewSize = chooseOptimalSize(cameraInterface.getSizesForSurfaceTexture(),
+            Size previewSize = CameraUtil.chooseOptimalSize(cameraInterface.getSizesForSurfaceTexture(),
                     rotatedViewWidth, rotatedViewHeight, maxPreviewWidth, maxPreviewHeight,
                     largest);
 
@@ -1025,8 +914,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             // Find rotation of device in degrees (reverse device orientation for front-facing
             // cameras).
             int rotation = (cameraInterface.isFrontCamera()) ?
-                    (360 + ORIENTATIONS.get(deviceRotation)) % 360 :
-                    (360 - ORIENTATIONS.get(deviceRotation)) % 360;
+                    (360 + CameraUtil.ORIENTATIONS.get(deviceRotation)) % 360 :
+                    (360 - CameraUtil.ORIENTATIONS.get(deviceRotation)) % 360;
 
             Matrix matrix = new Matrix();
             RectF viewRect = new RectF(0, 0, viewWidth, viewHeight);
@@ -1065,7 +954,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
             // Start or restart the active capture session if the preview was initialized or
             // if its aspect ratio changed significantly.
-            if (mPreviewSize == null || !checkAspectsEqual(previewSize, mPreviewSize)) {
+            if (mPreviewSize == null || !CameraUtil.checkAspectsEqual(previewSize, mPreviewSize)) {
                 mPreviewSize = previewSize;
                 if (cameraInterface.getCameraState() != CameraStates.Closed) {
                     startPreview();
@@ -1131,7 +1020,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
 
-        mMediaRecorder.setOrientationHint(ORIENTATIONS.get(rotation));
+        mMediaRecorder.setOrientationHint(CameraUtil.ORIENTATIONS.get(rotation));
 
         mMediaRecorder.prepare();
     }
@@ -1403,21 +1292,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         });
     }
 
-
-    /**
-     * Comparator based on area of the given {@link Size} objects.
-     */
-    static class CompareSizesByArea implements Comparator<Size> {
-
-        @Override
-        public int compare(Size lhs, Size rhs) {
-            // We cast here to ensure the multiplications won't overflow
-            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
-                    (long) rhs.getWidth() * rhs.getHeight());
-        }
-
-    }
-
     /**
      * A dialog fragment for displaying non-recoverable errors; this {@ling Activity} will be
      * finished once the dialog has been acknowledged by the user.
@@ -1494,8 +1368,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
             // Update GUI
             String text_lens_x_pre = "Lens (X): ";
-            binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", val_lens_x_global * 1.));
-            binding.seekBarLensX.setProgress(val_lens_x_global);
+            binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", sharedValues.getVal_lens_x_global() * 1.));
+            binding.seekBarLensX.setProgress(sharedValues.getVal_lens_x_global());
 
             String text_laser_pre = "Laser: ";
             binding.textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
@@ -1539,7 +1413,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     publishProgress();
 
                     // set lens to correct position
-                    setLensX(val_lens_x_global);
+                    setLensX(sharedValues.getVal_lens_x_global());
 
                     // determine the path for the video
                     myVideoFileName = new File(mypath + File.separator + "VID_" + String.valueOf(i_meas) + ".mp4");
@@ -1778,11 +1652,11 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                 // reset the lens's position in the first iteration by some value
                 if (i_search_maxintensity == 0) {
-                    val_lens_x_global_old = val_lens_x_global; // Save the value for later
-                    val_lens_x_global = 0;
+                    val_lens_x_global_old = sharedValues.getVal_lens_x_global(); // Save the value for later
+                    sharedValues.setVal_lens_x_global(0);
                     val_mean_max = 0;
                     val_lens_x_maxintensity = 0;
-                    setLensX(val_lens_x_global);
+                    setLensX(sharedValues.getVal_lens_x_global());
                 }
                 else {
                         int i_mean = (int)OpenCVUtil.measureCoupling(dst, OpenCVUtil.ROI_SIZE, 9);
@@ -1796,18 +1670,18 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     if (i_mean > val_mean_max) {
                         // Save the position with maximum intensity
                         val_mean_max = i_mean;
-                        val_lens_x_maxintensity = val_lens_x_global;
+                        val_lens_x_maxintensity = sharedValues.getVal_lens_x_global();
                     }
 
                 }
                 // break if algorithm reaches the maximum of lens positions
-                if (val_lens_x_global > PWM_RES) {
+                if (sharedValues.getVal_lens_x_global() > PWM_RES) {
                     // if maximum number of search iteration is reached, break
                     if (val_lens_x_maxintensity == 0) {
                         val_lens_x_maxintensity = val_lens_x_global_old;
                     }
-                    val_lens_x_global = val_lens_x_maxintensity;
-                    setLensX(val_lens_x_global);
+                    sharedValues.setVal_lens_x_global(val_lens_x_maxintensity);
+                    setLensX(sharedValues.getVal_lens_x_global());
 
                     i_search_maxintensity = 0;
                     exit = true;
@@ -1817,8 +1691,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                 } else {
                     // increase the lens position
-                    val_lens_x_global = val_lens_x_global + 400;
-                    setLensX(val_lens_x_global);
+                    sharedValues.setVal_lens_x_global(sharedValues.getVal_lens_x_global()+400);
+                    setLensX(sharedValues.getVal_lens_x_global());
                     // free memory
                     System.gc();
                     src.release();
@@ -1873,8 +1747,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                     // reset the lens's position in the first iteration by some value
                     if (i_search_maxintensity == 0) {
-                        val_lens_x_global_old = val_lens_x_global; // Save the value for later
-                        val_lens_x_global = val_lens_x_global - 200;
+                        val_lens_x_global_old = sharedValues.getVal_lens_x_global(); // Save the value for later
+                        sharedValues.setVal_lens_x_global(sharedValues.getVal_lens_x_global()-200);
                     }
                     i_search_maxintensity++;
 
@@ -1890,18 +1764,18 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     if (i_mean > val_mean_max) {
                         // Save the position with maximum intensity
                         val_mean_max = i_mean;
-                        val_lens_x_maxintensity = val_lens_x_global;
+                        val_lens_x_maxintensity = sharedValues.getVal_lens_x_global();
                     }
 
 
                     // break if algorithm reaches the maximum of lens positions
-                    if (val_lens_x_global > val_lens_x_global_old + 200) {
+                    if (sharedValues.getVal_lens_x_global() > val_lens_x_global_old + 200) {
                         // if maximum number of search iteration is reached, break
                         if (val_lens_x_maxintensity == 0) {
                             val_lens_x_maxintensity = val_lens_x_global_old;
                         }
-                        val_lens_x_global = val_lens_x_maxintensity;
-                        setLensX(val_lens_x_global);
+                        sharedValues.setVal_lens_x_global(val_lens_x_maxintensity);
+                        setLensX(sharedValues.getVal_lens_x_global());
                         is_findcoupling = false;
                         i_search_maxintensity = 0;
                         exit = true;
@@ -1912,8 +1786,8 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     }
 
                     // increase the lens position
-                    val_lens_x_global = val_lens_x_global + 10;
-                    setLensX(val_lens_x_global);
+                    sharedValues.setVal_lens_x_global(sharedValues.getVal_lens_x_global()+10);
+                    setLensX(sharedValues.getVal_lens_x_global());
 
                     // free memory
                     System.gc();
@@ -1946,7 +1820,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         val_sofi_amplitude_z = sharedPref.getInt("val_sofi_amplitude_z", val_sofi_amplitude_z);
         val_iso_index = sharedPref.getInt("val_iso_index", val_iso_index);
         val_texp_index = sharedPref.getInt("val_texp_index", val_texp_index);
-        val_lens_x_global = sharedPref.getInt("val_lens_x_global",val_lens_x_global);
+        sharedValues.setVal_lens_x_global(sharedPref.getInt("val_lens_x_global",sharedValues.getVal_lens_x_global()));
         val_lens_z_global = sharedPref.getInt("val_lens_z_global", val_lens_z_global);
         val_laser_red_global = sharedPref.getInt("val_laser_red_global", val_laser_red_global);
     }
