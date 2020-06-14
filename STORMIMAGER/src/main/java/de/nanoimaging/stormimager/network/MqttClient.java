@@ -161,6 +161,16 @@ public class MqttClient implements MqttClientInterface {
     }
 
     @Override
+    public void set_lens_z(String z) {
+        publishMessage(topic_lens_z, z);
+    }
+
+    @Override
+    public void set_lens_x(String x) {
+        publishMessage(topic_lens_x,x);
+    }
+
+    @Override
     public void set_laser(String laser) {
         publishMessage(topic_laser,laser);
     }

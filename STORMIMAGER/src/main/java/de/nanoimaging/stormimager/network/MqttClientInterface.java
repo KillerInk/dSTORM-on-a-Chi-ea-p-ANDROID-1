@@ -23,6 +23,8 @@ public interface MqttClientInterface {
     void setState(String state);
     void set_lens_sofi_z(String z);
     void set_lens_sofi_x(String x);
+    void set_lens_z(String z);
+    void set_lens_x(String x);
     void set_laser(String laser);
     void set_focus_z_fwd(String focus);
     void set_focus_z_bwd(String focus);

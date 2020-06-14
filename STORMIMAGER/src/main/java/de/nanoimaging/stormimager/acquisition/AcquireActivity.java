@@ -875,7 +875,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 is_findcoupling_coarse = true;
                 findFocusTask.stop();
                 yuvImageCapture.setYuvToBitmapEventListner(null);
-
             }
         });
 
@@ -1361,7 +1360,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     void setLensX(int lensposition) {
         if ((lensposition < PWM_RES) && (lensposition >=0)) {
             if (lensposition ==  0)lensposition=1;
-            mqttClientInterface.set_lens_sofi_x(String.valueOf(lin2qudratic(lensposition, PWM_RES)));
+            mqttClientInterface.set_lens_x(String.valueOf(lin2qudratic(lensposition, PWM_RES)));
             // Wait until the command was actually sent
             if(is_findcoupling){
             try {
@@ -1380,7 +1379,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     void setLensZ(int lensposition) {
         if (lensposition < PWM_RES && lensposition >= 0) {
             if (lensposition ==  0)lensposition=1;
-            mqttClientInterface.set_lens_sofi_z(String.valueOf(lin2qudratic(lensposition, PWM_RES)));
+            mqttClientInterface.set_lens_z(String.valueOf(lin2qudratic(lensposition, PWM_RES)));
             // Wait until the command was actually sent
             if(is_findcoupling){
                 try {
