@@ -162,7 +162,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     // settings for coupling
     double val_mean_max = 0;                            // for coupling intensity
-    double val_stdv_max = 0;                            // for focus stdv
     int i_search_maxintensity = 0;                      // global counter for number of search steps
     int val_lens_x_maxintensity = 0;                    // lens-position for maximum intensity
     int val_lens_x_global_old = 0;                      // last lens position before optimization
@@ -304,7 +303,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     new run_calibration_thread_fine("FineThread");
                 }
             }
-
             else if(is_process_sofi & !isCameraBusy){
                 // Collect images for SOFI-prediction
                 global_bitmap = binding.texture.getBitmap();
@@ -731,7 +729,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 String my_gui_text = "Lens Calibration in progress";
 
                 binding.textViewGuiText.setText(my_gui_text);
-                if (!findFocusTask.isSearchForFocus()) {
+                if (!findFocusTask.isWorking()) {
                     yuvImageCapture.setYuvToBitmapEventListner(findFocusTask);
                     findFocusTask.process();
                 }
