@@ -1,6 +1,7 @@
 package de.nanoimaging.stormimager.tasks;
 
 import android.graphics.Bitmap;
+import android.media.Image;
 import android.util.Log;
 
 import org.opencv.android.Utils;
@@ -16,7 +17,7 @@ import de.nanoimaging.stormimager.camera.capture.YuvImageCapture;
 import de.nanoimaging.stormimager.utils.OpenCVUtil;
 import de.nanoimaging.stormimager.utils.SharedValues;
 
-public class FindFocusTask extends AbstractTask<ZFocusInterface> implements YuvImageCapture.YuvToBitmapEvent {
+public class FindFocusTask extends AbstractTask<ZFocusInterface> {
 
     private final String TAG = FindFocusTask.class.getSimpleName();
     int val_focus_pos_global_old = 0;
@@ -27,25 +28,23 @@ public class FindFocusTask extends AbstractTask<ZFocusInterface> implements YuvI
     int val_focus_search_stepsize = 1;
     double val_stdv_max = 0;                            // for focus stdv
 
-    private final BlockingQueue<Mat> mats_to_process;
+    private YuvImageCapture yuvImageCapture;
 
     public FindFocusTask(CameraInterface cameraInterface, ZFocusInterface zFocusInterface, SharedValues sharedValues)
     {
         super(cameraInterface,zFocusInterface,sharedValues);
-        mats_to_process = new ArrayBlockingQueue<>(3);
     }
 
+    public void setYuvImageCapture(YuvImageCapture yuvImageCapture)
+    {
+        this.yuvImageCapture = yuvImageCapture;
+    }
 
     @Override
     public boolean preProcess() {
         if (isworking) {
             isworking = false;
             return false;
-        }
-        try {
-            cameraInterface.captureImage();
-        } catch (Exception e) {
-            e.printStackTrace();
         }
         isworking = true;
         return true;
@@ -57,15 +56,12 @@ public class FindFocusTask extends AbstractTask<ZFocusInterface> implements YuvI
         Mat dst = new Mat();
         Mat input = null;
         while (isworking) {
-            try {
-                input = mats_to_process.take();
-                Log.d(TAG,"run: take mate");
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                input = null;
-            }
-            if(input == null)
+
+            Image img = yuvImageCapture.pollImage();
+            if(img == null)
                 return;
+            input = OpenCVUtil.yuvToMat(img);
+            yuvImageCapture.releaseImage(img);
             dst = OpenCVUtil.getBGRMatFromYuvMat(input);
 
             // reset the lens's position in the first iteration by some value
@@ -121,39 +117,7 @@ public class FindFocusTask extends AbstractTask<ZFocusInterface> implements YuvI
         src.release();
         dst.release();
         input.release();
-        for (Mat mat :mats_to_process) {
-            mat.release();
-        }
-        mats_to_process.clear();
         System.gc();
     }
 
-    @Override
-    public void onYuvMatCompleted(Mat bitmap) {
-        Log.d(TAG, "onYuvMapCompleted: " + (bitmap != null));
-        if (bitmap != null) {
-            /*if (mats_to_process.remainingCapacity() == 0) {
-                try {
-                    Mat mat = mats_to_process.take();
-                    mat.release();
-
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }*/
-            try {
-                Log.d(TAG, "onYuvMapCompleted remaining size" + mats_to_process.remainingCapacity());
-                mats_to_process.put(bitmap);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        if (isWorking()) {
-            try {
-                cameraInterface.captureImage();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
 }

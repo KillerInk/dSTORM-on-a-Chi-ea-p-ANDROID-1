@@ -1,6 +1,5 @@
 package de.nanoimaging.stormimager.acquisition;
 
-import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -10,10 +9,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
@@ -21,9 +18,6 @@ import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.SensorManager;
 import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraCaptureSession;
-import android.hardware.camera2.CameraCharacteristics;
-import android.hardware.camera2.CameraDevice;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.net.ConnectivityManager;
@@ -39,10 +33,8 @@ import android.os.Message;
 import android.os.SystemClock;
 import android.support.annotation.RequiresApi;
 import android.support.v13.app.FragmentCompat;
-import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.util.Size;
-import android.util.SparseIntArray;
 import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.SurfaceHolder;
@@ -50,30 +42,15 @@ import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.CompoundButton;
-import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.SeekBar;
-import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
-import org.eclipse.paho.android.service.MqttAndroidClient;
-import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
-import org.eclipse.paho.client.mqttv3.IMqttActionListener;
-import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
-import org.eclipse.paho.client.mqttv3.IMqttToken;
-import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
-import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttException;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfFloat;
 import org.opencv.core.Rect;
 import org.opencv.imgproc.Imgproc;
@@ -90,11 +67,9 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.Semaphore;
 
 import de.nanoimaging.stormimager.R;
 import de.nanoimaging.stormimager.camera.CameraImpl;
@@ -118,7 +93,7 @@ import de.nanoimaging.stormimager.utils.SharedValues;
  * Created by Bene on 26.09.2015.
  */
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-public class AcquireActivity extends Activity implements FragmentCompat.OnRequestPermissionsResultCallback, AcquireSettings.NoticeDialogListener ,ZFocusInterface {
+public class AcquireActivity extends Activity implements FragmentCompat.OnRequestPermissionsResultCallback, AcquireSettings.NoticeDialogListener ,ZFocusInterface, UpdateUiEvent {
 
 
     String STATE_CALIBRATION = "state_calib";       // STate signal sent to ESP for light signal
@@ -730,12 +705,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                 binding.textViewGuiText.setText(my_gui_text);
                 if (!findFocusTask.isWorking()) {
-                    yuvImageCapture.setYuvToBitmapEventListner(findFocusTask);
+                    findFocusTask.setYuvImageCapture(yuvImageCapture);
                     findFocusTask.process();
                 }
                 else
                 {
-                    yuvImageCapture.setYuvToBitmapEventListner(null);
+                    findFocusTask.setYuvImageCapture(null);
                     findFocusTask.stop();
                 }
 
@@ -761,7 +736,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 is_findcoupling_coarse = false;
                 is_findcoupling_coarse = true;
                 findFocusTask.stop();
-                yuvImageCapture.setYuvToBitmapEventListner(null);
+                findFocusTask.setYuvImageCapture(null);
             }
         });
 
@@ -1288,6 +1263,11 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 binding.textViewGuiText.setText(msg);
             }
         });
+    }
+
+    @Override
+    public void onUpdatedUI() {
+
     }
 
     /**

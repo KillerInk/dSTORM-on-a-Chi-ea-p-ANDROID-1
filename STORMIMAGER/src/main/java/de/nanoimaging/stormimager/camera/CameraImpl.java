@@ -128,7 +128,10 @@ public class CameraImpl implements CameraInterface {
             {
                 mCaptureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
                 for (ImageCaptureInterface ici : imageCapturesList) {
-                    mCaptureRequestBuilder.addTarget(ici.getSurface());
+                    if (ici.setToPreview())
+                        mPreviewRequestBuilder.addTarget(ici.getSurface());
+                    else
+                        mCaptureRequestBuilder.addTarget(ici.getSurface());
                     surfaces.add(ici.getSurface());
                 }
             }

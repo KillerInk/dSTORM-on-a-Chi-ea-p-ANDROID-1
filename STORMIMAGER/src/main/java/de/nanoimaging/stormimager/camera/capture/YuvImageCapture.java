@@ -12,40 +12,15 @@ import de.nanoimaging.stormimager.utils.OpenCVUtil;
 
 public class YuvImageCapture extends AbstractImageCapture {
 
-    public interface YuvToBitmapEvent
-    {
-        void onYuvMatCompleted(Mat bitmap);
-    }
 
     private final String TAG = YuvImageCapture.class.getSimpleName();
-    private YuvToBitmapEvent yuvToBitmapEventListner;
 
     public YuvImageCapture(Size size) {
-        super(size, ImageFormat.YUV_420_888);
-    }
-
-    public void setYuvToBitmapEventListner(YuvToBitmapEvent eventListner)
-    {
-        this.yuvToBitmapEventListner = eventListner;
+        super(size, ImageFormat.YUV_420_888,true);
     }
 
     @Override
-    public synchronized void onCaptureCompleted(Image image, CaptureResult result) {
-        Log.d(TAG, "onCaptureCompleted");
-        try {
-            if (yuvToBitmapEventListner != null)
-                yuvToBitmapEventListner.onYuvMatCompleted(OpenCVUtil.yuvToMat(image));
-            else
-                Log.d(TAG, "YuvToBitmapListner is null");
-        }
-        catch (IllegalStateException ex)
-        {
-            if (yuvToBitmapEventListner != null)
-                yuvToBitmapEventListner.onYuvMatCompleted(null);
-            Log.d(TAG, "Image Already Closed");
-        }
+    public void onCaptureCompleted(Image image, CaptureResult result) {
 
-
-        super.onCaptureCompleted(image, result);
     }
 }
