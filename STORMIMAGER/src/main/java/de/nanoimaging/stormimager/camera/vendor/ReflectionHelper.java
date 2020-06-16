@@ -1,5 +1,7 @@
 package de.nanoimaging.stormimager.camera.vendor;
 
+import android.util.Log;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -9,45 +11,31 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 
+
 /**
  * Created by KillerInk on 08.12.2017.
  */
 
 public class ReflectionHelper {
 
-    public static Object getTypeReference(Type type)
-    {
-        Class typedreference = null;
-        try {
-            typedreference = Class.forName("android.hardware.camera2.utils.TypeReference");
-
-            Method method = typedreference.getMethod("createSpecializedTypeReference", Type.class);
-            return method.invoke(null, type);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
 
     public static Object getKeyType(String string, Type type, Class myclass)
     {
         try {
-            Object typeref = ReflectionHelper.getTypeReference(type);
-            Constructor<?>[] ctors = myclass.getDeclaredConstructors();
-            Constructor<?> constructor = (Constructor<?>) ctors[1];
+            Class typedreference = Class.forName("android.hardware.camera2.utils.TypeReference");
+            Method method = typedreference.getMethod("createSpecializedTypeReference", Type.class);
+            Constructor<?> constructor = myclass.getConstructor(String.class, typedreference);
             constructor.setAccessible(true);
-            return constructor.newInstance(string, typeref);
+            return constructor.newInstance(string, method.invoke(null, type));
         } catch (InstantiationException e) {
             e.printStackTrace();
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
         return null;
@@ -57,7 +45,8 @@ public class ReflectionHelper {
     {
         try {
             Constructor<?>[] ctors = myclass.getDeclaredConstructors();
-            Constructor<?> constructor = (Constructor<?>) ctors[2];
+            Constructor<?> constructor =  myclass.getConstructor(String.class, Class.class);
+
             constructor.setAccessible(true);
             return constructor.newInstance(string,type);
         } catch (InstantiationException e) {
@@ -65,6 +54,12 @@ public class ReflectionHelper {
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
+        catch (IllegalArgumentException e)
+        {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
             e.printStackTrace();
         }
         return null;
@@ -75,62 +70,62 @@ public class ReflectionHelper {
 
     private String getTab(int depth)
     {
-        String ret = "";
+        StringBuilder ret = new StringBuilder();
         for (int i =0; i< depth; i ++)
-            ret += tab;
-        return ret;
+            ret.append(tab);
+        return ret.toString();
     }
 
     public void dumpClass(Class classtoDump, FileOutputStream outputStream, int depth) throws IOException {
 
         outputStream.write((getTab(depth) + getAccessType(classtoDump.getModifiers()) + "class " + classtoDump.getSimpleName() + " {\r\n").getBytes());
 
-            Field[] f = classtoDump.getDeclaredFields();
-            if (f.length > 0) {
-                for (int i = 0; i < f.length; i++)
-                    outputStream.write((createFieldLogString(f[i], depth + 1) + "\r\n").getBytes());
-                outputStream.write("\r\n".getBytes());
-            }
+        Field[] f = classtoDump.getDeclaredFields();
+        if (f.length > 0) {
+            for (int i = 0; i < f.length; i++)
+                outputStream.write((createFieldLogString(f[i], depth + 1) + "\r\n").getBytes());
+            outputStream.write("\r\n".getBytes());
+        }
 
-            Method[] m = classtoDump.getDeclaredMethods();
-            if (m.length > 0)
-            {
-                for (int i = 0; i < m.length; i++)
-                    outputStream.write((createMethodLogString(m[i],depth +1) + "\r\n").getBytes());
-                outputStream.write("\r\n".getBytes());
-            }
+        Method[] m = classtoDump.getDeclaredMethods();
+        if (m.length > 0)
+        {
+            for (int i = 0; i < m.length; i++)
+                outputStream.write((createMethodLogString(m[i],depth +1) + "\r\n").getBytes());
+            outputStream.write("\r\n".getBytes());
+        }
 
-            depth++;
-            Class[] classes = classtoDump.getClasses();
-            for (Class cls : classes) {
-                dumpClass(cls, outputStream, depth);
-            }
-            depth--;
+        depth++;
+        Class[] classes = classtoDump.getClasses();
+        for (Class cls : classes) {
+            dumpClass(cls, outputStream, depth);
+        }
+        depth--;
         outputStream.write((getTab(depth) +"}\r\n").getBytes());
     }
 
-    private String createMethodLogString(Method method, int depth)
+    private String createMethodLogString(Method method,int depth)
     {
         int mod = method.getModifiers();
-        String ret = getTab(depth);
-        ret += getAccessType(mod);
+        StringBuilder ret = new StringBuilder(getTab(depth));
+        ret.append(getAccessType(mod));
 
-        ret += method.getReturnType().getSimpleName() + " ";
-        ret +=  method.getName();
+        ret.append(method.getReturnType().getSimpleName()).append(" ");
+        ret.append(method.getName());
         Class[] parametertypes = method.getParameterTypes();
-        ret+= "(";
+        ret.append("(");
         for (Class c : parametertypes){
             if (parametertypes[parametertypes.length-1] == c)
-                ret += c.getSimpleName();
+                ret.append(c.getSimpleName());
             else
-                ret += c.getSimpleName()+", ";
+                ret.append(c.getSimpleName()).append(", ");
         }
-        ret+=");";
+        ret.append(");");
 
-        return ret;
+        return ret.toString();
     }
 
-    private String createFieldLogString(Field field, int depth)
+    private String createFieldLogString(Field field,int depth)
     {
         int mod = field.getModifiers();
         String ret = getTab(depth);

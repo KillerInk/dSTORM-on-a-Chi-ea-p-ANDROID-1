@@ -128,7 +128,10 @@ public class CameraImpl implements CameraInterface {
             {
                 mCaptureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
                 for (ImageCaptureInterface ici : imageCapturesList) {
-                    mCaptureRequestBuilder.addTarget(ici.getSurface());
+                    if (ici.setToPreview())
+                        mPreviewRequestBuilder.addTarget(ici.getSurface());
+                    else
+                        mCaptureRequestBuilder.addTarget(ici.getSurface());
                     surfaces.add(ici.getSurface());
                 }
             }
@@ -399,11 +402,16 @@ public class CameraImpl implements CameraInterface {
         Log.d(TAG, "captureImage");
         if (imageCapturesList.size() == 0)
             throw  new Exception("No image capture Listners attached");
-        try {
-            captureSession.capture(mCaptureRequestBuilder.build(),imageCaptureCallback,mBackgroundHandler);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
+        mBackgroundHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    captureSession.capture(mCaptureRequestBuilder.build(),imageCaptureCallback,mBackgroundHandler);
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     private Size findPreviewSize()
