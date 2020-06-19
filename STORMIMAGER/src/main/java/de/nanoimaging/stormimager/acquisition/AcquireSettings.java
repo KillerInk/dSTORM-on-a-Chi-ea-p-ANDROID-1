@@ -82,32 +82,33 @@ public class AcquireSettings extends DialogFragment {
 
                 String mIPaddress = acquireSettingsIPaddress.getText().toString();
                 Log.d(TAG,String.format("mIPaddress: %s", mIPaddress));
-                callingActivity.setIPAddress(mIPaddress);
+                callingActivity.microScopeInterface.setIpAdress(mIPaddress);
 
                 int mValDurationMeas = Integer.parseInt(acquireSettingsValDurationMeas.getText().toString());
                 Log.d(TAG,String.format("mValDurationMeas: %s", mValDurationMeas));
-                callingActivity.setValDurationMeas(mValDurationMeas);
+                callingActivity.microScopeInterface.setValDurationMeas(mValDurationMeas);
 
                 int mValPeriodMeas = Integer.parseInt(acquireSettingsValPeriodMeas.getText().toString());
                 Log.d(TAG,String.format("mValPeriodMeas: %s", mValPeriodMeas));
-                callingActivity.setValPeriodMeas(mValPeriodMeas);
+                callingActivity.microScopeInterface.setValPeriodMeas(mValPeriodMeas);
 
                 int mNValPeriodCalibration = Integer.parseInt(acquireSettingsValNPeriodsCalibration.getText().toString());
                 Log.d(TAG,String.format("mNValPeriodCalibration: %s", mNValPeriodCalibration));
-                callingActivity.setNValPeriodCalibration(mNValPeriodCalibration);
+                callingActivity.microScopeInterface.setNValPeriodCalibration(mNValPeriodCalibration);
 
                 int mValSOFIX = Integer.parseInt(acquireSettingsValSOFIX.getText().toString());
                 Log.d(TAG,String.format("mValSOFIX: %s", mValSOFIX));
-                callingActivity.setValSOFIX(mValSOFIX);
+                callingActivity.microScopeInterface.setValSOFIX(mValSOFIX);
 
                 int mValSOFIZ = Integer.parseInt(acquireSettingsValSOFIZ.getText().toString());
                 Log.d(TAG,String.format("mValSOFIX: %s", mValSOFIZ));
-                callingActivity.setValSOFIZ(mValSOFIZ);
+                callingActivity.microScopeInterface.setValSOFIZ(mValSOFIZ);
 
-                callingActivity.setSOFIX(acquireSettingsSOFIXToggle.isChecked(), mValSOFIX);
-                callingActivity.setSOFIZ(acquireSettingsSOFIZToggle.isChecked(), mValSOFIZ);
+                callingActivity.microScopeInterface.setSOFIX(acquireSettingsSOFIXToggle.isChecked(), mValSOFIX);
+                callingActivity.microScopeInterface.setSOFIZ(acquireSettingsSOFIZToggle.isChecked(), mValSOFIZ);
 
-                callingActivity.MQTT_Reconnect(acquireSettingsIPaddress.getText().toString());
+                callingActivity.microScopeInterface.setIpAdress(acquireSettingsIPaddress.getText().toString());
+                callingActivity.microScopeInterface.Reconnect();
 
             }
         })
@@ -121,34 +122,35 @@ public class AcquireSettings extends DialogFragment {
 
         // ASsign the GUI components 
         acquireSettingsIPaddress = (TextView) content.findViewById(R.id.editText_ip_address);
-        acquireSettingsIPaddress.setText(callingActivity.getIpAdress());
+        acquireSettingsIPaddress.setText(callingActivity.microScopeInterface.getIpAdress());
 
         acquireSettingsValSOFIX = (TextView) content.findViewById(R.id.editText_SOFI_x);
         acquireSettingsValSOFIX.setInputType(InputType.TYPE_CLASS_NUMBER);
-        acquireSettingsValSOFIX.setText(String.valueOf(callingActivity.val_sofi_amplitude_x));
+        acquireSettingsValSOFIX.setText(String.valueOf(callingActivity.sharedValues.val_sofi_amplitude_x));
 
         acquireSettingsValSOFIZ = (TextView) content.findViewById(R.id.editText_SOFI_z);
         acquireSettingsValSOFIZ.setInputType(InputType.TYPE_CLASS_NUMBER);
-        acquireSettingsValSOFIZ.setText(String.valueOf(callingActivity.val_sofi_amplitude_z));
+        acquireSettingsValSOFIZ.setText(String.valueOf(callingActivity.sharedValues.val_sofi_amplitude_z));
 
         acquireSettingsValPeriodMeas = (TextView) content.findViewById(R.id.editText_period_measure);
         acquireSettingsValPeriodMeas.setInputType(InputType.TYPE_CLASS_NUMBER);
-        acquireSettingsValPeriodMeas.setText(String.valueOf(callingActivity.val_period_measurement));
+        acquireSettingsValPeriodMeas.setText(String.valueOf(callingActivity.sharedValues.val_period_measurement));
 
         acquireSettingsValDurationMeas = (TextView) content.findViewById(R.id.editText_duraction_measure);
         acquireSettingsValDurationMeas.setInputType(InputType.TYPE_CLASS_NUMBER);
-        acquireSettingsValDurationMeas.setText(String.valueOf(callingActivity.val_duration_measurement));
+        acquireSettingsValDurationMeas.setText(String.valueOf(callingActivity.sharedValues.val_duration_measurement));
 
         acquireSettingsValNPeriodsCalibration = (TextView) content.findViewById(R.id.editText_nperiod_realign);
         acquireSettingsValNPeriodsCalibration.setInputType(InputType.TYPE_CLASS_NUMBER);
-        acquireSettingsValNPeriodsCalibration.setText(String.valueOf(callingActivity.val_nperiods_calibration));
+        acquireSettingsValNPeriodsCalibration.setText(String.valueOf(callingActivity.sharedValues.val_nperiods_calibration));
 
 
         acquireSettingsButtonIPGO = (Button) content.findViewById(R.id.button_ip_address_go);
         acquireSettingsButtonIPGO.setOnClickListener(new View.OnClickListener() {
             public void onClick(View view) {
                 AcquireActivity callingActivity = (AcquireActivity) getActivity();
-                callingActivity.MQTT_Reconnect(acquireSettingsIPaddress.getText().toString());
+                callingActivity.microScopeInterface.setIpAdress(acquireSettingsIPaddress.getText().toString());
+                callingActivity.microScopeInterface.Reconnect();
                 Log.i(TAG, "IP-Address: "+acquireSettingsIPaddress.getText().toString());
             }
         });
@@ -167,9 +169,9 @@ public class AcquireSettings extends DialogFragment {
                     Log.i(TAG, "Checked");
                     int myamplitude_x = Integer.parseInt(acquireSettingsValSOFIX.getText().toString());
                     Log.i(TAG, "Set the amplitude to: " + String.valueOf(myamplitude_x));
-                    callingActivity.setSOFIX(true, myamplitude_x);
+                    callingActivity.microScopeInterface.setSOFIX(true, myamplitude_x);
                 } else {
-                    callingActivity.setSOFIX(false, 0);
+                    callingActivity.microScopeInterface.setSOFIX(false, 0);
                     }
             }
 
@@ -188,9 +190,9 @@ public class AcquireSettings extends DialogFragment {
                 if (isChecked) {
                     int myamplitude_z = Integer.parseInt(acquireSettingsValSOFIZ.getText().toString());
                     Log.i(TAG, "Set the amplitude to: " + String.valueOf(myamplitude_z));
-                    callingActivity.setSOFIZ(true, myamplitude_z);
+                    callingActivity.microScopeInterface.setSOFIZ(true, myamplitude_z);
                 } else {
-                    callingActivity.setSOFIZ(false, 0);
+                    callingActivity.microScopeInterface.setSOFIZ(false, 0);
                 }
             }
 

@@ -70,8 +70,7 @@ public abstract class AbstractImageCapture implements ImageCaptureInterface {
 
     @Override
     public void onImageAvailable(ImageReader reader) {
-        Log.d(TAG, "onImageAvailable imageblockingqueue:" + (imageBlockingQueue.size() - imageBlockingQueue.remainingCapacity()) + "/"+ imageBlockingQueue.size() + " image polled size: " + imagespolled.size());
-
+        //Log.d(TAG, "onImageAvailable imageblockingqueue:" + (imageBlockingQueue.size() - imageBlockingQueue.remainingCapacity()) + "/"+ imageBlockingQueue.size() + " image polled size: " + imagespolled.size());
         while (imageBlockingQueue.remainingCapacity() == imagespolled.size()+1) {
             imageBlockingQueue.poll().close();
         }
@@ -112,7 +111,8 @@ public abstract class AbstractImageCapture implements ImageCaptureInterface {
             img.close();
         captureResultBlockingQueue.clear();
         for (Image i : imagespolled)
-            i.close();
+            if (i != null)
+                i.close();
         imagespolled.clear();
         stopBackgroundThread();
     }

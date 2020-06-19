@@ -35,6 +35,7 @@ public abstract class StillImageCapture extends AbstractImageCapture {
             imageBlockingQueue.poll();
             captureResultBlockingQueue.poll();
             onCaptureCompleted(img, captureResult);
+            releaseImage(img);
         }
     }
 

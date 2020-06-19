@@ -19,6 +19,7 @@ import android.graphics.SurfaceTexture;
 import android.hardware.SensorManager;
 import android.hardware.camera2.CameraAccessException;
 import android.media.CamcorderProfile;
+import android.media.CameraProfile;
 import android.media.MediaRecorder;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -31,6 +32,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.os.SystemClock;
+import android.support.annotation.MainThread;
 import android.support.annotation.RequiresApi;
 import android.support.v13.app.FragmentCompat;
 import android.util.Log;
@@ -46,6 +48,9 @@ import android.widget.CompoundButton;
 import android.widget.SeekBar;
 import android.widget.Toast;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
@@ -75,12 +80,21 @@ import de.nanoimaging.stormimager.R;
 import de.nanoimaging.stormimager.camera.CameraImpl;
 import de.nanoimaging.stormimager.camera.CameraInterface;
 import de.nanoimaging.stormimager.camera.CameraStates;
+import de.nanoimaging.stormimager.camera.VideoRecorder;
 import de.nanoimaging.stormimager.camera.capture.YuvImageCapture;
 import de.nanoimaging.stormimager.databinding.ActivityAcquireBinding;
+import de.nanoimaging.stormimager.events.SofiMeasurementUpdateUiEvent;
+import de.nanoimaging.stormimager.events.StartRecordingEvent;
+import de.nanoimaging.stormimager.events.StopRecordingEvent;
+import de.nanoimaging.stormimager.microscope.MicroScopeController;
+import de.nanoimaging.stormimager.microscope.MicroScopeInterface;
 import de.nanoimaging.stormimager.network.MqttClient;
 import de.nanoimaging.stormimager.network.MqttClientInterface;
 import de.nanoimaging.stormimager.process.VideoProcessor;
+import de.nanoimaging.stormimager.tasks.FindCouplingTask;
 import de.nanoimaging.stormimager.tasks.FindFocusTask;
+import de.nanoimaging.stormimager.tasks.SofiMeasurementTask;
+import de.nanoimaging.stormimager.tasks.SofiProcessTask;
 import de.nanoimaging.stormimager.tflite.TFLitePredict;
 import de.nanoimaging.stormimager.utils.CameraUtil;
 import de.nanoimaging.stormimager.utils.HideNavBarHelper;
@@ -93,18 +107,12 @@ import de.nanoimaging.stormimager.utils.SharedValues;
  * Created by Bene on 26.09.2015.
  */
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-public class AcquireActivity extends Activity implements FragmentCompat.OnRequestPermissionsResultCallback, AcquireSettings.NoticeDialogListener ,ZFocusInterface, UpdateUiEvent {
+public class AcquireActivity extends Activity implements
+        FragmentCompat.OnRequestPermissionsResultCallback,
+        AcquireSettings.NoticeDialogListener,
+        GuiMessageEvent{
 
-
-    String STATE_CALIBRATION = "state_calib";       // STate signal sent to ESP for light signal
-    String STATE_WAIT = "state_wait";               // STate signal sent to ESP for light signal
-    String STATE_RECORD = "state_record";           // STate signal sent to ESP for light signal
-
-    SharedPreferences.Editor editor = null;
-
-    // Global MQTT Values
-    int MQTT_SLEEP = 250;                       // wait until next thing should be excuted
-
+    //SharedPreferences.Editor editor = null;
     /**
      * GUI related stuff
      */
@@ -117,10 +125,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     /**
      * Whether the app is recording video now
      */
-    public boolean mIsRecordingVideo;                   // State if camera is recording
+    //public boolean mIsRecordingVideo;                   // State if camera is recording
     public boolean isCameraBusy = false;                // State if camera is busy
-    boolean is_measurement = false;                     // State if measurement is performed
-    boolean is_findcoupling = false;                    // State if coupling is performed
+    //boolean is_measurement = false;                     // State if measurement is performed
 
     // Camera parameters
     String global_isoval = "0";                         // global iso-value
@@ -130,78 +137,38 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     int val_iso_index = 3;                              // Slider value for
     int val_texp_index = 10;
 
-    // Acquisition parameters
+    /*// Acquisition parameters
     int val_period_measurement = 6 * 10;                // time between measurements in seconds
     int val_duration_measurement = 5;                   // duration for one measurement in seconds
-    int val_nperiods_calibration = 10 * 10;             // number of measurements for next recalibraiont
+    int val_nperiods_calibration = 10 * 10;             // number of measurements for next recalibraiont*/
 
     // settings for coupling
-    double val_mean_max = 0;                            // for coupling intensity
-    int i_search_maxintensity = 0;                      // global counter for number of search steps
-    int val_lens_x_maxintensity = 0;                    // lens-position for maximum intensity
-    int val_lens_x_global_old = 0;                      // last lens position before optimization
     int ROI_SIZE = 512;                                 // region which gets cropped to measure the coupling efficiencey
-    boolean is_findcoupling_coarse = true;              // State if coupling is in fine mode
-    boolean is_findcoupling_fine = false;               // State if coupling is in coarse mode
 
     // File IO parameters
     File myVideoFileName = new File("");
-    ByteBuffer buffer = null; // for the processing
-    Bitmap global_bitmap = null;
+    //ByteBuffer buffer = null; // for the processing
+    //Bitmap global_bitmap = null;
     // (default) global file paths
     String mypath_measurements = Environment.getExternalStorageDirectory() + "/STORMimager/";
     String myfullpath_measurements = mypath_measurements;
-    private MediaRecorder mMediaRecorder;               // MediaRecorder
-    private File mCurrentFile;
+
+
     int global_framerate = 20;
-    int global_cameraquality = CamcorderProfile.QUALITY_1080P;
 
     /**
      * HARDWARE Settings for MQTT related values
      */
     int PWM_RES = (int) (Math.pow(2, 15)) - 1;          // bitrate of the PWM signal 15 bit
     int val_stepsize_focus_z = 1;                      // Stepsize to move the objective lens
-    //int val_lens_x_global = 0;                          // global position for the x-lens
     int val_lens_z_global = 0;                          // global position for the z-lens
-    int val_laser_red_global = 0;                       // global value for the laser
 
-    int val_sofi_amplitude_z = 20; // amplitude of the lens in each periode
-    int val_sofi_amplitude_x = 20; // amplitude of the lens in each periode
-
-    boolean is_SOFI_x = false;
-    boolean is_SOFI_z = false;
-
-    // Tensorflow stuff
-    int Nx_in = 128;
-    int Ny_in = Nx_in;
-    int N_time = 20;
-    int N_upscale = 2; // Upscalingfactor
-
-    int i_time = 0;     // global counter for timesteps to feed the neural network
-
-    boolean is_display_result = false;
-    Bitmap myresult_bmp = null;
-
-    private TFLitePredict mypredictor;
-    private TFLitePredict mypredictor_mean;
-    private TFLitePredict mypredictor_stdv;
-    String mymodelfile = "converted_model256_20.tflite";
-    String mymodelfile_mean = "converted_model_mean.tflite";
-    String mymodelfile_stdv = "converted_model_stdv.tflite";
-    List<Mat> listMat = new ArrayList<>();
-    // define ouput Data to store result
-    float[] TF_input = new float[(int)(Nx_in*Ny_in*N_time)];
-
-    // Need to convert TestMat to float array to feed into TF
-    MatOfFloat TF_input_f = new MatOfFloat(CvType.CV_32F);
-
-    boolean is_process_sofi = false;
 
     private CameraInterface cameraInterface;
-    private MqttClientInterface mqttClientInterface;
     private YuvImageCapture yuvImageCapture;
     private FindFocusTask findFocusTask;
-    private SharedValues sharedValues;
+    SharedValues sharedValues;
+    VideoRecorder recorder;
 
     static {
         if (!OpenCVLoader.initDebug()) {
@@ -265,20 +232,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
         @Override
         public void onSurfaceTextureUpdated(SurfaceTexture texture) {
-
-            if (is_findcoupling & !isCameraBusy) {
-                // Do lens aligning here
-                global_bitmap = binding.texture.getBitmap();
-                global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), binding.texture.getTransform(null), true);
-
-                // START THREAD AND ALIGN THE LENS
-                if (is_findcoupling_coarse) {
-                    new run_calibration_thread_coarse("CoarseThread");
-                } else if (is_findcoupling_fine) {
-                    new run_calibration_thread_fine("FineThread");
-                }
-            }
-            else if(is_process_sofi & !isCameraBusy){
+           /* if(is_process_sofi & !isCameraBusy){
                 // Collect images for SOFI-prediction
                 global_bitmap = binding.texture.getBitmap();
                 global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), binding.texture.getTransform(null), true);
@@ -297,11 +251,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 }
 
 
-            }
+            }*/
 
         }
     };
-
 
     public AcquireActivity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
@@ -309,18 +262,16 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     //**********************************************************************************************
 
-
-
-
-
-
-
     /**
      * view binding from activity_acquire.xml
      */
     private ActivityAcquireBinding binding;
     private PermissionUtil permissionUtil;
     private HideNavBarHelper hideNavBarHelper;
+    MicroScopeInterface microScopeInterface;
+    private FindCouplingTask couplingTask;
+    private SofiMeasurementTask sofiMeasurementTask;
+    private SofiProcessTask sofiProcessTask;
 
     //**********************************************************************************************
     //  Method onCreate
@@ -329,49 +280,33 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        EventBus.getDefault().register(this);
         binding = ActivityAcquireBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-        permissionUtil = new PermissionUtil();
-        hideNavBarHelper = new HideNavBarHelper();
-        sharedValues = new SharedValues();
 
         // Initialize OpenCV using external library for now //TODO use internal!
         OpenCVLoader.initDebug();
         //OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
 
-        cameraInterface = new CameraImpl();
-        binding.texture.setSurfaceTextureListener(mSurfaceTextureListener);
-        findFocusTask = new FindFocusTask(cameraInterface,this,sharedValues);
-        // load tensorflow stuff
-        mypredictor = new TFLitePredict(AcquireActivity.this, mymodelfile, Nx_in, Ny_in, N_time, N_upscale);
-        mypredictor_mean = new TFLitePredict(AcquireActivity.this, mymodelfile_mean, Nx_in, Ny_in, N_time);
-        mypredictor_stdv = new TFLitePredict(AcquireActivity.this, mymodelfile_stdv, Nx_in, Ny_in, N_time);
+        permissionUtil = new PermissionUtil();
+        hideNavBarHelper = new HideNavBarHelper();
 
-        // Load previously saved settings and set GUIelements
-        SharedPreferences sharedPref = this.getSharedPreferences(
-                PREFERENCE_FILE_KEY, Context.MODE_PRIVATE);
-        editor = sharedPref.edit();
+        sharedValues = new SharedValues();
+        cameraInterface = new CameraImpl();
+        recorder = new VideoRecorder();
+        microScopeInterface = new MicroScopeController(sharedValues,this);
+        findFocusTask = new FindFocusTask(cameraInterface,this,sharedValues,microScopeInterface);
+        couplingTask = new FindCouplingTask(cameraInterface,this,sharedValues,microScopeInterface);
+        sofiMeasurementTask = new SofiMeasurementTask(cameraInterface,this,sharedValues,microScopeInterface,recorder,mypath_measurements);
+        sofiProcessTask = new SofiProcessTask(cameraInterface,this,sharedValues,microScopeInterface);
+
 
 
         // build the pop-up settings activity
         settingsDialogFragment = new AcquireSettings();
 
-        // start MQTT
-        mqttClientInterface = new MqttClient(new MqttClientInterface.MessageEvent() {
-            @Override
-            public void onMessage(String msg) {
-                showToast(msg);
-            }
-        });
-        if (isNetworkAvailable()) {
-            showToast("Connecting MQTT");
-            mqttClientInterface.connect();
-        } else
-            showToast("We don't have network");
-
-        setGUIelements(sharedPref);
         // *****************************************************************************************
         //  Camera STUFF
         //******************************************************************************************
@@ -388,6 +323,13 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 }
             }
         };
+        initUiItems();
+
+    }
+
+    private void initUiItems() {
+
+        binding.texture.setSurfaceTextureListener(mSurfaceTextureListener);
 
         // Create the ISO-List
         List<String> isolist = new ArrayList<>();
@@ -427,8 +369,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
-                    editor.putInt("val_iso_index", progress);
-                    editor.commit();
 
                     binding.textViewIso.setText("Iso:" + isovalues[progress]);
                     global_isoval = isovalues[progress];
@@ -459,9 +399,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
-                    editor.putInt("val_texp_index", progress);
-                    editor.commit();
-
                     global_expval = texpvalues[progress];
                     binding.textViewShutter.setText("Shutter:" + texpvalues[progress]);
                     int msexpo = (int) CameraUtil.getMilliSecondStringFromShutterString(texpvalues[progress]);
@@ -496,7 +433,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                         sharedValues.setVal_lens_x_global(progress);
-                        setLensX(sharedValues.getVal_lens_x_global());
+                        microScopeInterface.setLensX(sharedValues.getVal_lens_x_global(),false);
                         binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", sharedValues.getVal_lens_x_global() * 1.));
                     }
 
@@ -528,7 +465,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                         val_lens_z_global = progress;
-                        setLensZ(val_lens_z_global);
+                        microScopeInterface.setLensZ(val_lens_z_global,false);
                         binding.textViewLensZ.setText(text_lens_z_pre + val_lens_z_global * 1.);
                     }
 
@@ -560,19 +497,19 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        val_laser_red_global = progress;
-                        setLaser(val_laser_red_global);
-                        binding.textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
+                        sharedValues.val_laser_red_global = progress;
+                        microScopeInterface.setLaser(sharedValues.val_laser_red_global,false);
+                        binding.textViewLaser.setText(text_laser_pre + String.format("%.2f", sharedValues.val_laser_red_global * 1.));
                     }
 
                     @Override
                     public void onStartTrackingTouch(SeekBar seekBar) {
-                        binding.textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
+                        binding.textViewLaser.setText(text_laser_pre + String.format("%.2f", sharedValues.val_laser_red_global * 1.));
                     }
 
                     @Override
                     public void onStopTrackingTouch(SeekBar seekBar) {
-                        binding.textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
+                        binding.textViewLaser.setText(text_laser_pre + String.format("%.2f", sharedValues.val_laser_red_global * 1.));
                     }
                 }
         );
@@ -606,7 +543,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         binding.btnLiveView.setTextOff("LIVE: 0");
 
 
-
         //******************* SOFI-Mode  ********************************************//
         // This is to let the lens vibrate by a certain amount
         binding.btnSofi.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -614,9 +550,9 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 if (isChecked) {
                     Log.i(TAG, "Checked");
                     // turn on fluctuation
-                    mqttClientInterface.set_lens_sofi_z(String.valueOf(val_sofi_amplitude_z));
+                    microScopeInterface.setSOFIZ(true,sharedValues.val_sofi_amplitude_z);
                 } else {
-                    mqttClientInterface.set_lens_sofi_z(String.valueOf(0));
+                    microScopeInterface.setSOFIZ(false,0);
                 }
             }
 
@@ -629,9 +565,12 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
                 if (isChecked) {
                     Log.i(TAG, "Live PRocessing Checked");
                     // turn on fluctuation
-                    is_process_sofi = true;
+                    sofiProcessTask.setYuvImageCapture(yuvImageCapture);
+                    sofiProcessTask.process();
+                    binding.imageViewPreview.setVisibility(View.VISIBLE);
                 } else {
-                    is_process_sofi = false;
+                    sofiProcessTask.stop();
+                    sofiProcessTask.setYuvImageCapture(null);
                     binding.imageViewPreview.setVisibility(View.GONE);
                 }
             }
@@ -642,7 +581,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         binding.buttonXLensPlus.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 sharedValues.setVal_lens_x_global(sharedValues.getVal_lens_x_global()+10);
-                setLensX(sharedValues.getVal_lens_x_global());
+                microScopeInterface.setLensX(sharedValues.getVal_lens_x_global(),false);
                 binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", sharedValues.getVal_lens_x_global() * 1.));
                 binding.seekBarLensX.setProgress(sharedValues.getVal_lens_x_global());
             }
@@ -653,7 +592,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         binding.buttonXLensMinus.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 sharedValues.setVal_lens_x_global(sharedValues.getVal_lens_x_global()-10);
-                setLensX(sharedValues.getVal_lens_x_global());
+                microScopeInterface.setLensX(sharedValues.getVal_lens_x_global(),false);
                 binding.textViewLensX.setText(text_lens_x_pre + String.format("%.2f", sharedValues.getVal_lens_x_global() * 1.));
                 binding.seekBarLensX.setProgress(sharedValues.getVal_lens_x_global());
             }
@@ -664,7 +603,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         //******************* Move X ++ ********************************************//
         binding.buttonZFocusPlus.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                setZFocus(val_stepsize_focus_z);
+                microScopeInterface.setZFocus(val_stepsize_focus_z);
             }
 
         });
@@ -672,7 +611,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         //******************* Move X -- ********************************************//
         binding.buttonZFocusMinus.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                setZFocus(-val_stepsize_focus_z);
+                microScopeInterface.setZFocus(-val_stepsize_focus_z);
             }
 
         });
@@ -683,14 +622,14 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
                 showToast("Optimize  Coupling");
                 // turn on the laser
-                setLaser(val_laser_red_global);
+                microScopeInterface.setLaser(sharedValues.val_laser_red_global,false);
                 Log.i(TAG, "Lens Calibration in progress");
                 String my_gui_text = "Lens Calibration in progress";
-                is_findcoupling = true;
-                is_measurement = false;
+                couplingTask.setYuvImageCapture(yuvImageCapture);
+                couplingTask.process();
 
                 binding.textViewGuiText.setText(my_gui_text);
-                mqttClientInterface.setState(STATE_CALIBRATION);
+                microScopeInterface.setState(MicroScopeController.STATE_CALIBRATION);
             }
         });
 
@@ -721,9 +660,10 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         //******************* Start MEasurement ********************************************//
         binding.btnStart.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                if(!is_measurement&!is_findcoupling){
-                    is_measurement = true;
-                    new run_sofimeasurement().execute();
+                if (!sofiMeasurementTask.isWorking()) {
+                    //new run_sofimeasurement().execute();
+                    sofiMeasurementTask.setYuvImageCapture(yuvImageCapture);
+                    sofiMeasurementTask.process();
                 }
             }
         });
@@ -731,15 +671,16 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         //******************* Stop Measurement ********************************************//
         binding.btnStop.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                is_measurement = false;
-                is_findcoupling = false;
-                is_findcoupling_coarse = false;
-                is_findcoupling_coarse = true;
                 findFocusTask.stop();
                 findFocusTask.setYuvImageCapture(null);
+                couplingTask.stop();
+                couplingTask.setYuvImageCapture(null);
+                sofiMeasurementTask.stop();
+                sofiMeasurementTask.setYuvImageCapture(null);
+                sofiProcessTask.stop();
+                sofiProcessTask.setYuvImageCapture(null);
             }
         });
-
     }
 
 
@@ -755,6 +696,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             mOrientationListener.disable();
         }
         cameraInterface.closeCamera();
+        saveSettings();
         super.onPause();
         cameraInterface.stopBackgroundThread();
     }
@@ -762,6 +704,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     @Override
     public void onResume() {
         super.onResume();
+        loadSettings();
         cameraInterface.startBackgroundThread();
         if (!permissionUtil.hasAllPermissionsGranted()) {
             permissionUtil.requestCameraPermissions(this);
@@ -777,8 +720,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         if (mOrientationListener != null && mOrientationListener.canDetectOrientation()) {
             mOrientationListener.enable();
         }
-        mMediaRecorder = new MediaRecorder();
-
 
         // SET CAMERA PARAMETERS FROM GUI
         cameraInterface.setIso(Integer.parseInt(isovalues[val_iso_index]));
@@ -788,6 +729,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
 
     public void onDestroy() {
         super.onDestroy();
+        EventBus.getDefault().unregister(this);
     }
 
     @Override
@@ -966,37 +908,7 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         mMessageHandler.sendMessage(message);
     }
 
-    private void setUpMediaRecorder() throws IOException {
-        final Activity activity = this; //getActivity();
-        if (null == activity) {
-            return;
-        }
-        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        /**
-         * create video output file
-         */
-        mCurrentFile = myVideoFileName;
-        /**
-         * set output file in media recorder
-         */
-        mMediaRecorder.setOutputFile(mCurrentFile.getAbsolutePath());
-        CamcorderProfile profile = CamcorderProfile.get(global_cameraquality);
-        mMediaRecorder.setVideoFrameRate(global_framerate);
-        mMediaRecorder.setVideoSize(profile.videoFrameWidth, profile.videoFrameHeight);
-        mMediaRecorder.setVideoEncodingBitRate(profile.videoBitRate);
-        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-        mMediaRecorder.setAudioEncodingBitRate(profile.audioBitRate);
-        mMediaRecorder.setAudioSamplingRate(profile.audioSampleRate);
 
-        int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
-
-        mMediaRecorder.setOrientationHint(CameraUtil.ORIENTATIONS.get(rotation));
-
-        mMediaRecorder.prepare();
-    }
 
     /**
      * Start the camera preview.
@@ -1031,31 +943,40 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         });
     }
 
-    public void startRecordingVideo() {
+    private File getNewVideoFile(int id)
+    {
+        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS", Locale.US).format(new Date());
+        String mypath = mypath_measurements + timestamp + "/" + File.separator + "VID_" + String.valueOf(id) + ".mp4";
+        return new File(mypath);
+    }
+
+    @Subscribe
+    public void startRecordingVideo(StartRecordingEvent startRecordingEvent) {
+        int id = startRecordingEvent.video_id;
         if (!binding.texture.isAvailable() || null == cameraInterface.getPreviewSize()) {
             return;
         }
         try {
             cameraInterface.stopPreview();
             yuvImageCapture.release();
-            setUpMediaRecorder();
+            myVideoFileName = getNewVideoFile(id);
+            recorder.setUpMediaRecorder(myVideoFileName, CamcorderProfile.QUALITY_1080P,global_framerate,CameraUtil.ORIENTATIONS.get(getWindowManager().getDefaultDisplay().getRotation()));
             SurfaceTexture texture = binding.texture.getSurfaceTexture();
             assert texture != null;
             texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
             Surface previewSurface = new Surface(texture);
             cameraInterface.setSurface(previewSurface);
             //MediaRecorder setup for surface
-            Surface recorderSurface = mMediaRecorder.getSurface();
+            Surface recorderSurface = recorder.getSurface();
             cameraInterface.setSurface(recorderSurface);
             yuvImageCapture = new YuvImageCapture(mPreviewSize);
             cameraInterface.addImageCaptureInterface(yuvImageCapture);
             // Start a capture session
             cameraInterface.setCaptureEventListner(() -> {
-                mIsRecordingVideo = true;
                 cameraInterface.setCaptureEventListner(null);
                 // Start recording
                 try {
-                    mMediaRecorder.start();
+                    recorder.start();
                 } catch (IllegalStateException e) {
                     e.printStackTrace();
                 }
@@ -1066,102 +987,16 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         }
     }
 
-    public void stopRecordingVideo() throws Exception {
+    @Subscribe
+    public void stopRecordingVideo(StopRecordingEvent stopRecordingEvent) throws Exception {
         // UI
-        mIsRecordingVideo = false;
         cameraInterface.stopPreview();
         // Stop recording
-        mMediaRecorder.stop();
-        mMediaRecorder.reset();
+        recorder.stop();
 
         startPreview();
     }
 
-
-    private boolean isNetworkAvailable() {
-        ConnectivityManager connectivityManager
-                = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
-    }
-
-
-    // -------------------------------
-    // ------ MQTT STUFFF -----------
-    //- ------------------------------
-
-    public void setIPAddress(String mIPaddress) {
-        mqttClientInterface.setIPAddress(mIPaddress);
-        editor.putString("myIPAddress", mIPaddress);
-        editor.commit();
-    }
-
-    public String getIpAdress()
-    {
-        return mqttClientInterface.getIPAdress();
-    }
-
-    public void setSOFIX(boolean misSOFI_X, int mvalSOFIX) {
-        val_sofi_amplitude_x = mvalSOFIX;
-        is_SOFI_x = misSOFI_X;
-        mqttClientInterface.set_lens_sofi_x(String.valueOf(val_sofi_amplitude_x));
-        editor.putInt("val_sofi_amplitude_x", val_sofi_amplitude_x);
-        editor.commit();
-    }
-
-    public void setSOFIZ(boolean misSOFI_Z, int mvalSOFIZ) {
-        val_sofi_amplitude_z = mvalSOFIZ;
-        is_SOFI_z = misSOFI_Z;
-        mqttClientInterface.set_lens_sofi_z(String.valueOf(val_sofi_amplitude_z));
-        editor.putInt("val_sofi_amplitude_z", val_sofi_amplitude_z);
-        editor.commit();
-    }
-
-    public void setValSOFIX(int mval_sofi_amplitude_x) {
-        val_sofi_amplitude_x = mval_sofi_amplitude_x;
-        // Save the IP address for next start
-        editor.putInt("mval_sofi_amplitude_x", mval_sofi_amplitude_x);
-        editor.commit();
-    }
-
-    public void setValSOFIZ(int mval_sofi_amplitude_z) {
-        val_sofi_amplitude_z = mval_sofi_amplitude_z;
-        // Save the IP address for next start
-        editor.putInt("mval_sofi_amplitude_z", mval_sofi_amplitude_z);
-        editor.commit();
-    }
-
-    public void setValDurationMeas(int mval_duration_measurement) {
-        val_duration_measurement = mval_duration_measurement;
-        // Save the IP address for next start
-        editor.putInt("val_duration_measurement", mval_duration_measurement);
-        editor.commit();
-    }
-
-    public void setValPeriodMeas(int mval_period_measurement) {
-        val_period_measurement = mval_period_measurement;
-        // Save the IP address for next start
-        editor.putInt("val_period_measurement", mval_period_measurement);
-        editor.commit();
-    }
-
-    public void setNValPeriodCalibration(int mval_period_calibration) {
-        val_nperiods_calibration = mval_period_calibration;
-        // Save the IP address for next start
-        editor.putInt("val_nperiods_calibration", mval_period_calibration);
-        editor.commit();
-    }
-
-    void MQTT_Reconnect(String mIP) {
-        mqttClientInterface.stopConnection();
-        mqttClientInterface.setIPAddress(mIP);
-        mqttClientInterface.connect();
-        showToast("IP-Address set to: " + mIP);
-
-        // Save the IP address for next start
-        editor.putString("myIPAddress", mIP);
-        editor.commit();
-    }
 
     protected String wifiIpAddress(Context context) {
         WifiManager wifiManager = (WifiManager) context.getSystemService(WIFI_SERVICE);
@@ -1185,76 +1020,6 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
         return ipAddressString;
     }
 
-    // SOME I/O thingys
-    public int lin2qudratic(int input, int mymax) {
-        double normalizedval = (double) input / (double) mymax;
-        double quadraticval = Math.pow(normalizedval, 2);
-        int laserintensitypow = (int) (quadraticval * (double) mymax);
-        return laserintensitypow;
-    }
-
-    public void setLaser(int laserintensity) {
-        if (laserintensity < PWM_RES && laserintensity>=0 ) {
-            if (laserintensity ==  0)laserintensity=1;
-            mqttClientInterface.set_laser(String.valueOf(lin2qudratic(laserintensity, PWM_RES)));
-            // Wait until the command was actually sent
-            if(is_findcoupling){
-                try {
-                    Thread.sleep(MQTT_SLEEP);
-                } catch (Exception e) {
-                    Log.e(TAG, String.valueOf(e));
-                }
-            }
-        }
-    }
-
-    @Override
-    public void setZFocus(int stepsize) {
-        if(stepsize>0) mqttClientInterface.set_focus_z_fwd(String.valueOf(Math.abs(stepsize)));
-        if(stepsize<0) mqttClientInterface.set_focus_z_bwd(String.valueOf(Math.abs(stepsize)));
-
-        try {Thread.sleep(stepsize*80); }
-        catch (Exception e) { Log.e(TAG, String.valueOf(e));}
-    }
-
-
-
-    void setLensX(int lensposition) {
-        if ((lensposition < PWM_RES) && (lensposition >=0)) {
-            if (lensposition ==  0)lensposition=1;
-            mqttClientInterface.set_lens_x(String.valueOf(lin2qudratic(lensposition, PWM_RES)));
-            // Wait until the command was actually sent
-            if(is_findcoupling){
-            try {
-                Thread.sleep(MQTT_SLEEP);
-            } catch (Exception e) {
-                Log.e(TAG, String.valueOf(e));
-            }
-            }
-            editor.putInt("val_lens_x_global", lensposition);
-            editor.commit();
-
-
-        }
-    }
-
-    void setLensZ(int lensposition) {
-        if (lensposition < PWM_RES && lensposition >= 0) {
-            if (lensposition ==  0)lensposition=1;
-            mqttClientInterface.set_lens_z(String.valueOf(lin2qudratic(lensposition, PWM_RES)));
-            // Wait until the command was actually sent
-            if(is_findcoupling){
-                try {
-                    Thread.sleep(MQTT_SLEEP);
-                } catch (Exception e) {
-                    Log.e(TAG, String.valueOf(e));
-                }
-            }
-            editor.putInt("val_lens_z_global", lensposition);
-            editor.commit();
-
-        }
-    }
 
     @Override
     public void onGuiMessage(String msg) {
@@ -1266,82 +1031,42 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
     }
 
     @Override
-    public void onUpdatedUI() {
-
+    public void onShowToast(String msg) {
+        showToast(msg);
     }
 
-    /**
-     * A dialog fragment for displaying non-recoverable errors; this {@ling Activity} will be
-     * finished once the dialog has been acknowledged by the user.
-     */
-    public static class ErrorDialog extends DialogFragment {
-
-        private String mErrorMessage;
-
-        public ErrorDialog() {
-            mErrorMessage = "Unknown error occurred!";
-        }
-
-        // Build a dialog with a custom message (Fragments require default constructor).
-        public static ErrorDialog buildErrorDialog(String errorMessage) {
-            ErrorDialog dialog = new ErrorDialog();
-            dialog.mErrorMessage = errorMessage;
-            return dialog;
-        }
-
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            final Activity activity = getActivity();
-            return new AlertDialog.Builder(activity)
-                    .setMessage(mErrorMessage)
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            activity.finish();
-                        }
-                    })
-                    .create();
-        }
-    }
-
-    private class run_sofimeasurement extends AsyncTask<Void, Void, Void> {
-
-        String my_gui_text = "";
-        long t = 0;
-        int i_meas = 0;
-        int n_meas = 20;
-        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS", Locale.US).format(new Date());
-        String mypath = mypath_measurements + timestamp + "/";
-        File myDir = new File(mypath);
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            // Create Folder
-            if (!myDir.exists()) {
-                if (!myDir.mkdirs()) {
-                    return; //Cannot make directory
-                }
+    @Override
+    public void onUpdatePreviewImg(Bitmap bitmap) {
+        binding.imageViewPreview.post(new Runnable() {
+            @Override
+            public void run() {
+                if (binding.imageViewPreview.getVisibility() != View.VISIBLE)
+                    binding.imageViewPreview.setVisibility(View.VISIBLE);
+                Log.d(TAG,"onUpdatePreviewImg show image");
+                binding.imageViewPreview.setImageBitmap(bitmap);
             }
+        });
+    }
 
+    @Subscribe (threadMode = ThreadMode.MAIN)
+    public void onSofiMeasurementUpdateEvent(SofiMeasurementUpdateUiEvent sofiMeasurementUpdateUiEvent)
+    {
+        if (sofiMeasurementUpdateUiEvent.preExecute)
+        {
             // Make sure laser is not set to zero
-            if (val_laser_red_global == 0) {
-                val_laser_red_global = 2000;
+            if (sharedValues.val_laser_red_global == 0) {
+                sharedValues.val_laser_red_global = 2000;
             }
 
             // Set some GUI components
             binding.acquireProgressBar.setVisibility(View.VISIBLE); // Make invisible at first, then have it pop up
-            binding.acquireProgressBar.setMax(val_nperiods_calibration);
+            binding.acquireProgressBar.setMax(sharedValues.val_nperiods_calibration);
             showToast("Start Measurements");
-
         }
+        if (sofiMeasurementUpdateUiEvent.update)
+        {
+            binding.acquireProgressBar.setProgress(sofiMeasurementUpdateUiEvent.i_meas);
 
-        @Override
-        protected void onProgressUpdate(Void... params) {
-            binding.acquireProgressBar.setProgress(i_meas);
-
-            // some GUI interaction
-            binding.textViewGuiText.setText(my_gui_text);
             binding.btnStart.setEnabled(false);
 
             // Update GUI
@@ -1350,457 +1075,60 @@ public class AcquireActivity extends Activity implements FragmentCompat.OnReques
             binding.seekBarLensX.setProgress(sharedValues.getVal_lens_x_global());
 
             String text_laser_pre = "Laser: ";
-            binding.textViewLaser.setText(text_laser_pre + String.format("%.2f", val_laser_red_global * 1.));
-            binding.seekBarLaser.setProgress(val_laser_red_global);
+            binding.textViewLaser.setText(text_laser_pre + String.format("%.2f", sharedValues.val_laser_red_global * 1.));
+            binding.seekBarLaser.setProgress(sharedValues.val_laser_red_global);
         }
-
-        void mSleep(int sleepVal) {
-            try {
-                Thread.sleep(sleepVal);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        protected Void doInBackground(Void... params) {
-
-            // Wait for the data to propigate down the chain
-            t = SystemClock.elapsedRealtime();
-
-            // Start with a video measurement for XXX-seconds
-            i_meas = 1;
-            while (is_measurement) {
-                // Do recalibration every  10 measurements
-                // do lens calibration every n-th step
-                if ((i_meas % val_nperiods_calibration) == 0) {
-                    // turn on the laser
-                    setLaser(val_laser_red_global);
-                    Log.i(TAG, "Lens Calibration in progress");
-                    my_gui_text = "Lens Calibration in progress";
-                    is_findcoupling = true;
-                    is_measurement = false;
-                    i_meas++;
-                    publishProgress();
-                    mqttClientInterface.setState(STATE_CALIBRATION);
-                }
-                else if(!is_findcoupling&is_measurement) {// if no coupling has to be done -> measure!
-                    mqttClientInterface.setState(STATE_RECORD);
-                    // Once in a while update the GUI
-                    my_gui_text = "Measurement: " + String.valueOf(i_meas ) + '/' + String.valueOf(n_meas);
-                    publishProgress();
-
-                    // set lens to correct position
-                    setLensX(sharedValues.getVal_lens_x_global());
-
-                    // determine the path for the video
-                    myVideoFileName = new File(mypath + File.separator + "VID_" + String.valueOf(i_meas) + ".mp4");
-                    Log.i(TAG, "Saving file here:" + String.valueOf(myVideoFileName));
-
-                    // turn on the laser
-                    setLaser(val_laser_red_global);
-
-                    // start video-capture
-                    if (!mIsRecordingVideo) {
-                        startRecordingVideo();
-                    }
-
-                    // turn on fluctuation
-                    mqttClientInterface.set_lens_sofi_z(String.valueOf(val_sofi_amplitude_z));
-                    mSleep(val_duration_measurement * 1000); //Let AEC stabalize if it's on
-
-                    // turn off fluctuation
-                    mqttClientInterface.set_lens_sofi_z(String.valueOf(0));
-                    mSleep(500); //Let AEC stabalize if it's on
-
-                    // stop video-capture
-                    if (mIsRecordingVideo) {
-                        try {
-                            stopRecordingVideo();
-                            //prepareViews();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                    // turn off the laser
-                    setLaser(1);
-
-                    //TODO : Dirty hack for now since we don't have a proper laser
-                    mSleep(200); //Let AEC stabalize if it's on
-                    //setLensX(1); // Heavily detune the lens to reduce phototoxicity
-
-                    // Once in a while update the GUI
-                    my_gui_text = "Waiting for next measurements. "+String.valueOf(val_nperiods_calibration-i_meas)+"/"+String.valueOf(val_nperiods_calibration)+"left until recalibration";
-                    publishProgress();
-                    mqttClientInterface.setState(STATE_WAIT);
-
-                    // only perform the measurements if the camera is not looking for best coupling
-
-                    my_gui_text = "Processing Video...";
-                    publishProgress();
-                    VideoProcessor vidproc = new VideoProcessor(String.valueOf(myVideoFileName), ROI_SIZE, global_framerate);
-                    vidproc.setupvideo();
-                    vidproc.process(10);
-                    vidproc.saveresult(mypath + File.separator + "VID_" + String.valueOf(i_meas) + ".png");
-
-                    for(int iwait = 0; iwait<val_period_measurement*10; iwait++){
-                        if(!is_measurement)break;
-                        my_gui_text = "Waiting: "+String.valueOf(iwait/10) + "/" +String.valueOf(val_period_measurement)+"s";
-                        publishProgress();
-                        mSleep(100);
-
-
-                    }
-
-                    i_meas++;
-                }
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void result) {
-            super.onPostExecute(result);
-
+        if (sofiMeasurementUpdateUiEvent.postExecute)
+        {
             // Set some GUI components
             binding.acquireProgressBar.setVisibility(View.GONE); // Make invisible at first, then have it pop up
             binding.textViewGuiText.setText("Done Measurements.");
             binding.btnStart.setEnabled(true);
 
             // Switch off laser
-            setLaser(0);
+            microScopeInterface.setLaser(0,true);
 
             // free memory
-            is_findcoupling = false;
+            //is_findcoupling = false;
             showToast("Stop Measurements");
             System.gc();
         }
     }
 
-    class run_sofiprocessing_thread implements Runnable {
 
-        Thread mythread;
-        // to stop the thread
-        private boolean exit;
-        private String name;
-
-        run_sofiprocessing_thread(String threadname) {
-            name = threadname;
-            mythread = new Thread(this, name);
-            exit = false;
-            mythread.start(); // Starting the thread
-        }
-
-        // execution of thread starts from run() method
-        public void run() {
-            try {
-
-                isCameraBusy = true;
-                if(i_time < N_time & is_process_sofi){
-                    // convert the Bitmap coming from the camera frame to MAT and crop it
-                    Mat src = new Mat();
-                    Utils.bitmapToMat(global_bitmap, src);
-                    Mat grayMat = new Mat();
-                    Imgproc.cvtColor(src, grayMat, Imgproc.COLOR_BGRA2BGR);
-                    // Extract one frame channel
-                    List<Mat> rgb_list = new ArrayList(3);
-                    Core.split(grayMat,rgb_list);
-                    rgb_list.get(0).copyTo(grayMat);
-
-                    Rect roi = new Rect((int)src.width()/2-Nx_in/2, (int)src.height()/2-Ny_in/2, Nx_in, Ny_in);
-                    Mat dst = new Mat(grayMat, roi);
-
-
-                    // accumulate the result of all frames
-                    //dst.convertTo(dst, CvType.CV_32FC1);
-
-                    // preprocess the frame
-                    // dst = preprocess(dst);
-                    //Log.e(TAG,dst.dump());
-
-                    // convert MAT to MatOfFloat
-                    dst.convertTo(TF_input_f,CvType.CV_32F);
-                    //Log.e(TAG,dst.dump());
-
-                    // Add the frame to the list
-                    listMat.add(TF_input_f);
-                    i_time ++;
-
-                    // Release memory
-                    src.release();
-                    grayMat.release();
-                    dst.release();
-                }
-                else{
-                    // reset counters
-                    i_time = 0;
-                    //is_process_sofi = false;
-
-                    // If a stack of batch_size images is loaded, feed it into the TF object and run iference
-                    Mat tmp_dst = new Mat();
-                    Core.merge(listMat, tmp_dst); // Log.i(TAG, String.valueOf(tmp_dst));
-                    listMat = new ArrayList<>(); // reset the list
-
-                    // define ouput Data to store result
-                    // TF_output = new float[(int) (OUTPUT_SIZE[0]*OUTPUT_SIZE[1]*OUTPUT_SIZE[2]*OUTPUT_SIZE[3])];
-
-                    // get the frame/image and allocate it in the MOF object
-                    tmp_dst.get(0, 0, TF_input);
-
-                    tmp_dst.release();
-
-                    Log.i(TAG, "All frames have been accumulated");
-
-                    String is_output_nn = "nn_sofi"; // nn_stdv, nn_mean, nn_sofi
-                    Mat myresult = null;
-                    if(is_output_nn=="nn_sofi"){
-                        myresult = mypredictor.predict(TF_input);
-                    }
-                    else if(is_output_nn=="nn_stdv"){
-                        myresult = mypredictor_mean.predict(TF_input);
-                    }
-                    else{
-                        myresult = mypredictor_stdv.predict(TF_input);
-                    }
-                    is_display_result = true;
-
-                    String mytimestamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS", Locale.US).format(new Date());
-                    String myresultpath = String.valueOf(Environment.getExternalStorageDirectory() + "/STORMimager/"+mytimestamp+"_test.png");
-                    myresult = ImageUtils.imwriteNorm(myresult, myresultpath);
-
-                    myresult_bmp = Bitmap.createBitmap(Nx_in*N_upscale, Ny_in*N_upscale, Bitmap.Config.ARGB_8888);
-                    Utils.matToBitmap(myresult, myresult_bmp);
-
-                }
-
-
-
-
-
-                System.gc();
-                global_bitmap.recycle();
-                }
-
-
-            catch(Exception v){
-                System.out.println(v);
-                isCameraBusy=false;
-            }
-
-            isCameraBusy=false;
-            System.out.println(name + " Stopped.");
-        }
-
-        // for stopping the thread
-        public void stop ()
-        {
-            exit = true;
-        }
-    }
-
-
-    class run_calibration_thread_coarse implements Runnable {
-
-        Thread mythread;
-        // to stop the thread
-        private boolean exit;
-        private String name;
-
-        run_calibration_thread_coarse(String threadname) {
-            name = threadname;
-            mythread = new Thread(this, name);
-            exit = false;
-            mythread.start(); // Starting the thread
-        }
-
-        // execution of thread starts from run() method
-        public void run() {
-
-            try {
-                isCameraBusy = true;
-
-                // convert the Bitmap coming from the camera frame to MAT
-                Mat src = new Mat();
-                Mat dst = new Mat();
-
-                Utils.bitmapToMat(global_bitmap, src);
-                Imgproc.cvtColor(src, dst, Imgproc.COLOR_BGRA2BGR);
-
-
-                // reset the lens's position in the first iteration by some value
-                if (i_search_maxintensity == 0) {
-                    val_lens_x_global_old = sharedValues.getVal_lens_x_global(); // Save the value for later
-                    sharedValues.setVal_lens_x_global(0);
-                    val_mean_max = 0;
-                    val_lens_x_maxintensity = 0;
-                    setLensX(sharedValues.getVal_lens_x_global());
-                }
-                else {
-                        int i_mean = (int)OpenCVUtil.measureCoupling(dst, OpenCVUtil.ROI_SIZE, 9);
-                        String mycouplingtext = "Coupling (coarse) @ "+String.valueOf(i_search_maxintensity)+" is "+String.valueOf(i_mean)+"with max: "+String.valueOf(val_mean_max);
-                        binding.textViewGuiText.post(new Runnable() {
-                            public void run() {
-                                binding.textViewGuiText.setText(mycouplingtext);
-                            }
-                        });
-                        Log.i(TAG, mycouplingtext);
-                    if (i_mean > val_mean_max) {
-                        // Save the position with maximum intensity
-                        val_mean_max = i_mean;
-                        val_lens_x_maxintensity = sharedValues.getVal_lens_x_global();
-                    }
-
-                }
-                // break if algorithm reaches the maximum of lens positions
-                if (sharedValues.getVal_lens_x_global() > PWM_RES) {
-                    // if maximum number of search iteration is reached, break
-                    if (val_lens_x_maxintensity == 0) {
-                        val_lens_x_maxintensity = val_lens_x_global_old;
-                    }
-                    sharedValues.setVal_lens_x_global(val_lens_x_maxintensity);
-                    setLensX(sharedValues.getVal_lens_x_global());
-
-                    i_search_maxintensity = 0;
-                    exit = true;
-                    is_findcoupling_coarse = false;
-                    is_findcoupling_fine = true;
-                    Log.i(TAG, "My final Mean/STDV (coarse) is:" + String.valueOf(val_mean_max) + "@" + String.valueOf(val_lens_x_maxintensity));
-
-                } else {
-                    // increase the lens position
-                    sharedValues.setVal_lens_x_global(sharedValues.getVal_lens_x_global()+400);
-                    setLensX(sharedValues.getVal_lens_x_global());
-                    // free memory
-                    System.gc();
-                    src.release();
-                    dst.release();
-                    global_bitmap.recycle();
-                }
-                // release camera
-                isCameraBusy = false;
-
-                i_search_maxintensity++;
-
-            }
-            catch(Exception v){
-                    System.out.println(v);
-                }
-
-                System.out.println(name + " Stopped.");
-            }
-
-            // for stopping the thread
-            public void stop ()
-            {
-                exit = true;
-            }
-        }
-
-    class run_calibration_thread_fine implements Runnable {
-
-            Thread mythread;
-            // to stop the thread
-            private boolean exit;
-            private String name;
-
-            run_calibration_thread_fine(String threadname) {
-                name = threadname;
-                mythread = new Thread(this, name);
-                exit = false;
-                mythread.start(); // Starting the thread
-            }
-
-            // execution of thread starts from run() method
-            public void run() {
-
-                try {
-                    isCameraBusy = true;
-
-                    // convert the Bitmap coming from the camera frame to MAT
-                    Mat src = new Mat();
-                    Mat dst = new Mat();
-                    Utils.bitmapToMat(global_bitmap, src);
-                    Imgproc.cvtColor(src, dst, Imgproc.COLOR_BGRA2BGR);
-
-                    // reset the lens's position in the first iteration by some value
-                    if (i_search_maxintensity == 0) {
-                        val_lens_x_global_old = sharedValues.getVal_lens_x_global(); // Save the value for later
-                        sharedValues.setVal_lens_x_global(sharedValues.getVal_lens_x_global()-200);
-                    }
-                    i_search_maxintensity++;
-
-
-                    int i_mean = (int) OpenCVUtil.measureCoupling(dst, OpenCVUtil.ROI_SIZE, 9);
-                    String mycouplingtext = "Coupling (fine) @ "+String.valueOf(i_search_maxintensity)+" is "+String.valueOf(i_mean)+"with max: "+String.valueOf(val_mean_max);
-                    binding.textViewGuiText.post(new Runnable() {
-                        public void run() {
-                            binding.textViewGuiText.setText(mycouplingtext);
-                        }
-                    });
-                    Log.i(TAG, mycouplingtext);
-                    if (i_mean > val_mean_max) {
-                        // Save the position with maximum intensity
-                        val_mean_max = i_mean;
-                        val_lens_x_maxintensity = sharedValues.getVal_lens_x_global();
-                    }
-
-
-                    // break if algorithm reaches the maximum of lens positions
-                    if (sharedValues.getVal_lens_x_global() > val_lens_x_global_old + 200) {
-                        // if maximum number of search iteration is reached, break
-                        if (val_lens_x_maxintensity == 0) {
-                            val_lens_x_maxintensity = val_lens_x_global_old;
-                        }
-                        sharedValues.setVal_lens_x_global(val_lens_x_maxintensity);
-                        setLensX(sharedValues.getVal_lens_x_global());
-                        is_findcoupling = false;
-                        i_search_maxintensity = 0;
-                        exit = true;
-                        is_findcoupling_fine = false;
-                        is_findcoupling_coarse = true;
-                        Log.i(TAG, "My final Mean/STDV (fine) is:" + String.valueOf(val_mean_max) + "@" + String.valueOf(val_lens_x_maxintensity));
-                        setLaser(0);
-                    }
-
-                    // increase the lens position
-                    sharedValues.setVal_lens_x_global(sharedValues.getVal_lens_x_global()+10);
-                    setLensX(sharedValues.getVal_lens_x_global());
-
-                    // free memory
-                    System.gc();
-                    src.release();
-                    dst.release();
-                    global_bitmap.recycle();
-
-                    isCameraBusy = false;
-
-
-                } catch (Exception v) {
-                    System.out.println(v);
-                }
-
-                System.out.println(name + " Stopped.");
-            }
-
-            // for stopping the thread
-            public void stop() {
-                exit = true;
-            }
-        }
-
-    void setGUIelements(SharedPreferences sharedPref){
-        mqttClientInterface.setIPAddress(sharedPref.getString("myIPAddress", "192.168.43.88"));
-        val_nperiods_calibration = sharedPref.getInt("val_nperiods_calibration", val_nperiods_calibration);
-        val_period_measurement = sharedPref.getInt("val_period_measurement", val_period_measurement);
-        val_duration_measurement = sharedPref.getInt("val_duration_measurement", val_duration_measurement);
-        val_sofi_amplitude_x = sharedPref.getInt("val_sofi_amplitude_x", val_sofi_amplitude_x);
-        val_sofi_amplitude_z = sharedPref.getInt("val_sofi_amplitude_z", val_sofi_amplitude_z);
+    void loadSettings(){
+        SharedPreferences sharedPref = this.getSharedPreferences(
+                PREFERENCE_FILE_KEY, Context.MODE_PRIVATE);
+        microScopeInterface.setIpAdress(sharedPref.getString("myIPAddress", "192.168.43.88"));
+        sharedValues.val_nperiods_calibration = sharedPref.getInt("val_nperiods_calibration", sharedValues.val_nperiods_calibration);
+        sharedValues.val_period_measurement = sharedPref.getInt("val_period_measurement", sharedValues.val_period_measurement);
+        sharedValues.val_duration_measurement = sharedPref.getInt("val_duration_measurement", sharedValues.val_duration_measurement);
+        sharedValues.val_sofi_amplitude_x = sharedPref.getInt("val_sofi_amplitude_x", sharedValues.val_sofi_amplitude_x);
+        sharedValues.val_sofi_amplitude_z = sharedPref.getInt("val_sofi_amplitude_z", sharedValues.val_sofi_amplitude_z);
         val_iso_index = sharedPref.getInt("val_iso_index", val_iso_index);
         val_texp_index = sharedPref.getInt("val_texp_index", val_texp_index);
         sharedValues.setVal_lens_x_global(sharedPref.getInt("val_lens_x_global",sharedValues.getVal_lens_x_global()));
         val_lens_z_global = sharedPref.getInt("val_lens_z_global", val_lens_z_global);
-        val_laser_red_global = sharedPref.getInt("val_laser_red_global", val_laser_red_global);
+        sharedValues.val_laser_red_global = sharedPref.getInt("val_laser_red_global", sharedValues.val_laser_red_global);
+    }
+
+    void saveSettings()
+    {
+        // Load previously saved settings and set GUIelements
+        SharedPreferences sharedPref = this.getSharedPreferences(
+                PREFERENCE_FILE_KEY, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putInt("val_nperiods_calibration",sharedValues.val_nperiods_calibration).commit();
+        editor.putInt("val_period_measurement",sharedValues.val_period_measurement).commit();
+        editor.putInt("val_duration_measurement",sharedValues.val_duration_measurement).commit();
+        editor.putInt("val_sofi_amplitude_x",sharedValues.val_sofi_amplitude_x).commit();
+        editor.putInt("val_sofi_amplitude_z",sharedValues.val_sofi_amplitude_z).commit();
+        editor.putInt("val_iso_index",val_iso_index).commit();
+        editor.putInt("val_texp_index",val_texp_index).commit();
+        editor.putInt("val_lens_x_global",sharedValues.getVal_lens_x_global()).commit();
+        editor.putInt("val_lens_z_global",val_lens_z_global).commit();
+        editor.putInt("val_laser_red_global",sharedValues.val_laser_red_global).commit();
+        editor.putString("myIPAddress",microScopeInterface.getIpAdress());
     }
 
 
