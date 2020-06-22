@@ -1,6 +1,5 @@
 package de.nanoimaging.stormimager.camera;
 
-import android.app.Activity;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.view.Surface;

@@ -2,7 +2,6 @@ package de.nanoimaging.stormimager.process;
 
 import android.graphics.Bitmap;
 import android.media.MediaExtractor;
-import android.media.MediaFormat;
 import android.media.MediaMetadataRetriever;
 import android.util.Log;
 
@@ -13,8 +12,6 @@ import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
 import org.opencv.core.Rect;
 import org.opencv.imgproc.Imgproc;
-
-import java.io.IOException;
 
 import static org.opencv.core.Core.NORM_MINMAX;
 import static org.opencv.core.Core.normalize;

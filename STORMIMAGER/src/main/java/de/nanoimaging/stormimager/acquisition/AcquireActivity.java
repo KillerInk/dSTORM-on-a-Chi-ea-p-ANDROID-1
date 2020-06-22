@@ -2,11 +2,8 @@ package de.nanoimaging.stormimager.acquisition;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
 import android.app.DialogFragment;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
@@ -19,20 +16,12 @@ import android.graphics.SurfaceTexture;
 import android.hardware.SensorManager;
 import android.hardware.camera2.CameraAccessException;
 import android.media.CamcorderProfile;
-import android.media.CameraProfile;
-import android.media.MediaRecorder;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.net.wifi.WifiManager;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.os.SystemClock;
-import android.support.annotation.MainThread;
 import android.support.annotation.RequiresApi;
 import android.support.v13.app.FragmentCompat;
 import android.util.Log;
@@ -52,22 +41,9 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 import org.opencv.android.OpenCVLoader;
-import org.opencv.android.Utils;
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfFloat;
-import org.opencv.core.Rect;
-import org.opencv.imgproc.Imgproc;
-//import org.opencv.core.Size;
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigInteger;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -88,20 +64,16 @@ import de.nanoimaging.stormimager.events.StartRecordingEvent;
 import de.nanoimaging.stormimager.events.StopRecordingEvent;
 import de.nanoimaging.stormimager.microscope.MicroScopeController;
 import de.nanoimaging.stormimager.microscope.MicroScopeInterface;
-import de.nanoimaging.stormimager.network.MqttClient;
-import de.nanoimaging.stormimager.network.MqttClientInterface;
-import de.nanoimaging.stormimager.process.VideoProcessor;
 import de.nanoimaging.stormimager.tasks.FindCouplingTask;
 import de.nanoimaging.stormimager.tasks.FindFocusTask;
 import de.nanoimaging.stormimager.tasks.SofiMeasurementTask;
 import de.nanoimaging.stormimager.tasks.SofiProcessTask;
-import de.nanoimaging.stormimager.tflite.TFLitePredict;
 import de.nanoimaging.stormimager.utils.CameraUtil;
 import de.nanoimaging.stormimager.utils.HideNavBarHelper;
-import de.nanoimaging.stormimager.utils.ImageUtils;
-import de.nanoimaging.stormimager.utils.OpenCVUtil;
 import de.nanoimaging.stormimager.utils.PermissionUtil;
 import de.nanoimaging.stormimager.utils.SharedValues;
+
+//import org.opencv.core.Size;
 
 /**
  * Created by Bene on 26.09.2015.
@@ -109,10 +81,7 @@ import de.nanoimaging.stormimager.utils.SharedValues;
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class AcquireActivity extends Activity implements
         FragmentCompat.OnRequestPermissionsResultCallback,
-        AcquireSettings.NoticeDialogListener,
         GuiMessageEvent{
-
-    //SharedPreferences.Editor editor = null;
     /**
      * GUI related stuff
      */
@@ -125,9 +94,6 @@ public class AcquireActivity extends Activity implements
     /**
      * Whether the app is recording video now
      */
-    //public boolean mIsRecordingVideo;                   // State if camera is recording
-    public boolean isCameraBusy = false;                // State if camera is busy
-    //boolean is_measurement = false;                     // State if measurement is performed
 
     // Camera parameters
     String global_isoval = "0";                         // global iso-value
@@ -137,18 +103,8 @@ public class AcquireActivity extends Activity implements
     int val_iso_index = 3;                              // Slider value for
     int val_texp_index = 10;
 
-    /*// Acquisition parameters
-    int val_period_measurement = 6 * 10;                // time between measurements in seconds
-    int val_duration_measurement = 5;                   // duration for one measurement in seconds
-    int val_nperiods_calibration = 10 * 10;             // number of measurements for next recalibraiont*/
-
-    // settings for coupling
-    int ROI_SIZE = 512;                                 // region which gets cropped to measure the coupling efficiencey
-
     // File IO parameters
     File myVideoFileName = new File("");
-    //ByteBuffer buffer = null; // for the processing
-    //Bitmap global_bitmap = null;
     // (default) global file paths
     String mypath_measurements = Environment.getExternalStorageDirectory() + "/STORMimager/";
     String myfullpath_measurements = mypath_measurements;
@@ -232,27 +188,6 @@ public class AcquireActivity extends Activity implements
 
         @Override
         public void onSurfaceTextureUpdated(SurfaceTexture texture) {
-           /* if(is_process_sofi & !isCameraBusy){
-                // Collect images for SOFI-prediction
-                global_bitmap = binding.texture.getBitmap();
-                global_bitmap = Bitmap.createBitmap(global_bitmap, 0, 0, global_bitmap.getWidth(), global_bitmap.getHeight(), binding.texture.getTransform(null), true);
-
-                new run_sofiprocessing_thread("ProcessingThread");
-            }
-            else if(is_display_result){
-                Log.i(TAG, "Displaying result of SOFI prediction");
-                binding.imageViewPreview.setVisibility(View.VISIBLE);
-                try{
-                    binding.imageViewPreview.setImageBitmap(myresult_bmp);
-                    is_display_result = false;
-                }
-                catch(Exception e){
-                    Log.i(TAG, "Could not display result...");
-                }
-
-
-            }*/
-
         }
     };
 
@@ -516,6 +451,7 @@ public class AcquireActivity extends Activity implements
 
 
         //Create second surface with another holder (holderTransparent) for drawing the rectangle
+        //looks not like it get used somewhere
         SurfaceView transparentView = (SurfaceView) findViewById(R.id.TransparentView);
         transparentView.setBackgroundColor(Color.TRANSPARENT);
         transparentView.setZOrderOnTop(true);    // necessary
@@ -733,16 +669,6 @@ public class AcquireActivity extends Activity implements
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-    }
-
-    @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         if (!permissionUtil.onRequestPermissionsResult(requestCode,permissions,grantResults)) {
             showMissingPermissionError();
@@ -886,15 +812,6 @@ public class AcquireActivity extends Activity implements
         settingsDialogFragment.show(getFragmentManager(), "acquireSettings");
     }
 
-    @Override
-    public void onDialogPositiveClick(DialogFragment dialog) {
-    }
-
-    @Override
-    public void onDialogNegativeClick(DialogFragment dialog) {
-
-    }
-
     /**
      * Shows a {@link Toast} on the UI thread.
      *
@@ -996,30 +913,6 @@ public class AcquireActivity extends Activity implements
 
         startPreview();
     }
-
-
-    protected String wifiIpAddress(Context context) {
-        WifiManager wifiManager = (WifiManager) context.getSystemService(WIFI_SERVICE);
-        int ipAddress = wifiManager.getConnectionInfo().getIpAddress();
-
-        // Convert little-endian to big-endianif needed
-        if (ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN)) {
-            ipAddress = Integer.reverseBytes(ipAddress);
-        }
-
-        byte[] ipByteArray = BigInteger.valueOf(ipAddress).toByteArray();
-
-        String ipAddressString;
-        try {
-            ipAddressString = InetAddress.getByAddress(ipByteArray).getHostAddress();
-        } catch (UnknownHostException ex) {
-            Log.e("WIFIIP", "Unable to get host address.");
-            ipAddressString = null;
-        }
-
-        return ipAddressString;
-    }
-
 
     @Override
     public void onGuiMessage(String msg) {

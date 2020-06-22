@@ -1,16 +1,15 @@
 package de.nanoimaging.stormimager.activity;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 
+import de.nanoimaging.stormimager.R;
 
 /**
  * Created by Bene on 21.04.2015.
  */
-import android.content.Intent;
-import android.os.Handler;
-
-import de.nanoimaging.stormimager.R;
 
 public class SplashActivity extends Activity {
 

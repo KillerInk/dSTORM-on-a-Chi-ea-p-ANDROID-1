@@ -1,6 +1,5 @@
 package de.nanoimaging.stormimager.utils;
 
-import android.graphics.ImageFormat;
 import android.media.Image;
 
 import org.opencv.core.Core;

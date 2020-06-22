@@ -8,12 +8,13 @@ import android.widget.ImageView;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.imgcodecs.Imgcodecs;
 
 import de.nanoimaging.stormimager.R;
 
-//import static org.opencv.imgcodecs.Imgcodecs.CV_LOAD_IMAGE_ANYDEPTH;
 import static org.opencv.imgcodecs.Imgcodecs.imread;
-import org.opencv.imgcodecs.Imgcodecs;
+
+//import static org.opencv.imgcodecs.Imgcodecs.CV_LOAD_IMAGE_ANYDEPTH;
 
 /**
  * Created by Bene on 20.10.17.

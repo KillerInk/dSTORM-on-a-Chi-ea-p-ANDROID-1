@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.nanoimaging.stormimager.StormApplication;
-import de.nanoimaging.stormimager.camera.capture.AbstractImageCapture;
 import de.nanoimaging.stormimager.camera.capture.ImageCaptureInterface;
 import de.nanoimaging.stormimager.camera.vendor.CaptureRequestEx;
 

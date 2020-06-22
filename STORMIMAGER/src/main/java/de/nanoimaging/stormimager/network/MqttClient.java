@@ -1,7 +1,6 @@
 package de.nanoimaging.stormimager.network;
 
 import android.util.Log;
-import android.widget.Toast;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;

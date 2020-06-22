@@ -1,10 +1,10 @@
 package de.nanoimaging.stormimager.tasks;
 
-import android.graphics.Bitmap;
 import android.media.Image;
 import android.util.Log;
 
 import org.opencv.core.Mat;
+
 import de.nanoimaging.stormimager.acquisition.GuiMessageEvent;
 import de.nanoimaging.stormimager.camera.CameraInterface;
 import de.nanoimaging.stormimager.camera.capture.YuvImageCapture;
