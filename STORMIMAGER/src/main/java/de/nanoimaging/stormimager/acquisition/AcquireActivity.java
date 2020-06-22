@@ -86,7 +86,7 @@ public class AcquireActivity extends Activity implements
      * GUI related stuff
      */
     public DialogFragment settingsDialogFragment;       // For the pop-up window for external settings
-    String TAG = "STORMimager_AcquireActivity";         // TAG for the APP
+    final String TAG = "STORMimager_AcquireActivity";         // TAG for the APP
 
     // Save settings for later
     private final String PREFERENCE_FILE_KEY = "myAppPreference";
@@ -106,7 +106,7 @@ public class AcquireActivity extends Activity implements
     // File IO parameters
     File myVideoFileName = new File("");
     // (default) global file paths
-    String mypath_measurements = Environment.getExternalStorageDirectory() + "/STORMimager/";
+    final String mypath_measurements = Environment.getExternalStorageDirectory() + "/STORMimager/";
     String myfullpath_measurements = mypath_measurements;
 
 
@@ -863,7 +863,7 @@ public class AcquireActivity extends Activity implements
     private File getNewVideoFile(int id)
     {
         String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmssSSS", Locale.US).format(new Date());
-        String mypath = mypath_measurements + timestamp + "/" + File.separator + "VID_" + String.valueOf(id) + ".mp4";
+        String mypath = mypath_measurements + timestamp + "/" + File.separator + "VID_" + id + ".mp4";
         return new File(mypath);
     }
 
@@ -889,8 +889,8 @@ public class AcquireActivity extends Activity implements
             yuvImageCapture = new YuvImageCapture(mPreviewSize);
             cameraInterface.addImageCaptureInterface(yuvImageCapture);
             // Start a capture session
-            cameraInterface.setCaptureEventListner(() -> {
-                cameraInterface.setCaptureEventListner(null);
+            cameraInterface.setCaptureEventListener(() -> {
+                cameraInterface.setCaptureEventListener(null);
                 // Start recording
                 try {
                     recorder.start();

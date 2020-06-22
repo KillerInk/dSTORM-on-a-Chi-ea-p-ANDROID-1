@@ -3,6 +3,7 @@ package de.nanoimaging.stormimager.tasks;
 import android.graphics.Bitmap;
 import android.media.Image;
 import android.os.Environment;
+import android.text.TextUtils;
 import android.util.Log;
 
 import org.opencv.android.Utils;
@@ -67,10 +68,7 @@ public class SofiProcessTask extends AbstractTask<GuiMessageEvent> {
 
     @Override
     public boolean preProcess() {
-        if (isworking)
-            isworking = false;
-        else
-            isworking = true;
+        isworking = !isworking;
         return isworking;
     }
 
@@ -144,9 +142,9 @@ public class SofiProcessTask extends AbstractTask<GuiMessageEvent> {
 
             String is_output_nn = "nn_sofi"; // nn_stdv, nn_mean, nn_sofi
             Mat myresult = null;
-            if (is_output_nn == "nn_sofi") {
+            if (is_output_nn.equals("nn_sofi")) {
                 myresult = mypredictor.predict(TF_input);
-            } else if (is_output_nn == "nn_stdv") {
+            } else if (is_output_nn.equals("nn_stdv")) {
                 myresult = mypredictor_mean.predict(TF_input);
             } else {
                 myresult = mypredictor_stdv.predict(TF_input);

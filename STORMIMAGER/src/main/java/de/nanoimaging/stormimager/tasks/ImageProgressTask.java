@@ -5,8 +5,8 @@ import android.content.Context;
 import android.os.AsyncTask;
 
 public abstract class ImageProgressTask extends AsyncTask<Float, Integer, Void> {
-    protected Context context;
-    protected ProgressDialog progressDialog;
+    protected final Context context;
+    protected final ProgressDialog progressDialog;
 
     public ImageProgressTask(Context context) {
         this.context = context;

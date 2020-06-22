@@ -28,7 +28,7 @@ public class MqttClient implements MqttClientInterface {
     final String MQTT_CLIENTID = "STORMimager";
     String myIPAddress = "192.168.43.88";
 
-    private MqttClientInterface.MessageEvent messageEventListner;
+    private final MqttClientInterface.MessageEvent messageEventListner;
 
     public MqttClient(MqttClientInterface.MessageEvent messageEventListner)
     {

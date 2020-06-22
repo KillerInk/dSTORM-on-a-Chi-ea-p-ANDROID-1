@@ -19,11 +19,11 @@ import de.nanoimaging.stormimager.R;
 
 public class AcquireSettings extends DialogFragment {
 
-    public static String TAG = "Settings Dialog";
+    public static final String TAG = "Settings Dialog";
 
     public interface NoticeDialogListener {
-        public void onDialogPositiveClick(DialogFragment dialog);
-        public void onDialogNegativeClick(DialogFragment dialog);
+        void onDialogPositiveClick(DialogFragment dialog);
+        void onDialogNegativeClick(DialogFragment dialog);
     }
 
     // Use this instance of the interface to deliver action events
@@ -58,8 +58,8 @@ public class AcquireSettings extends DialogFragment {
         }
     }
 
-    public static interface OnCompleteListener {
-        public abstract void onComplete(String time);
+    public interface OnCompleteListener {
+        void onComplete(String time);
     }
 
 
@@ -168,7 +168,7 @@ public class AcquireSettings extends DialogFragment {
                 if (isChecked) {
                     Log.i(TAG, "Checked");
                     int myamplitude_x = Integer.parseInt(acquireSettingsValSOFIX.getText().toString());
-                    Log.i(TAG, "Set the amplitude to: " + String.valueOf(myamplitude_x));
+                    Log.i(TAG, "Set the amplitude to: " + myamplitude_x);
                     callingActivity.microScopeInterface.setSOFIX(true, myamplitude_x);
                 } else {
                     callingActivity.microScopeInterface.setSOFIX(false, 0);
@@ -189,7 +189,7 @@ public class AcquireSettings extends DialogFragment {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
                     int myamplitude_z = Integer.parseInt(acquireSettingsValSOFIZ.getText().toString());
-                    Log.i(TAG, "Set the amplitude to: " + String.valueOf(myamplitude_z));
+                    Log.i(TAG, "Set the amplitude to: " + myamplitude_z);
                     callingActivity.microScopeInterface.setSOFIZ(true, myamplitude_z);
                 } else {
                     callingActivity.microScopeInterface.setSOFIZ(false, 0);

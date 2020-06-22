@@ -27,7 +27,7 @@ public class ImageUtils {
             Mat magI = Input;
             Mat magI2 = new Mat(magI.size(), magI.type());
             Mat magI3 = new Mat(magI.size(), magI.type());
-            Mat magI4 = new Mat(magI.size(), magI.type());
+            Mat magI4;
             Mat magI5 = new Mat(magI.size(), magI.type());
 
             //Core.add(magI, Mat.ones(paddedReal.rows(), paddedReal.cols(), CvType.CV_64FC1),  magI2); // switch to logarithmic scale

@@ -2,14 +2,14 @@ package de.nanoimaging.stormimager.network;
 
 public interface MqttClientInterface {
 
-    public static final String topic_lens_z = "lens/right/z";
-    public static final String topic_lens_x = "lens/right/x";
-    public static final String topic_laser = "laser/red";
-    public static final String topic_lens_sofi_z = "lens/right/sofi/z";
-    public static final String topic_lens_sofi_x = "lens/right/sofi/x";
-    public static final String topic_state = "state";
-    public static final String topic_focus_z_fwd = "stepper/z/fwd";
-    public static final String topic_focus_z_bwd = "stepper/z/bwd";
+    String topic_lens_z = "lens/right/z";
+    String topic_lens_x = "lens/right/x";
+    String topic_laser = "laser/red";
+    String topic_lens_sofi_z = "lens/right/sofi/z";
+    String topic_lens_sofi_x = "lens/right/sofi/x";
+    String topic_state = "state";
+    String topic_focus_z_fwd = "stepper/z/fwd";
+    String topic_focus_z_bwd = "stepper/z/bwd";
 
     interface MessageEvent
     {

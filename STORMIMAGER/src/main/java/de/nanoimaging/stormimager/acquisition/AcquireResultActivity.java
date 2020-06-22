@@ -3,6 +3,7 @@ package de.nanoimaging.stormimager.acquisition;
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.WindowManager;
 import android.widget.ImageView;
 
@@ -41,7 +42,7 @@ public class AcquireResultActivity extends Activity {
 
 
 
-        if(imagepath!=""){
+        if(!TextUtils.isEmpty(imagepath)){
             Mat qDPCresultMat = imread(imagepath, Imgcodecs.IMREAD_ANYDEPTH);
             Bitmap qDPCresultBMP = null;
             qDPCresultBMP = Bitmap.createBitmap(qDPCresultMat.cols(), qDPCresultMat.rows(), Bitmap.Config.ARGB_8888);

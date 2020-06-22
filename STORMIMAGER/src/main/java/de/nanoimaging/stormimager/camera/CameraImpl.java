@@ -67,7 +67,7 @@ public class CameraImpl implements CameraInterface {
     /**
      * Surface from TextureView
      */
-    private List<Surface> surfaces = new ArrayList<>();
+    private final List<Surface> surfaces = new ArrayList<>();
 
     private Size previewSize;
     /**
@@ -86,7 +86,7 @@ public class CameraImpl implements CameraInterface {
      */
     private CaptureSessionEvent captureSessionEventListner;
 
-    private List<ImageCaptureInterface> imageCapturesList = new ArrayList<>();
+    private final List<ImageCaptureInterface> imageCapturesList = new ArrayList<>();
 
     @SuppressLint("MissingPermission")
     @Override
@@ -242,7 +242,7 @@ public class CameraImpl implements CameraInterface {
         return cameraState;
     }
 
-    CameraDevice.StateCallback cameraStateCallback = new CameraDevice.StateCallback() {
+    final CameraDevice.StateCallback cameraStateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(CameraDevice cameraDevice) {
             CameraImpl.this.cameraDevice = cameraDevice;
@@ -320,7 +320,7 @@ public class CameraImpl implements CameraInterface {
      * A {@link CameraCaptureSession.CaptureCallback} that handles events for the preview and
      * pre-capture sequence.
      */
-    private CameraCaptureSession.CaptureCallback previewCaptureCallback
+    private final CameraCaptureSession.CaptureCallback previewCaptureCallback
             = new CameraCaptureSession.CaptureCallback() {
 
         @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -387,7 +387,7 @@ public class CameraImpl implements CameraInterface {
     }
 
     @Override
-    public void setCaptureEventListner(CaptureSessionEvent eventListner) {
+    public void setCaptureEventListener(CaptureSessionEvent eventListner) {
         this.captureSessionEventListner = eventListner;
     }
 
@@ -431,7 +431,7 @@ public class CameraImpl implements CameraInterface {
         return largestSize;
     }
 
-    CameraCaptureSession.CaptureCallback imageCaptureCallback = new CameraCaptureSession.CaptureCallback() {
+    final CameraCaptureSession.CaptureCallback imageCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         @Override
         public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
             Log.d(TAG,"onCaptureCompleted");

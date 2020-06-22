@@ -20,11 +20,11 @@ public class MicroScopeController implements MicroScopeInterface {
     private final String TAG = MicroScopeController.class.getSimpleName();
 
     private MqttClientInterface mqttClientInterface;
-    private SharedValues sharedValues;
+    private final SharedValues sharedValues;
     // Global MQTT Values
     private final int MQTT_SLEEP = 250;                       // wait until next thing should be excuted
     public static final int PWM_RES = (int) (Math.pow(2, 15)) - 1;          // bitrate of the PWM signal 15 bit
-    private GuiMessageEvent guiMessageEventListner;
+    private final GuiMessageEvent guiMessageEventListner;
 
     public MicroScopeController(SharedValues sharedValues, GuiMessageEvent messageEventListner)
     {
@@ -76,8 +76,7 @@ public class MicroScopeController implements MicroScopeInterface {
     public int lin2qudratic(int input, int mymax) {
         double normalizedval = (double) input / (double) mymax;
         double quadraticval = Math.pow(normalizedval, 2);
-        int laserintensitypow = (int) (quadraticval * (double) mymax);
-        return laserintensitypow;
+        return (int) (quadraticval * (double) mymax);
     }
 
     @Override

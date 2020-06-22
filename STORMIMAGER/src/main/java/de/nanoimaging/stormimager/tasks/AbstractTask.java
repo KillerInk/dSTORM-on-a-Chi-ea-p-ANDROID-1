@@ -7,11 +7,11 @@ import de.nanoimaging.stormimager.utils.SharedValues;
 
 public abstract class AbstractTask<T extends GuiMessageEvent> implements TaskInterface {
 
-    protected T messageEvent;
-    protected CameraInterface cameraInterface;
-    protected SharedValues sharedValues;
+    protected final T messageEvent;
+    protected final CameraInterface cameraInterface;
+    protected final SharedValues sharedValues;
     protected boolean isworking;
-    protected MicroScopeInterface microScopeInterface;
+    protected final MicroScopeInterface microScopeInterface;
 
     public AbstractTask(CameraInterface cameraInterface, T messageEvent, SharedValues sharedValues,MicroScopeInterface microScopeInterface)
     {

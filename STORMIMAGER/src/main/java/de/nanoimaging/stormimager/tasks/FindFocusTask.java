@@ -5,6 +5,8 @@ import android.util.Log;
 
 import org.opencv.core.Mat;
 
+import java.util.Objects;
+
 import de.nanoimaging.stormimager.acquisition.GuiMessageEvent;
 import de.nanoimaging.stormimager.camera.CameraInterface;
 import de.nanoimaging.stormimager.camera.capture.YuvImageCapture;
@@ -19,8 +21,8 @@ public class FindFocusTask extends AbstractTask<GuiMessageEvent> {
     int val_focus_pos_global = 0;
     int i_search_bestfocus = 0;
     int val_focus_pos_best_global = 0;
-    int val_focus_searchradius = 40;
-    int val_focus_search_stepsize = 1;
+    final int val_focus_searchradius = 40;
+    final int val_focus_search_stepsize = 1;
     double val_stdv_max = 0;                            // for focus stdv
 
     private YuvImageCapture yuvImageCapture;
@@ -82,14 +84,14 @@ public class FindFocusTask extends AbstractTask<GuiMessageEvent> {
                 microScopeInterface.setZFocus(-(2 * val_focus_searchradius) + val_focus_pos_best_global);
 
                 i_search_bestfocus = 0;
-                Log.i(TAG, "My final focus is at z=" + String.valueOf(val_focus_pos_best_global) + '@' + String.valueOf(val_stdv_max));
+                Log.i(TAG, "My final focus is at z=" + val_focus_pos_best_global + '@' + val_stdv_max);
             }
         }
         // free memory
 
         src.release();
         dst.release();
-        input.release();
+        Objects.requireNonNull(input).release();
         System.gc();
     }
 
@@ -97,7 +99,7 @@ public class FindFocusTask extends AbstractTask<GuiMessageEvent> {
         i_search_bestfocus = i_search_bestfocus + val_focus_search_stepsize;
 
         double i_stdv = OpenCVUtil.measureCoupling(dst, OpenCVUtil.ROI_SIZE, 9);
-        String myfocusingtext = "Focus @ " + String.valueOf(i_search_bestfocus) + " is " + String.valueOf(i_stdv);
+        String myfocusingtext = "Focus @ " + i_search_bestfocus + " is " + i_stdv;
         messageEvent.onGuiMessage(myfocusingtext);
 
         Log.i(TAG, myfocusingtext);

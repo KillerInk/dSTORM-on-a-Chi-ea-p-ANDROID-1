@@ -29,7 +29,7 @@ public class FindCouplingTask extends AbstractTask<GuiMessageEvent> {
     /**
      * HARDWARE Settings for MQTT related values
      */
-    int PWM_RES = (int) (Math.pow(2, 15)) - 1;          // bitrate of the PWM signal 15 bit
+    final int PWM_RES = (int) (Math.pow(2, 15)) - 1;          // bitrate of the PWM signal 15 bit
 
     public FindCouplingTask(CameraInterface cameraInterface, GuiMessageEvent messageEvent, SharedValues sharedValues, MicroScopeInterface microScopeInterface) {
         super(cameraInterface, messageEvent, sharedValues,microScopeInterface);
@@ -67,7 +67,7 @@ public class FindCouplingTask extends AbstractTask<GuiMessageEvent> {
     {
         try {
             // convert the Bitmap coming from the camera frame to MAT
-            Mat src = new Mat();
+            Mat src;
             Mat dst = new Mat();
             Image img = yuvimagecapture.pollImage();
             src = OpenCVUtil.getBGRMatFromYuvMat(OpenCVUtil.yuvToMat(img));
@@ -85,7 +85,7 @@ public class FindCouplingTask extends AbstractTask<GuiMessageEvent> {
             }
             else {
                 int i_mean = (int) OpenCVUtil.measureCoupling(dst, OpenCVUtil.ROI_SIZE, 9);
-                String mycouplingtext = "Coupling (coarse) @ "+String.valueOf(i_search_maxintensity)+" is "+String.valueOf(i_mean)+"with max: "+String.valueOf(val_mean_max);
+                String mycouplingtext = "Coupling (coarse) @ "+ i_search_maxintensity +" is "+ i_mean +"with max: "+ val_mean_max;
                 messageEvent.onGuiMessage(mycouplingtext);
                 Log.i(TAG, mycouplingtext);
                 if (i_mean > val_mean_max) {
@@ -108,7 +108,7 @@ public class FindCouplingTask extends AbstractTask<GuiMessageEvent> {
                 //exit = true;
                 is_findcoupling_coarse = false;
                 is_findcoupling_fine = true;
-                Log.i(TAG, "My final Mean/STDV (coarse) is:" + String.valueOf(val_mean_max) + "@" + String.valueOf(val_lens_x_maxintensity));
+                Log.i(TAG, "My final Mean/STDV (coarse) is:" + val_mean_max + "@" + val_lens_x_maxintensity);
 
             } else {
                 // increase the lens position
@@ -133,7 +133,7 @@ public class FindCouplingTask extends AbstractTask<GuiMessageEvent> {
     {
         try {
             // convert the Bitmap coming from the camera frame to MAT
-            Mat src = new Mat();
+            Mat src;
             Mat dst = new Mat();
             Image img = yuvimagecapture.pollImage();
             src = OpenCVUtil.getBGRMatFromYuvMat(OpenCVUtil.yuvToMat(img));
@@ -149,7 +149,7 @@ public class FindCouplingTask extends AbstractTask<GuiMessageEvent> {
 
 
             int i_mean = (int) OpenCVUtil.measureCoupling(dst, OpenCVUtil.ROI_SIZE, 9);
-            String mycouplingtext = "Coupling (fine) @ "+String.valueOf(i_search_maxintensity)+" is "+String.valueOf(i_mean)+"with max: "+String.valueOf(val_mean_max);
+            String mycouplingtext = "Coupling (fine) @ "+ i_search_maxintensity +" is "+ i_mean +"with max: "+ val_mean_max;
             messageEvent.onGuiMessage(mycouplingtext);
 
             Log.i(TAG, mycouplingtext);
@@ -173,7 +173,7 @@ public class FindCouplingTask extends AbstractTask<GuiMessageEvent> {
                 //exit = true;
                 is_findcoupling_fine = false;
                 is_findcoupling_coarse = true;
-                Log.i(TAG, "My final Mean/STDV (fine) is:" + String.valueOf(val_mean_max) + "@" + String.valueOf(val_lens_x_maxintensity));
+                Log.i(TAG, "My final Mean/STDV (fine) is:" + val_mean_max + "@" + val_lens_x_maxintensity);
                 microScopeInterface.setLaser(0,isworking);
             }
 

@@ -40,8 +40,5 @@ public abstract class StillImageCapture extends AbstractImageCapture {
     }
 
     @Override
-    public void onCaptureCompleted(Image image, CaptureResult result)
-    {
-
-    }
+    public abstract void onCaptureCompleted(Image image, CaptureResult result);
 }

@@ -42,10 +42,7 @@ public class SofiMeasurementTask extends AbstractTask<GuiMessageEvent> {
 
     @Override
     public boolean preProcess() {
-        if (isworking)
-            isworking = false;
-        else
-            isworking = true;
+        isworking = !isworking;
         return isworking;
     }
 
@@ -71,7 +68,7 @@ public class SofiMeasurementTask extends AbstractTask<GuiMessageEvent> {
         microScopeInterface.setState(MicroScopeController.STATE_RECORD);
         // Once in a while update the GUI
         //publishProgress();
-        messageEvent.onGuiMessage("Measurement: " + String.valueOf(i_meas) + '/' + String.valueOf(n_meas));
+        messageEvent.onGuiMessage("Measurement: " + i_meas + '/' + n_meas);
         // set lens to correct position
         microScopeInterface.setLensX(sharedValues.getVal_lens_x_global(), false);
 
@@ -110,11 +107,11 @@ public class SofiMeasurementTask extends AbstractTask<GuiMessageEvent> {
         VideoProcessor vidproc = new VideoProcessor(recorder.getmCurrentFile().getAbsolutePath(), OpenCVUtil.ROI_SIZE, recorder.getFrameRate());
         vidproc.setupvideo();
         vidproc.process(10);
-        vidproc.saveresult(mypath + File.separator + "VID_" + String.valueOf(i_meas) + ".png");
+        vidproc.saveresult(mypath + File.separator + "VID_" + i_meas + ".png");
 
         for (int iwait = 0; iwait < sharedValues.val_period_measurement * 10; iwait++) {
             if (!isworking) break;
-            messageEvent.onGuiMessage("Waiting: " + String.valueOf(iwait / 10) + "/" + String.valueOf(sharedValues.val_period_measurement) + "s");
+            messageEvent.onGuiMessage("Waiting: " + iwait / 10 + "/" + sharedValues.val_period_measurement + "s");
             mSleep(100);
         }
         i_meas++;

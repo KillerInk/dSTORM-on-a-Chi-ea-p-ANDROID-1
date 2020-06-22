@@ -69,7 +69,7 @@ public class VideoProcessor {
         Mat result_mat = new Mat();
         for(int iter = num_frame_first; iter< num_frames; iter++) {
             long video_time_position = (long) ((float) iter * video_frame_duration);
-            Log.i(TAG, "Videoframe-position: " + String.valueOf(iter) + ", Time: (us)" + String.valueOf(video_time_position));
+            Log.i(TAG, "Videoframe-position: " + iter + ", Time: (us)" + video_time_position);
 
             // get first frame of the video
             Bitmap current_frame = mediaMetadataRetriever.getFrameAtTime(video_time_position, MediaMetadataRetriever.OPTION_CLOSEST_SYNC); //unit in microsecond
