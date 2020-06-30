@@ -46,7 +46,7 @@ public class SofiProcessTask extends AbstractTask<GuiMessageEvent> {
     private TFLitePredict mypredictor;
     private TFLitePredict mypredictor_mean;
     private TFLitePredict mypredictor_stdv;
-    String mymodelfile = "converted_model256_20.tflite";
+    String mymodelfile = "converted_model128_20_keras.tflite";
     String mymodelfile_mean = "converted_model_mean.tflite";
     String mymodelfile_stdv = "converted_model_stdv.tflite";
 
@@ -118,7 +118,7 @@ public class SofiProcessTask extends AbstractTask<GuiMessageEvent> {
                 // Add the frame to the list
                 listMat.add(TF_input_f);
                 //Log.d(TAG, "captured img:" + i + "/"+N_time+ " list size:" + listMat.size());
-                dst.release();
+                //dst.release();
             }
             Log.d(TAG,"capture frames dones");
             //is_process_sofi = false;

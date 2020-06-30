@@ -284,7 +284,7 @@ public class AcquireActivity extends Activity implements
         texpvalues = "1/100000,1/6000,1/4000,1/2000,1/1000,1/500,1/250,1/125,1/60,1/30,1/15,1/8,1/4,1/2,2,4,8,15,30,32".split(",");
 
         /**
-        GUI-STUFF
+         GUI-STUFF
          */
         binding.acquireProgressBar.setVisibility(View.INVISIBLE); // Make invisible at first, then have it pop up
 

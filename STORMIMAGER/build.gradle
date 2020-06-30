@@ -48,4 +48,6 @@ dependencies {
     implementation 'org.greenrobot:eventbus:3.2.0'
 
     implementation  'org.tensorflow:tensorflow-lite:0.0.0-nightly'// 'org.tensorflow:tensorflow-lite:+'
+    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:0.0.0-nightly'
+
 }
