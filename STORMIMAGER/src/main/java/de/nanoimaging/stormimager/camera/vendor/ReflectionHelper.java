@@ -1,7 +1,5 @@
 package de.nanoimaging.stormimager.camera.vendor;
 
-import android.util.Log;
-
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Constructor;

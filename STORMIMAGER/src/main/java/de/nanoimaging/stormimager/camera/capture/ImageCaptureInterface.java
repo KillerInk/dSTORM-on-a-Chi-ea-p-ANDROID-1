@@ -5,8 +5,6 @@ import android.media.Image;
 import android.media.ImageReader;
 import android.view.Surface;
 
-import java.util.concurrent.BlockingQueue;
-
 public interface ImageCaptureInterface extends ImageReader.OnImageAvailableListener {
     /**
      * @return the Surface from the ImageReader attached to this instance

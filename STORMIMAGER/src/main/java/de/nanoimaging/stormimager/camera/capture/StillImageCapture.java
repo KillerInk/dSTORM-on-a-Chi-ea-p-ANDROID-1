@@ -35,12 +35,10 @@ public abstract class StillImageCapture extends AbstractImageCapture {
             imageBlockingQueue.poll();
             captureResultBlockingQueue.poll();
             onCaptureCompleted(img, captureResult);
+            releaseImage(img);
         }
     }
 
     @Override
-    public void onCaptureCompleted(Image image, CaptureResult result)
-    {
-
-    }
+    public abstract void onCaptureCompleted(Image image, CaptureResult result);
 }

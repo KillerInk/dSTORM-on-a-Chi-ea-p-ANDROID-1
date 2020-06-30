@@ -1,7 +1,6 @@
 package de.nanoimaging.stormimager.utils;
 
 import android.graphics.Bitmap;
-import android.util.Log;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
@@ -9,15 +8,11 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
-import org.opencv.core.Size;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static java.lang.Math.cos;
-import static java.lang.Math.sin;
 import static org.opencv.core.Core.NORM_MINMAX;
-import static org.opencv.core.Core.mulSpectrums;
 import static org.opencv.core.Core.normalize;
 import static org.opencv.imgcodecs.Imgcodecs.imwrite;
 
@@ -32,7 +27,7 @@ public class ImageUtils {
             Mat magI = Input;
             Mat magI2 = new Mat(magI.size(), magI.type());
             Mat magI3 = new Mat(magI.size(), magI.type());
-            Mat magI4 = new Mat(magI.size(), magI.type());
+            Mat magI4;
             Mat magI5 = new Mat(magI.size(), magI.type());
 
             //Core.add(magI, Mat.ones(paddedReal.rows(), paddedReal.cols(), CvType.CV_64FC1),  magI2); // switch to logarithmic scale

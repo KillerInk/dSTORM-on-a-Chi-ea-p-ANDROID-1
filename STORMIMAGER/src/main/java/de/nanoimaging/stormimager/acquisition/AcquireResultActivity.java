@@ -3,17 +3,19 @@ package de.nanoimaging.stormimager.acquisition;
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.WindowManager;
 import android.widget.ImageView;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.imgcodecs.Imgcodecs;
 
 import de.nanoimaging.stormimager.R;
 
-//import static org.opencv.imgcodecs.Imgcodecs.CV_LOAD_IMAGE_ANYDEPTH;
 import static org.opencv.imgcodecs.Imgcodecs.imread;
-import org.opencv.imgcodecs.Imgcodecs;
+
+//import static org.opencv.imgcodecs.Imgcodecs.CV_LOAD_IMAGE_ANYDEPTH;
 
 /**
  * Created by Bene on 20.10.17.
@@ -40,7 +42,7 @@ public class AcquireResultActivity extends Activity {
 
 
 
-        if(imagepath!=""){
+        if(!TextUtils.isEmpty(imagepath)){
             Mat qDPCresultMat = imread(imagepath, Imgcodecs.IMREAD_ANYDEPTH);
             Bitmap qDPCresultBMP = null;
             qDPCresultBMP = Bitmap.createBitmap(qDPCresultMat.cols(), qDPCresultMat.rows(), Bitmap.Config.ARGB_8888);

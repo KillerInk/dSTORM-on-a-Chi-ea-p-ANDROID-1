@@ -13,7 +13,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import de.nanoimaging.stormimager.acquisition.AcquireActivity;
 import de.nanoimaging.stormimager.camera.CameraInterface;
 
 public class CameraUtil {

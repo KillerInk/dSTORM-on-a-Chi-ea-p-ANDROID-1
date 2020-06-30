@@ -29,7 +29,7 @@ public interface CameraInterface {
      * setSurface that should get used by the camera
      * mainly used to set Surface from TextureView or the mediaRecorder.
      * for image capture use addImageCaptureInterface
-     * surfaces must get set bevor the preview get started
+     * surfaces must get set before the preview get started
      * @param surface
      */
     void setSurface(Surface surface);
@@ -41,7 +41,7 @@ public interface CameraInterface {
     void startPreview() throws CameraAccessException;
 
     /**
-     * stop the active capturession
+     * stop the active capturesession
      */
     void stopPreview();
 
@@ -58,7 +58,7 @@ public interface CameraInterface {
     void setExposureTime(int exposureTime);
 
     /**
-     * startBackgroundThread, make sure to call it bevor camera get open
+     * startBackgroundThread, make sure to call it before camera get open
      */
     void startBackgroundThread();
     /**
@@ -76,7 +76,7 @@ public interface CameraInterface {
     boolean isFrontCamera();
     Size getMaxPreviewSize();
     Size[] getSizesForSurfaceTexture();
-    void setCaptureEventListner(CaptureSessionEvent eventListner);
+    void setCaptureEventListener(CaptureSessionEvent eventListner);
     void addImageCaptureInterface(ImageCaptureInterface imageCaptureInterface);
     void captureImage() throws Exception;
 }

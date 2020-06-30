@@ -11,6 +11,7 @@ import android.view.Surface;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -18,20 +19,20 @@ public abstract class AbstractImageCapture implements ImageCaptureInterface {
 
     private final String TAG = AbstractImageCapture.class.getSimpleName();
     private final int MAX_IMAGES = 6;
-    private ImageReader imageReader;
+    private final ImageReader imageReader;
     private HandlerThread mBackgroundThread;
     private Handler mBackgroundHandler;
     private boolean setToPreview = false;
-    protected BlockingQueue<Image> imageBlockingQueue = new ArrayBlockingQueue<>(MAX_IMAGES-1);
-    protected BlockingQueue<CaptureResult> captureResultBlockingQueue = new ArrayBlockingQueue<>(MAX_IMAGES-1);
-    private List<Image> imagespolled = new ArrayList<>();
+    protected final BlockingQueue<Image> imageBlockingQueue = new ArrayBlockingQueue<>(MAX_IMAGES-1);
+    protected final BlockingQueue<CaptureResult> captureResultBlockingQueue = new ArrayBlockingQueue<>(MAX_IMAGES-1);
+    private final List<Image> imagespolled = new ArrayList<>();
 
     public AbstractImageCapture(Size size, int format, boolean setToPreview)
     {
         startBackgroundThread();
         this.setToPreview = setToPreview;
         imageReader = ImageReader.newInstance(size.getWidth(),size.getHeight(),format,MAX_IMAGES);
-        imageReader.setOnImageAvailableListener(this::onImageAvailable,mBackgroundHandler);
+        imageReader.setOnImageAvailableListener(this,mBackgroundHandler);
     }
 
     @Override
@@ -70,10 +71,9 @@ public abstract class AbstractImageCapture implements ImageCaptureInterface {
 
     @Override
     public void onImageAvailable(ImageReader reader) {
-        Log.d(TAG, "onImageAvailable imageblockingqueue:" + (imageBlockingQueue.size() - imageBlockingQueue.remainingCapacity()) + "/"+ imageBlockingQueue.size() + " image polled size: " + imagespolled.size());
-
+        //Log.d(TAG, "onImageAvailable imageblockingqueue:" + (imageBlockingQueue.size() - imageBlockingQueue.remainingCapacity()) + "/"+ imageBlockingQueue.size() + " image polled size: " + imagespolled.size());
         while (imageBlockingQueue.remainingCapacity() == imagespolled.size()+1) {
-            imageBlockingQueue.poll().close();
+            Objects.requireNonNull(imageBlockingQueue.poll()).close();
         }
         try {
             imageBlockingQueue.put(imageReader.acquireLatestImage());
@@ -112,7 +112,8 @@ public abstract class AbstractImageCapture implements ImageCaptureInterface {
             img.close();
         captureResultBlockingQueue.clear();
         for (Image i : imagespolled)
-            i.close();
+            if (i != null)
+                i.close();
         imagespolled.clear();
         stopBackgroundThread();
     }
