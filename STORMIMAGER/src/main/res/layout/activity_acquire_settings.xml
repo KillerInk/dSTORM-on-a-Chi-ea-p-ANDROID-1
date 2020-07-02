@@ -23,7 +23,7 @@
                 android:layout_weight="1"
                 android:digits="0123456789."
                 android:ems="10"
-                android:inputType="number"
+                android:inputType="date|textUri|textShortMessage|textLongMessage|textAutoCorrect|numberSigned|textVisiblePassword|textWebEditText|textMultiLine|textNoSuggestions|textFilter|number|datetime|textWebEmailAddress|textPersonName|text|textPhonetic|textCapSentences|textPassword|textAutoComplete|textImeMultiLine|textPostalAddress|numberDecimal|textEmailAddress|numberPassword|textCapWords|phone|textEmailSubject|textCapCharacters|time|textWebPassword"
                 android:text="192.168.43.88"
                 android:textSize="15sp" />
 

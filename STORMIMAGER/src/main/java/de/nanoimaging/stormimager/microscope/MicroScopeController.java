@@ -38,7 +38,7 @@ public class MicroScopeController implements MicroScopeInterface {
                 guiMessageEventListner.onShowToast(msg);
             }
         });
-        if (isNetworkAvailable()) {
+        if (true){//TODO: Not working, why?! isNetworkAvailable()) {
             guiMessageEventListner.onShowToast("Connecting MQTT");
             mqttClientInterface.connect();
         } else
