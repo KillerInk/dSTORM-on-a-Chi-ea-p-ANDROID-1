@@ -26,7 +26,7 @@ public class MqttClient implements MqttClientInterface {
     final String MQTT_USER = "username";
     final String MQTT_PASS = "pi";
     final String MQTT_CLIENTID = "STORMimager";
-    String myIPAddress = "192.168.43.88";
+    String myIPAddress = "0.0.0.0"; //"192.168.43.88";
 
     private final MqttClientInterface.MessageEvent messageEventListner;
 
@@ -136,6 +136,7 @@ public class MqttClient implements MqttClientInterface {
                 public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
                     //addToHistory("Failed to connect to: " + myIPAddress);
                     sendMsg("Connection attemp failed");
+                    Log.e(TAG, String.valueOf(exception));
                 }
             });
 

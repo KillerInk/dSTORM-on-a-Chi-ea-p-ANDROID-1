@@ -100,10 +100,12 @@ public class SofiProcessTask extends AbstractTask<GuiMessageEvent> {
                 Core.split(grayMat, rgb_list);
                 rgb_list.get(0).copyTo(grayMat);
 
-
                 Mat dst = new Mat(grayMat, roi);
-
-
+                try {
+                    Thread.sleep(40);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 // accumulate the result of all frames
                 //dst.convertTo(dst, CvType.CV_32FC1);
 
@@ -117,10 +119,10 @@ public class SofiProcessTask extends AbstractTask<GuiMessageEvent> {
 
                 // Add the frame to the list
                 listMat.add(TF_input_f);
-                //Log.d(TAG, "captured img:" + i + "/"+N_time+ " list size:" + listMat.size());
-                //dst.release();
+                Log.d(TAG, "captured img:" + i + "/"+N_time+ " list size:" + listMat.size());
+                dst.release();
             }
-            Log.d(TAG,"capture frames dones");
+            Log.i(TAG,"capture frames dones");
             //is_process_sofi = false;
 
             // If a stack of batch_size images is loaded, feed it into the TF object and run iference

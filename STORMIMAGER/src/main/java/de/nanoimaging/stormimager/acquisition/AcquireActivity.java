@@ -81,6 +81,7 @@ import de.nanoimaging.stormimager.utils.SharedValues;
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 public class AcquireActivity extends Activity implements
         FragmentCompat.OnRequestPermissionsResultCallback,
+        AcquireSettings.NoticeDialogListener,
         GuiMessageEvent{
     /**
      * GUI related stuff
@@ -809,7 +810,7 @@ public class AcquireActivity extends Activity implements
 
 
     public void openSettingsDialog() {
-        settingsDialogFragment.show(getFragmentManager(), "acquireSettings");
+        settingsDialogFragment.show(getFragmentManager(), "AcquireSettings");
     }
 
     /**
@@ -992,7 +993,7 @@ public class AcquireActivity extends Activity implements
     void loadSettings(){
         SharedPreferences sharedPref = this.getSharedPreferences(
                 PREFERENCE_FILE_KEY, Context.MODE_PRIVATE);
-        microScopeInterface.setIpAdress(sharedPref.getString("myIPAddress", "192.168.43.88"));
+        microScopeInterface.setIpAdress(sharedPref.getString("myIPAddress", "0.0.0.0"));
         sharedValues.val_nperiods_calibration = sharedPref.getInt("val_nperiods_calibration", sharedValues.val_nperiods_calibration);
         sharedValues.val_period_measurement = sharedPref.getInt("val_period_measurement", sharedValues.val_period_measurement);
         sharedValues.val_duration_measurement = sharedPref.getInt("val_duration_measurement", sharedValues.val_duration_measurement);
@@ -1025,5 +1026,11 @@ public class AcquireActivity extends Activity implements
     }
 
 
+    @Override
+    public void onDialogPositiveClick(DialogFragment dialog) {
+    }
 
+    @Override
+    public void onDialogNegativeClick(DialogFragment dialog) {
+    }
 }
