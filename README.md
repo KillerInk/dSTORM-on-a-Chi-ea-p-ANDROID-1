@@ -22,6 +22,7 @@ The APP features:
 
 The preprint for the *cell*STORM II device accompanied with a series of applications ca be found on [**BIORXIV**](https://www.biorxiv.org/content/10.1101/2020.09.04.283085v1) 😊 
 
+
 ## Setup 
 
 Setting up the microscope is straightforward, but requires some technical experience! The basic idea is to have a WiFi-based network, which connects all different components with each other. This can be the cellphone where the APP "STORMImager" is running on and external components such as Lasers, LEDs, etc. WiFi-capable microcontrollers, such as ESP32s bridge the gap between WiFi and I2C or other interfaces. 
@@ -174,6 +175,10 @@ The fluctuation of the illumination is the result of the discrete mode pattern i
 <p align="center">
 <img src="./IMAGES/ondevicesr.gif" width="300">
 </p>
+
+# Precompiled APP (unsigned!)
+
+We provide the precompiled APP tested on a Huawei P9 and P20 in the Folder [RELEASE](./RELEASE/STORMIMAGER-debug.apk). In order to install this APP you need to enter the debug mode in Android. If you don't know what this is, please have a look [here](https://www.companionlink.com/support/kb/Enable_Android_USB_Debugging_Mode). If the APP does not work properly, please file an issue so that we can improve it!
 
 # Contribute
 
