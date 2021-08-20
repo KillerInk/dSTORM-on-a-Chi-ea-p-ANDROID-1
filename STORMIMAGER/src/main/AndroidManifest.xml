@@ -36,6 +36,7 @@
     <application
         android:name="de.nanoimaging.stormimager.StormApplication"
         android:allowBackup="true"
+        android:usesCleartextTraffic="true"
         android:icon="@drawable/microscope_icon"
         android:label="@string/app_name"
         android:theme="@android:style/Theme.Holo.Light"

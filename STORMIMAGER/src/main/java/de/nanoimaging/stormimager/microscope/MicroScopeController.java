@@ -5,21 +5,27 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.util.Log;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+
 import de.nanoimaging.stormimager.StormApplication;
 import de.nanoimaging.stormimager.acquisition.GuiMessageEvent;
-import de.nanoimaging.stormimager.network.MqttClient;
-import de.nanoimaging.stormimager.network.MqttClientInterface;
+import de.nanoimaging.stormimager.network.APIEndPoint;
 import de.nanoimaging.stormimager.utils.SharedValues;
+
+import static de.nanoimaging.stormimager.network.APINetworking.rest_post;
 
 public class MicroScopeController implements MicroScopeInterface {
 
+    public String ipAdress = "http://0.0.0.0";
     public static final String STATE_CALIBRATION = "state_calib";       // STate signal sent to ESP for light signal
     public static final String STATE_WAIT = "state_wait";               // STate signal sent to ESP for light signal
     public static final String STATE_RECORD = "state_record";           // STate signal sent to ESP for light signal
 
     private final String TAG = MicroScopeController.class.getSimpleName();
 
-    private MqttClientInterface mqttClientInterface;
     private final SharedValues sharedValues;
     // Global MQTT Values
     private final int MQTT_SLEEP = 250;                       // wait until next thing should be excuted
@@ -29,28 +35,15 @@ public class MicroScopeController implements MicroScopeInterface {
     public MicroScopeController(SharedValues sharedValues, GuiMessageEvent messageEventListner)
     {
         this.guiMessageEventListner = messageEventListner;
-        this.mqttClientInterface = mqttClientInterface;
         this.sharedValues = sharedValues;
-        // start MQTT
-        mqttClientInterface = new MqttClient(new MqttClientInterface.MessageEvent() {
-            @Override
-            public void onMessage(String msg) {
-                guiMessageEventListner.onShowToast(msg);
-            }
-        });
-        if (true){//TODO: Not working, why?! isNetworkAvailable()) {
-            guiMessageEventListner.onShowToast("Connecting MQTT");
-            mqttClientInterface.connect();
-        } else
-            guiMessageEventListner.onShowToast("We don't have network");
     }
 
 
 
     @Override
     public void setZFocus(int stepsize) {
-        if(stepsize>0) mqttClientInterface.set_focus_z_fwd(String.valueOf(Math.abs(stepsize)));
-        if(stepsize<0) mqttClientInterface.set_focus_z_bwd(String.valueOf(Math.abs(stepsize)));
+//TODO:        if(stepsize>0) mqttClientInterface.set_focus_z_fwd(String.valueOf(Math.abs(stepsize)));
+//TODO:        if(stepsize<0) mqttClientInterface.set_focus_z_bwd(String.valueOf(Math.abs(stepsize)));
 
         try {Thread.sleep(stepsize*80); }
         catch (Exception e) { Log.e(TAG, String.valueOf(e));}
@@ -60,7 +53,18 @@ public class MicroScopeController implements MicroScopeInterface {
     public void setLaser(int laserintensity, boolean findcoupling) {
         if (laserintensity < PWM_RES && laserintensity>=0 ) {
             if (laserintensity ==  0)laserintensity=1;
-            mqttClientInterface.set_laser(String.valueOf(lin2qudratic(laserintensity, PWM_RES)));
+            JSONObject jsonObject = new JSONObject();
+            try {
+                jsonObject.put(APIEndPoint.PAYLOAD_LASER, lin2qudratic(laserintensity, PWM_RES));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            //        post(APIEndPoint.POST_LENS_X, jsonObject);
+            try {
+                rest_post(APIEndPoint.BASE_URL, APIEndPoint.POST_LASER, jsonObject);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             // Wait until the command was actually sent
             if(findcoupling){
                 try {
@@ -83,7 +87,18 @@ public class MicroScopeController implements MicroScopeInterface {
     public void setLensX(int lensposition, boolean findcoupling) {
         if ((lensposition < PWM_RES) && (lensposition >=0)) {
             if (lensposition ==  0)lensposition=1;
-            mqttClientInterface.set_lens_x(String.valueOf(lin2qudratic(lensposition, PWM_RES)));
+            JSONObject jsonObject = new JSONObject();
+            try {
+                jsonObject.put(APIEndPoint.PAYLOAD_LENS, String.valueOf(lin2qudratic(lensposition, PWM_RES)));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            //        post(APIEndPoint.POST_LENS_X, jsonObject);
+            try {
+                rest_post(APIEndPoint.BASE_URL, APIEndPoint.POST_LENS_X, jsonObject);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             // Wait until the command was actually sent
             if(findcoupling){
                 try {
@@ -98,8 +113,19 @@ public class MicroScopeController implements MicroScopeInterface {
     @Override
     public void setLensZ(int lensposition, boolean findcoupling) {
         if (lensposition < PWM_RES && lensposition >= 0) {
-            if (lensposition ==  0)lensposition=1;
-            mqttClientInterface.set_lens_z(String.valueOf(lin2qudratic(lensposition, PWM_RES)));
+            if (lensposition ==  0) lensposition=1;
+            JSONObject jsonObject = new JSONObject();
+            try {
+                jsonObject.put(APIEndPoint.PAYLOAD_LENS, String.valueOf(lin2qudratic(lensposition, PWM_RES)));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            //        post(APIEndPoint.POST_LENS_X, jsonObject);
+            try {
+                rest_post(APIEndPoint.BASE_URL, APIEndPoint.POST_LENS_Z, jsonObject);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             // Wait until the command was actually sent
             if(findcoupling){
                 try {
@@ -111,18 +137,19 @@ public class MicroScopeController implements MicroScopeInterface {
         }
     }
 
+
     @Override
     public void setSOFIX(boolean misSOFI_X, int mvalSOFIX) {
         sharedValues.val_sofi_amplitude_x = mvalSOFIX;
         sharedValues.is_SOFI_x = misSOFI_X;
-        mqttClientInterface.set_lens_sofi_x(String.valueOf(sharedValues.val_sofi_amplitude_x));
+        //TODO: mqttClientInterface.set_lens_sofi_x(String.valueOf(sharedValues.val_sofi_amplitude_x));
     }
 
     @Override
     public void setSOFIZ(boolean misSOFI_Z, int mvalSOFIZ) {
         sharedValues.val_sofi_amplitude_z = mvalSOFIZ;
         sharedValues.is_SOFI_z = misSOFI_Z;
-        mqttClientInterface.set_lens_sofi_z(String.valueOf(sharedValues.val_sofi_amplitude_z));
+        //TODO: mqttClientInterface.set_lens_sofi_z(String.valueOf(sharedValues.val_sofi_amplitude_z));
     }
 
     @Override
@@ -152,24 +179,22 @@ public class MicroScopeController implements MicroScopeInterface {
 
     @Override
     public void setState(String state) {
-        mqttClientInterface.setState(state);
+        //TODO: mqttClientInterface.setState(state);
     }
 
     @Override
-    public void setIpAdress(String ipAdress) {
-        mqttClientInterface.setIPAddress(ipAdress);
+    public void setIpAdress(String mipAdress) {
+        ipAdress = "http://"+mipAdress;
+
     }
 
     @Override
     public String getIpAdress() {
-        return mqttClientInterface.getIPAdress();
+        return ipAdress;
     }
 
     @Override
     public void Reconnect() {
-        mqttClientInterface.stopConnection();
-        //mqttClientInterface.setIPAddress(mIP);
-        mqttClientInterface.connect();
     }
 
     private boolean isNetworkAvailable() {
