@@ -2,6 +2,8 @@ package de.nanoimaging.stormimager.utils;
 
 public class SharedValues {
 
+    public int val_z_step = 10;
+    public int val_z_speed = 1000;
     private int val_lens_x_global = 0;
     // Acquisition parameters
     public int val_period_measurement = 6 * 10;                // time between measurements in seconds

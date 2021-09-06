@@ -13,13 +13,13 @@ import java.io.IOException;
 import de.nanoimaging.stormimager.StormApplication;
 import de.nanoimaging.stormimager.acquisition.GuiMessageEvent;
 import de.nanoimaging.stormimager.network.APIEndPoint;
+import de.nanoimaging.stormimager.network.APINetworking;
 import de.nanoimaging.stormimager.utils.SharedValues;
 
-import static de.nanoimaging.stormimager.network.APINetworking.rest_post;
 
 public class MicroScopeController implements MicroScopeInterface {
 
-    public String ipAdress = "http://0.0.0.0";
+    public String ipAdress = "0.0.0.0";
     public static final String STATE_CALIBRATION = "state_calib";       // STate signal sent to ESP for light signal
     public static final String STATE_WAIT = "state_wait";               // STate signal sent to ESP for light signal
     public static final String STATE_RECORD = "state_record";           // STate signal sent to ESP for light signal
@@ -31,22 +31,29 @@ public class MicroScopeController implements MicroScopeInterface {
     private final int MQTT_SLEEP = 250;                       // wait until next thing should be excuted
     public static final int PWM_RES = (int) (Math.pow(2, 15)) - 1;          // bitrate of the PWM signal 15 bit
     private final GuiMessageEvent guiMessageEventListner;
+    private APINetworking http_request;
 
     public MicroScopeController(SharedValues sharedValues, GuiMessageEvent messageEventListner)
     {
         this.guiMessageEventListner = messageEventListner;
         this.sharedValues = sharedValues;
+        this.http_request = new APINetworking(ipAdress);
+
     }
 
 
 
     @Override
-    public void setZFocus(int stepsize) {
-//TODO:        if(stepsize>0) mqttClientInterface.set_focus_z_fwd(String.valueOf(Math.abs(stepsize)));
-//TODO:        if(stepsize<0) mqttClientInterface.set_focus_z_bwd(String.valueOf(Math.abs(stepsize)));
-
-        try {Thread.sleep(stepsize*80); }
-        catch (Exception e) { Log.e(TAG, String.valueOf(e));}
+    public void setZFocus(int stepsize, int speed) {
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put(APIEndPoint.PAYLOAD_MOVE_SPEED, speed);
+            jsonObject.put(APIEndPoint.PAYLOAD_MOVE_STEPS, stepsize);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        //        post(APIEndPoint.POST_LENS_X, jsonObject);
+        http_request.rest_post_async(APIEndPoint.POST_MOVE_Z, jsonObject);
     }
 
     @Override
@@ -60,11 +67,7 @@ public class MicroScopeController implements MicroScopeInterface {
                 e.printStackTrace();
             }
             //        post(APIEndPoint.POST_LENS_X, jsonObject);
-            try {
-                rest_post(APIEndPoint.BASE_URL, APIEndPoint.POST_LASER, jsonObject);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            http_request.rest_post_async(APIEndPoint.POST_LASER, jsonObject);
             // Wait until the command was actually sent
             if(findcoupling){
                 try {
@@ -94,11 +97,7 @@ public class MicroScopeController implements MicroScopeInterface {
                 e.printStackTrace();
             }
             //        post(APIEndPoint.POST_LENS_X, jsonObject);
-            try {
-                rest_post(APIEndPoint.BASE_URL, APIEndPoint.POST_LENS_X, jsonObject);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            http_request.rest_post_async(APIEndPoint.POST_LENS_X, jsonObject);
             // Wait until the command was actually sent
             if(findcoupling){
                 try {
@@ -121,11 +120,7 @@ public class MicroScopeController implements MicroScopeInterface {
                 e.printStackTrace();
             }
             //        post(APIEndPoint.POST_LENS_X, jsonObject);
-            try {
-                rest_post(APIEndPoint.BASE_URL, APIEndPoint.POST_LENS_Z, jsonObject);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            http_request.rest_post_async(APIEndPoint.POST_LENS_Z, jsonObject);
             // Wait until the command was actually sent
             if(findcoupling){
                 try {
@@ -184,17 +179,20 @@ public class MicroScopeController implements MicroScopeInterface {
 
     @Override
     public void setIpAdress(String mipAdress) {
-        ipAdress = "http://"+mipAdress;
-
+        this.ipAdress = mipAdress;
+        http_request.set_url(this.ipAdress);
+        http_request.reconnect();
     }
 
     @Override
     public String getIpAdress() {
-        return ipAdress;
+        return this.ipAdress;
     }
 
     @Override
     public void Reconnect() {
+        http_request.set_url(this.ipAdress);
+        http_request.reconnect();
     }
 
     private boolean isNetworkAvailable() {

@@ -284,7 +284,22 @@
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"/>
+                    android:orientation="vertical">
+
+                    <io.github.controlwear.virtual.joystick.android.JoystickView
+                        android:id="@+id/joystickView"
+                        android:layout_width="100pt"
+                        android:layout_height="100pt"
+                        android:alpha="50"
+                        app:JV_backgroundColor="#009688"
+                        app:JV_borderAlpha="50"
+                        app:JV_borderColor="#00796B"
+                        app:JV_borderWidth="4dp"
+                        app:JV_buttonColor="#FF6E40"
+                        app:JV_buttonSizeRatio="15%"
+                        app:JV_enabled="true"
+                        app:JV_fixedCenter="false" />
+                </LinearLayout>
             </LinearLayout>
 
         </LinearLayout>

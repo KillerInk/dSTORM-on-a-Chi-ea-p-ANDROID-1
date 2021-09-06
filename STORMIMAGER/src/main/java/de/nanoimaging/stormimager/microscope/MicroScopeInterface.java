@@ -1,7 +1,7 @@
 package de.nanoimaging.stormimager.microscope;
 
 public interface MicroScopeInterface {
-    void setZFocus(int stepsize);
+    void setZFocus(int stepsize, int speed);
     void setLaser(int laserintensity, boolean findcoupling);
     void setLensX(int lensposition, boolean findcoupling);
     void setLensZ(int lensposition, boolean findcoupling);

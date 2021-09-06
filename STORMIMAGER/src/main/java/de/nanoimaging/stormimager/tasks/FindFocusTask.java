@@ -81,7 +81,7 @@ public class FindFocusTask extends AbstractTask<GuiMessageEvent> {
                 }
 
                 // Go to position with highest stdv
-                microScopeInterface.setZFocus(-(2 * val_focus_searchradius) + val_focus_pos_best_global);
+                microScopeInterface.setZFocus(-(2 * val_focus_searchradius) + val_focus_pos_best_global, 1000);
 
                 i_search_bestfocus = 0;
                 Log.i(TAG, "My final focus is at z=" + val_focus_pos_best_global + '@' + val_stdv_max);
@@ -113,7 +113,7 @@ public class FindFocusTask extends AbstractTask<GuiMessageEvent> {
     private void increaseLensPosition() {
         int val_lens_x_global = sharedValues.getVal_lens_x_global();
         sharedValues.setVal_lens_x_global((val_lens_x_global + val_focus_search_stepsize));
-        microScopeInterface.setZFocus(val_focus_search_stepsize);
+        microScopeInterface.setZFocus(val_focus_search_stepsize, 1000);
     }
 
     private void resetLensPosition() {
@@ -121,7 +121,7 @@ public class FindFocusTask extends AbstractTask<GuiMessageEvent> {
         val_focus_pos_global_old = 0; // Save the value for later
         val_focus_pos_global = -val_focus_searchradius;
         // reset lens position
-        microScopeInterface.setZFocus(-val_focus_searchradius);
+        microScopeInterface.setZFocus(-val_focus_searchradius,1000);
         try {
             Thread.sleep(3000);
         } catch (Exception e) {

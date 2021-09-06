@@ -22,6 +22,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.os.StrictMode;
 import android.support.annotation.RequiresApi;
 import android.support.v13.app.FragmentCompat;
 import android.util.Log;
@@ -72,6 +73,7 @@ import de.nanoimaging.stormimager.utils.CameraUtil;
 import de.nanoimaging.stormimager.utils.HideNavBarHelper;
 import de.nanoimaging.stormimager.utils.PermissionUtil;
 import de.nanoimaging.stormimager.utils.SharedValues;
+import io.github.controlwear.virtual.joystick.android.JoystickView;
 
 //import org.opencv.core.Size;
 
@@ -111,7 +113,7 @@ public class AcquireActivity extends Activity implements
     String myfullpath_measurements = mypath_measurements;
 
 
-    int global_framerate = 20;
+
 
     /**
      * HARDWARE Settings for MQTT related values
@@ -121,6 +123,10 @@ public class AcquireActivity extends Activity implements
     int val_lens_z_global = 0;                          // global position for the z-lens
 
 
+    /**
+     * Camera-related Stuff
+     */
+    int global_framerate = 20;
     private CameraInterface cameraInterface;
     private YuvImageCapture yuvImageCapture;
     private FindFocusTask findFocusTask;
@@ -216,11 +222,17 @@ public class AcquireActivity extends Activity implements
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        //TODO: Dirty Workaround
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder()
+                .permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+
         EventBus.getDefault().register(this);
         binding = ActivityAcquireBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         // Initialize OpenCV using external library for now //TODO use internal!
         OpenCVLoader.initDebug();
@@ -238,7 +250,9 @@ public class AcquireActivity extends Activity implements
         sofiMeasurementTask = new SofiMeasurementTask(cameraInterface,this,sharedValues,microScopeInterface,recorder,mypath_measurements);
         sofiProcessTask = new SofiProcessTask(cameraInterface,this,sharedValues,microScopeInterface);
 
-
+        // load settings from previous session
+        loadSettings();
+        microScopeInterface.Reconnect(); // Retrieve IP Adress from last run
 
         // build the pop-up settings activity
         settingsDialogFragment = new AcquireSettings();
@@ -451,6 +465,34 @@ public class AcquireActivity extends Activity implements
         );
 
 
+        /**
+         * Joystick for Z-Motion
+         */
+
+        JoystickView joystick = (JoystickView) findViewById(R.id.joystickView);
+        joystick.setFixedCenter(true); // set up auto-define center
+        joystick.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // workaround to send values if no change is detected
+                microScopeInterface.setZFocus(sharedValues.val_z_step, sharedValues.val_z_speed);
+            }
+        });
+
+        joystick.setOnMoveListener(new JoystickView.OnMoveListener() {
+            @Override
+            public void onMove(int angle, int strength) {
+                int direction = 0;
+                if(0<angle & angle >180)
+                    direction = 1;
+                else
+                    direction = -1;
+                sharedValues.val_z_step = direction * (int) Math.ceil(strength/10)*100;
+                sharedValues.val_z_speed = strength*20;
+                microScopeInterface.setZFocus(sharedValues.val_z_step, sharedValues.val_z_speed);
+            }
+        });
+
         //Create second surface with another holder (holderTransparent) for drawing the rectangle
         //looks not like it get used somewhere
         SurfaceView transparentView = (SurfaceView) findViewById(R.id.TransparentView);
@@ -459,8 +501,6 @@ public class AcquireActivity extends Activity implements
         SurfaceHolder holderTransparent = transparentView.getHolder();
         holderTransparent.setFormat(PixelFormat.TRANSPARENT);
         //TODO holderTransparent.addCallback(callBack);
-
-
 
         /*
         Assign GUI-Elements to actions
@@ -540,7 +580,7 @@ public class AcquireActivity extends Activity implements
         //******************* Move X ++ ********************************************//
         binding.buttonZFocusPlus.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                microScopeInterface.setZFocus(val_stepsize_focus_z);
+                microScopeInterface.setZFocus(val_stepsize_focus_z, 1000);
             }
 
         });
@@ -548,7 +588,7 @@ public class AcquireActivity extends Activity implements
         //******************* Move X -- ********************************************//
         binding.buttonZFocusMinus.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                microScopeInterface.setZFocus(-val_stepsize_focus_z);
+                microScopeInterface.setZFocus(-val_stepsize_focus_z, 1000);
             }
 
         });
@@ -666,6 +706,7 @@ public class AcquireActivity extends Activity implements
 
     public void onDestroy() {
         super.onDestroy();
+        saveSettings();
         EventBus.getDefault().unregister(this);
     }
 
@@ -1004,6 +1045,7 @@ public class AcquireActivity extends Activity implements
         sharedValues.setVal_lens_x_global(sharedPref.getInt("val_lens_x_global",sharedValues.getVal_lens_x_global()));
         val_lens_z_global = sharedPref.getInt("val_lens_z_global", val_lens_z_global);
         sharedValues.val_laser_red_global = sharedPref.getInt("val_laser_red_global", sharedValues.val_laser_red_global);
+        Log.d(TAG, "Settings loaded sucessfully");
     }
 
     void saveSettings()
@@ -1022,7 +1064,7 @@ public class AcquireActivity extends Activity implements
         editor.putInt("val_lens_x_global",sharedValues.getVal_lens_x_global()).commit();
         editor.putInt("val_lens_z_global",val_lens_z_global).commit();
         editor.putInt("val_laser_red_global",sharedValues.val_laser_red_global).commit();
-        editor.putString("myIPAddress",microScopeInterface.getIpAdress());
+        editor.putString("myIPAddress",microScopeInterface.getIpAdress()).commit();
     }
 
 
